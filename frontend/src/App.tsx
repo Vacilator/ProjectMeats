@@ -115,6 +115,8 @@ const App: React.FC = () => {
               <NavLink href="/customers">Customers</NavLink>
               <NavLink href="/contacts">Contact Info</NavLink>
               <NavLink href="/purchase-orders">Purchase Orders</NavLink>
+              <NavLink href="/plants">Plants</NavLink>
+              <NavLink href="/carriers">Carriers</NavLink>
             </Navigation>
           </HeaderContent>
         </Header>
@@ -127,7 +129,9 @@ const App: React.FC = () => {
             <Route path="/customers" element={<CustomersScreen />} />
             <Route path="/contacts" element={<ContactsScreen />} />
             <Route path="/purchase-orders" element={<PurchaseOrdersScreen />} />
-            {/* Future routes for remaining entities */}
+            <Route path="/plants" element={<div style={{padding: '20px'}}>Plants (Backend Complete, Frontend Coming Soon)</div>} />
+            <Route path="/carriers" element={<div style={{padding: '20px'}}>Carriers (Backend Complete, Frontend Coming Soon)</div>} />
+            {/* Additional entities can be added here */}
           </Routes>
         </Main>
         

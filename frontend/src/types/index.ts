@@ -93,6 +93,44 @@ export interface PurchaseOrder extends OwnedEntity, StatusEntity {
   powerapps_entity_name?: string;
 }
 
+// Plant types (migrated from cr7c4_plant)
+export interface Plant extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  plant_type?: string;
+  powerapps_entity_name?: string;
+}
+
+// CarrierInfo types (migrated from cr7c4_carrierinfo)
+export interface CarrierInfo extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  address?: string;
+  phone?: string;
+  powerapps_entity_name?: string;
+}
+
+// SupplierLocation types (migrated from pro_supplier_locations)
+export interface SupplierLocation extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  supplier: number;
+  supplier_name?: string;
+  address?: string;
+  powerapps_entity_name?: string;
+}
+
+// SupplierPlantMapping types (migrated from pro_supplierplantmapping)
+export interface SupplierPlantMapping extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  supplier: number;
+  supplier_name?: string;
+  plant: number;
+  plant_name?: string;
+  powerapps_entity_name?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   count: number;
@@ -177,5 +215,32 @@ export interface PurchaseOrderFormData {
   supplier: number;
   customer_documents?: string;
   supplier_documents?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface PlantFormData {
+  name: string;
+  plant_type?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface CarrierInfoFormData {
+  name: string;
+  address?: string;
+  phone?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface SupplierLocationFormData {
+  name: string;
+  supplier: number;
+  address?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface SupplierPlantMappingFormData {
+  name: string;
+  supplier: number;
+  plant: number;
   status: 'active' | 'inactive';
 }

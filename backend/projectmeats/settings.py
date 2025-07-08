@@ -42,6 +42,9 @@ LOCAL_APPS = [
     'apps.contacts',
     'apps.purchase_orders',
     'apps.plants',
+    'apps.carriers',
+    'apps.supplier_locations',
+    'apps.supplier_plant_mapping',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
