@@ -1,0 +1,3 @@
+INFO 2025-07-08 04:24:22,249 autoreload 3381 140615112736896 Watching for file changes with StatReloader
+WARNING 2025-07-08 04:24:33,404 log 3381 140615045875392 Forbidden: /api/v1/accounts-receivables/
+WARNING 2025-07-08 04:24:33,404 basehttp 3381 140615045875392 "GET /api/v1/accounts-receivables/ HTTP/1.1" 403 58
