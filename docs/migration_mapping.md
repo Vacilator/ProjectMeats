@@ -213,11 +213,37 @@ PowerApps Canvas App        →    React Frontend
 **Django Model**: `SupplierLocation` (planned)  
 **Django App**: `apps.suppliers` (planned)
 
-### 9. Supplier Plant Mapping (🔄 Planned)
+### 9. Supplier Plant Mapping (✅ Completed)
 
 **PowerApps Entity**: `pro_supplierplantmapping`  
-**Django Model**: `SupplierPlantMapping` (planned)  
-**Django App**: `apps.suppliers` (planned)
+**Django Model**: `SupplierPlantMapping`  
+**Django App**: `apps.suppliers`
+
+#### Field Mappings
+
+| PowerApps Field | Type | Django Field | Type | Notes |
+|----------------|------|--------------|------|--------| 
+| `pro_supplierplantmappingid` | Primary Key | `id` | AutoField | Django auto-generated |
+| `pro_supplierplantmapping1` | Text (850) | `name` | CharField(850) | Primary field, required |
+| `Supplier_lookup` | Lookup | `supplier` | ForeignKey(Supplier) | Required relationship |
+| `Customer_lookup` | Lookup | `customer` | ForeignKey(Customer) | Required relationship |
+| `ContactInfo_lookup` | Lookup | `contact_info` | ForeignKey(ContactInfo) | Optional relationship |
+| `documents_reference` | Text (500) | `documents_reference` | CharField(500) | Document references |
+| `statecode` | State | `status` | TextChoices | Active/Inactive |
+| `statuscode` | Status | `status` | TextChoices | Combined with statecode |
+| `createdon` | DateTime | `created_on` | DateTimeField | Auto timestamp |
+| `modifiedon` | DateTime | `modified_on` | DateTimeField | Auto update |
+| `createdby` | Lookup | `created_by` | ForeignKey(User) | User reference |
+| `modifiedby` | Lookup | `modified_by` | ForeignKey(User) | User reference |
+| `ownerid` | Owner | `owner` | ForeignKey(User) | User reference |
+
+#### API Endpoints
+- `GET /api/v1/supplier-plant-mappings/` - List with pagination/filtering
+- `POST /api/v1/supplier-plant-mappings/` - Create new record
+- `GET /api/v1/supplier-plant-mappings/{id}/` - Get specific record  
+- `PUT /api/v1/supplier-plant-mappings/{id}/` - Update record
+- `DELETE /api/v1/supplier-plant-mappings/{id}/` - Soft delete (inactive)
+- `GET /api/v1/supplier-plant-mappings/migration_info/` - PowerApps migration data
 
 ## Relationship Mappings
 
@@ -489,9 +515,9 @@ const EntityScreen: React.FC = () => {
 ### Phase 2: Contact Management (✅ COMPLETED)
 - ✅ Contact Info (`pro_contactinfo`) - Full Django + React implementation with relationships
 
-### Phase 3: Transaction Data (🔄 In Progress)
+### Phase 3: Transaction Data (✅ COMPLETED)
 - ✅ Purchase Orders (`pro_purchaseorder`) - Backend implementation completed
-- 🔄 Supplier Plant Mapping (`pro_supplierplantmapping`)
+- ✅ Supplier Plant Mapping (`pro_supplierplantmapping`) - Backend implementation completed
 
 ### Phase 4: Reference Data (🔄 Planned)
 - 🔄 Plants (`cr7c4_plant`)
@@ -511,13 +537,14 @@ const EntityScreen: React.FC = () => {
 3. **Customers** - Complete backend + frontend
 4. **Contact Info** - Complete backend + frontend
 
-### 🔄 Backend Ready (1/9 entities)
+### 🔄 Backend Ready (2/9 entities)
 5. **Purchase Orders** - Backend implementation completed, frontend pending
+6. **Supplier Plant Mapping** - Backend implementation completed, frontend pending
 
 ### 📊 Implementation Statistics
-- **Backend**: 5 Django apps with 33 passing tests
-- **Frontend**: 4 React screens with API integration (Purchase Orders frontend not yet implemented)
-- **API Endpoints**: 25+ REST endpoints with OpenAPI documentation
+- **Backend**: 6 Django apps with 45 passing tests
+- **Frontend**: 4 React screens with API integration (Purchase Orders & Supplier Plant Mapping frontends not yet implemented)
+- **API Endpoints**: 30+ REST endpoints with OpenAPI documentation
 - **Database**: All migrations applied, relationships established
 - **Admin Interface**: Full Django admin with PowerApps field documentation
 
