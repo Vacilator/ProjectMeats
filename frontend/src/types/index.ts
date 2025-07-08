@@ -35,6 +35,43 @@ export interface AccountsReceivable extends OwnedEntity, StatusEntity {
   powerapps_entity_name?: string;
 }
 
+// Supplier types (migrated from cr7c4_supplier)
+export interface Supplier extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  credit_application_date?: string;
+  delivery_type_profile: boolean;
+  accounts_receivable?: number;
+  accounts_receivable_name?: string;
+  has_credit_application: boolean;
+  has_accounts_receivable: boolean;
+  powerapps_entity_name?: string;
+}
+
+// Customer types (migrated from pro_customer)
+export interface Customer extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  powerapps_entity_name?: string;
+}
+
+// ContactInfo types (migrated from pro_contactinfo)
+export interface ContactInfo extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+  contact_type?: string;
+  customer?: number;
+  customer_name?: string;
+  supplier?: number;
+  supplier_name?: string;
+  has_contact_details: boolean;
+  has_relationships: boolean;
+  powerapps_entity_name?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   count: number;
@@ -81,5 +118,29 @@ export interface AccountsReceivableFormData {
   email?: string;
   phone?: string;
   terms?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface SupplierFormData {
+  name: string;
+  credit_application_date?: string;
+  delivery_type_profile: boolean;
+  accounts_receivable?: number;
+  status: 'active' | 'inactive';
+}
+
+export interface CustomerFormData {
+  name: string;
+  status: 'active' | 'inactive';
+}
+
+export interface ContactInfoFormData {
+  name: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+  contact_type?: string;
+  customer?: number;
+  supplier?: number;
   status: 'active' | 'inactive';
 }
