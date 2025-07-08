@@ -18,11 +18,14 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.contrib.auth.models import User
 
-from .models import Supplier
+from .models import Supplier, SupplierPlantMapping
 from .serializers import (
     SupplierListSerializer,
     SupplierDetailSerializer,
-    SupplierCreateSerializer
+    SupplierCreateSerializer,
+    SupplierPlantMappingListSerializer,
+    SupplierPlantMappingDetailSerializer,
+    SupplierPlantMappingCreateSerializer
 )
 
 
@@ -202,5 +205,151 @@ class SupplierViewSet(viewsets.ModelViewSet):
                 "list": "/api/v1/suppliers/",
                 "detail": "/api/v1/suppliers/{id}/",
                 "migration_info": "/api/v1/suppliers/migration_info/"
+            }
+        }, status=status.HTTP_200_OK)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Supplier Plant Mappings",
+        description="Retrieve a paginated list of all supplier plant mapping records migrated from PowerApps pro_supplierplantmapping.",
+        tags=["Supplier Plant Mappings"]
+    ),
+    create=extend_schema(
+        summary="Create Supplier Plant Mapping",
+        description="Create a new supplier plant mapping record with automatic ownership assignment.",
+        tags=["Supplier Plant Mappings"]
+    ),
+    retrieve=extend_schema(
+        summary="Get Supplier Plant Mapping",
+        description="Retrieve detailed information for a specific supplier plant mapping record.",
+        tags=["Supplier Plant Mappings"]
+    ),
+    update=extend_schema(
+        summary="Update Supplier Plant Mapping",
+        description="Update an existing supplier plant mapping record.",
+        tags=["Supplier Plant Mappings"]
+    ),
+    partial_update=extend_schema(
+        summary="Partially Update Supplier Plant Mapping",
+        description="Partially update an existing supplier plant mapping record.",
+        tags=["Supplier Plant Mappings"]
+    ),
+    destroy=extend_schema(
+        summary="Delete Supplier Plant Mapping",
+        description="Soft delete a supplier plant mapping record (mark as inactive).",
+        tags=["Supplier Plant Mappings"]
+    )
+)
+class SupplierPlantMappingViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Supplier Plant Mapping entities.
+    
+    Provides CRUD operations for SupplierPlantMapping records migrated from 
+    PowerApps pro_supplierplantmapping entity.
+    
+    The entity represents mapping relationships between suppliers, customers, 
+    contacts, plants, and documents.
+    """
+    
+    queryset = SupplierPlantMapping.objects.all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'supplier', 'customer', 'contact_info']
+    search_fields = ['name', 'supplier__name', 'customer__name', 'contact_info__name']
+    ordering_fields = ['name', 'created_on', 'modified_on']
+    ordering = ['-created_on']
+    
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action == 'list':
+            return SupplierPlantMappingListSerializer
+        elif self.action == 'create':
+            return SupplierPlantMappingCreateSerializer
+        else:
+            return SupplierPlantMappingDetailSerializer
+    
+    def perform_create(self, serializer):
+        """Set ownership when creating new records."""
+        user = getattr(self.request, 'user', None) or self._get_or_create_system_user()
+        serializer.save(
+            created_by=user,
+            modified_by=user,
+            owner=user
+        )
+    
+    def perform_update(self, serializer):
+        """Update modified_by when updating records."""
+        user = getattr(self.request, 'user', None) or self._get_or_create_system_user()
+        serializer.save(modified_by=user)
+    
+    def perform_destroy(self, instance):
+        """Soft delete by marking as inactive instead of actual deletion."""
+        instance.status = 'inactive'
+        instance.modified_by = getattr(self.request, 'user', None) or self._get_or_create_system_user()
+        instance.save()
+    
+    def _get_or_create_system_user(self):
+        """Get or create a system user for ownership."""
+        user, created = User.objects.get_or_create(
+            username='system',
+            defaults={
+                'email': 'system@projectmeats.com',
+                'first_name': 'System',
+                'last_name': 'User'
+            }
+        )
+        return user
+    
+    @extend_schema(
+        summary="Get PowerApps Migration Info",
+        description="Get information about the PowerApps to Django migration for this entity.",
+        responses={200: {
+            "type": "object",
+            "properties": {
+                "powerapps_entity_name": {"type": "string"},
+                "django_model_name": {"type": "string"},
+                "total_records": {"type": "integer"},
+                "active_records": {"type": "integer"},
+                "field_mappings": {"type": "object"}
+            }
+        }},
+        tags=["Supplier Plant Mappings"]
+    )
+    @action(detail=False, methods=['get'])
+    def migration_info(self, request):
+        """
+        Endpoint to get PowerApps migration information.
+        Useful for documentation and verification.
+        """
+        queryset = self.get_queryset()
+        total_count = queryset.count()
+        active_count = queryset.filter(status='active').count()
+        
+        field_mappings = {
+            "pro_supplierplantmapping1": "name",
+            "pro_supplierplantmappingid": "id",
+            "Supplier_lookup": "supplier",
+            "Customer_lookup": "customer",
+            "ContactInfo_lookup": "contact_info",
+            "documents_reference": "documents_reference",
+            "statecode/statuscode": "status",
+            "CreatedOn": "created_on",
+            "ModifiedOn": "modified_on",
+            "CreatedBy": "created_by",
+            "ModifiedBy": "modified_by",
+            "OwnerId": "owner"
+        }
+        
+        return Response({
+            "powerapps_entity_name": "pro_supplierplantmapping",
+            "django_model_name": "SupplierPlantMapping",
+            "django_app_name": "suppliers",
+            "total_records": total_count,
+            "active_records": active_count,
+            "field_mappings": field_mappings,
+            "api_endpoints": {
+                "list": "/api/v1/supplier-plant-mappings/",
+                "detail": "/api/v1/supplier-plant-mappings/{id}/",
+                "migration_info": "/api/v1/supplier-plant-mappings/migration_info/"
             }
         }, status=status.HTTP_200_OK)
