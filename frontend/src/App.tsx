@@ -8,6 +8,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
 import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
+import SuppliersScreen from './screens/SuppliersScreen';
+import CustomersScreen from './screens/CustomersScreen';
+import ContactsScreen from './screens/ContactsScreen';
 
 // Global styles
 const GlobalStyle = createGlobalStyle`
@@ -109,7 +112,7 @@ const App: React.FC = () => {
               </NavLink>
               <NavLink href="/suppliers">Suppliers</NavLink>
               <NavLink href="/customers">Customers</NavLink>
-              <NavLink href="/purchase-orders">Purchase Orders</NavLink>
+              <NavLink href="/contacts">Contact Info</NavLink>
             </Navigation>
           </HeaderContent>
         </Header>
@@ -118,9 +121,10 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Navigate to="/accounts-receivables" replace />} />
             <Route path="/accounts-receivables" element={<AccountsReceivablesScreen />} />
-            {/* Future routes for other migrated entities */}
-            <Route path="/suppliers" element={<div style={{padding: '20px'}}>Suppliers (Coming Soon)</div>} />
-            <Route path="/customers" element={<div style={{padding: '20px'}}>Customers (Coming Soon)</div>} />
+            <Route path="/suppliers" element={<SuppliersScreen />} />
+            <Route path="/customers" element={<CustomersScreen />} />
+            <Route path="/contacts" element={<ContactsScreen />} />
+            {/* Future routes for remaining entities */}
             <Route path="/purchase-orders" element={<div style={{padding: '20px'}}>Purchase Orders (Coming Soon)</div>} />
           </Routes>
         </Main>
