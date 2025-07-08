@@ -270,22 +270,36 @@ class SupplierPlantMappingViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set ownership when creating new records."""
-        user = getattr(self.request, 'user', None) or self._get_or_create_system_user()
+        user = getattr(self.request, 'user', None)
+        if user and user.is_authenticated:
+            owner_user = user
+        else:
+            owner_user = self._get_or_create_system_user()
+        
         serializer.save(
-            created_by=user,
-            modified_by=user,
-            owner=user
+            created_by=owner_user,
+            modified_by=owner_user,
+            owner=owner_user
         )
     
     def perform_update(self, serializer):
         """Update modified_by when updating records."""
-        user = getattr(self.request, 'user', None) or self._get_or_create_system_user()
-        serializer.save(modified_by=user)
+        user = getattr(self.request, 'user', None)
+        if user and user.is_authenticated:
+            modified_user = user
+        else:
+            modified_user = self._get_or_create_system_user()
+        
+        serializer.save(modified_by=modified_user)
     
     def perform_destroy(self, instance):
         """Soft delete by marking as inactive instead of actual deletion."""
         instance.status = 'inactive'
-        instance.modified_by = getattr(self.request, 'user', None) or self._get_or_create_system_user()
+        user = getattr(self.request, 'user', None)
+        if user and user.is_authenticated:
+            instance.modified_by = user
+        else:
+            instance.modified_by = self._get_or_create_system_user()
         instance.save()
     
     def _get_or_create_system_user(self):
