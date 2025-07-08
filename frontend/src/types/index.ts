@@ -72,6 +72,27 @@ export interface ContactInfo extends OwnedEntity, StatusEntity {
   powerapps_entity_name?: string;
 }
 
+// PurchaseOrder types (migrated from pro_purchaseorder)
+export interface PurchaseOrder extends OwnedEntity, StatusEntity {
+  id: number;
+  po_number: string;
+  item: string;
+  quantity: number;
+  price_per_unit: string; // Decimal field as string from API
+  total_amount: string; // Computed field as string
+  purchase_date: string;
+  fulfillment_date?: string;
+  customer: number;
+  customer_name: string;
+  supplier: number;
+  supplier_name: string;
+  customer_documents?: string;
+  supplier_documents?: string;
+  is_fulfilled: boolean;
+  has_documents: boolean;
+  powerapps_entity_name?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   count: number;
@@ -142,5 +163,19 @@ export interface ContactInfoFormData {
   contact_type?: string;
   customer?: number;
   supplier?: number;
+  status: 'active' | 'inactive';
+}
+
+export interface PurchaseOrderFormData {
+  po_number: string;
+  item: string;
+  quantity: number;
+  price_per_unit: string;
+  purchase_date: string;
+  fulfillment_date?: string;
+  customer: number;
+  supplier: number;
+  customer_documents?: string;
+  supplier_documents?: string;
   status: 'active' | 'inactive';
 }

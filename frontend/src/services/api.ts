@@ -14,6 +14,8 @@ import {
   CustomerFormData,
   ContactInfo,
   ContactInfoFormData,
+  PurchaseOrder,
+  PurchaseOrderFormData,
   ApiResponse, 
   MigrationInfo,
   FilterOptions 
@@ -261,6 +263,105 @@ export class ContactsService {
   static async getMigrationInfo(): Promise<MigrationInfo> {
     const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
     return response.data;
+  }
+}
+/**
+ * Purchase Orders API service
+ * Migrated from PowerApps pro_purchaseorder entity
+ */
+export class PurchaseOrdersService {
+  private static baseEndpoint = '/purchase-orders';
+
+  /**
+   * Get paginated list of purchase orders
+   */
+  static async getList(
+    page: number = 1, 
+    filters: FilterOptions = {}
+  ): Promise<ApiResponse<PurchaseOrder>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+    });
+
+    // Add filters
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<PurchaseOrder>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Get detailed information for a specific purchase order
+   */
+  static async getDetail(id: number): Promise<PurchaseOrder> {
+    const response: AxiosResponse<PurchaseOrder> = await apiClient.get(
+      `${this.baseEndpoint}/${id}/`
+    );
+    return response.data;
+  }
+
+  /**
+   * Create new purchase order record
+   */
+  static async create(data: PurchaseOrderFormData): Promise<PurchaseOrder> {
+    const response: AxiosResponse<PurchaseOrder> = await apiClient.post(
+      `${this.baseEndpoint}/`,
+      data
+    );
+    return response.data;
+  }
+
+  /**
+   * Update existing purchase order record
+   */
+  static async update(id: number, data: Partial<PurchaseOrderFormData>): Promise<PurchaseOrder> {
+    const response: AxiosResponse<PurchaseOrder> = await apiClient.patch(
+      `${this.baseEndpoint}/${id}/`,
+      data
+    );
+    return response.data;
+  }
+
+  /**
+   * Delete purchase order record (soft delete to inactive)
+   */
+  static async delete(id: number): Promise<void> {
+    await apiClient.delete(`${this.baseEndpoint}/${id}/`);
+  }
+
+  /**
+   * Get PowerApps migration information for this entity
+   */
+  static async getMigrationInfo(): Promise<MigrationInfo> {
+    const response: AxiosResponse<MigrationInfo> = await apiClient.get(
+      `${this.baseEndpoint}/migration_info/`
+    );
+    return response.data;
+  }
+
+  /**
+   * Get customers for dropdowns (helper method)
+   */
+  static async getCustomerOptions(): Promise<{ id: number; name: string }[]> {
+    const response = await CustomersService.getList(1, { status: 'active' });
+    return response.results.map(customer => ({
+      id: customer.id,
+      name: customer.name
+    }));
+  }
+
+  /**
+   * Get suppliers for dropdowns (helper method)
+   */
+  static async getSupplierOptions(): Promise<{ id: number; name: string }[]> {
+    const response = await SuppliersService.getList(1, { status: 'active' });
+    return response.results.map(supplier => ({
+      id: supplier.id,
+      name: supplier.name
+    }));
   }
 }
 

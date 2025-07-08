@@ -11,6 +11,7 @@ import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
 import SuppliersScreen from './screens/SuppliersScreen';
 import CustomersScreen from './screens/CustomersScreen';
 import ContactsScreen from './screens/ContactsScreen';
+import PurchaseOrdersScreen from './screens/PurchaseOrdersScreen';
 
 // Global styles
 const GlobalStyle = createGlobalStyle`
@@ -113,6 +114,7 @@ const App: React.FC = () => {
               <NavLink href="/suppliers">Suppliers</NavLink>
               <NavLink href="/customers">Customers</NavLink>
               <NavLink href="/contacts">Contact Info</NavLink>
+              <NavLink href="/purchase-orders">Purchase Orders</NavLink>
             </Navigation>
           </HeaderContent>
         </Header>
@@ -124,8 +126,8 @@ const App: React.FC = () => {
             <Route path="/suppliers" element={<SuppliersScreen />} />
             <Route path="/customers" element={<CustomersScreen />} />
             <Route path="/contacts" element={<ContactsScreen />} />
+            <Route path="/purchase-orders" element={<PurchaseOrdersScreen />} />
             {/* Future routes for remaining entities */}
-            <Route path="/purchase-orders" element={<div style={{padding: '20px'}}>Purchase Orders (Coming Soon)</div>} />
           </Routes>
         </Main>
         
