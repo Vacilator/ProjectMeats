@@ -5,3 +5,7 @@ INFO 2025-07-08 04:30:50,055 autoreload 3527 140719662182528 Watching for file c
 INFO 2025-07-08 04:31:01,933 basehttp 3527 140719595337408 "GET /api/v1/accounts-receivables/migration_info/ HTTP/1.1" 200 599
 INFO 2025-07-08 04:31:08,021 basehttp 3527 140719595337408 "GET /api/v1/accounts-receivables/ HTTP/1.1" 200 52
 INFO 2025-07-08 04:31:15,618 basehttp 3527 140719595337408 "GET /api/docs/ HTTP/1.1" 200 4649
+WARNING 2025-07-08 05:02:27,196 log 3422 139873135841408 Bad Request: /api/v1/suppliers/
+WARNING 2025-07-08 05:06:05,944 log 3555 139770314428544 Bad Request: /api/v1/customers/
+WARNING 2025-07-08 05:09:33,079 log 3673 140641354518656 Bad Request: /api/v1/customers/
+WARNING 2025-07-08 05:09:35,178 log 3673 140641354518656 Bad Request: /api/v1/suppliers/

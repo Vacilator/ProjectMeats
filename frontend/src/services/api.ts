@@ -8,6 +8,12 @@ import axios, { AxiosResponse } from 'axios';
 import { 
   AccountsReceivable, 
   AccountsReceivableFormData,
+  Supplier,
+  SupplierFormData,
+  Customer,
+  CustomerFormData,
+  ContactInfo,
+  ContactInfoFormData,
   ApiResponse, 
   MigrationInfo,
   FilterOptions 
@@ -125,6 +131,135 @@ export class AccountsReceivablesService {
     const response: AxiosResponse<MigrationInfo> = await apiClient.get(
       `${this.baseEndpoint}/migration_info/`
     );
+    return response.data;
+  }
+}
+
+/**
+ * Suppliers API service
+ * Migrated from PowerApps cr7c4_supplier entity
+ */
+export class SuppliersService {
+  private static baseEndpoint = '/suppliers';
+
+  static async getList(page: number = 1, filters: FilterOptions = {}): Promise<ApiResponse<Supplier>> {
+    const params = new URLSearchParams({ page: page.toString() });
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<Supplier>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  static async getDetail(id: number): Promise<Supplier> {
+    const response: AxiosResponse<Supplier> = await apiClient.get(`${this.baseEndpoint}/${id}/`);
+    return response.data;
+  }
+
+  static async create(data: SupplierFormData): Promise<Supplier> {
+    const response: AxiosResponse<Supplier> = await apiClient.post(`${this.baseEndpoint}/`, data);
+    return response.data;
+  }
+
+  static async update(id: number, data: Partial<SupplierFormData>): Promise<Supplier> {
+    const response: AxiosResponse<Supplier> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
+    return response.data;
+  }
+
+  static async delete(id: number): Promise<void> {
+    await apiClient.delete(`${this.baseEndpoint}/${id}/`);
+  }
+
+  static async getMigrationInfo(): Promise<MigrationInfo> {
+    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
+    return response.data;
+  }
+}
+
+/**
+ * Customers API service
+ * Migrated from PowerApps pro_customer entity
+ */
+export class CustomersService {
+  private static baseEndpoint = '/customers';
+
+  static async getList(page: number = 1, filters: FilterOptions = {}): Promise<ApiResponse<Customer>> {
+    const params = new URLSearchParams({ page: page.toString() });
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<Customer>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  static async getDetail(id: number): Promise<Customer> {
+    const response: AxiosResponse<Customer> = await apiClient.get(`${this.baseEndpoint}/${id}/`);
+    return response.data;
+  }
+
+  static async create(data: CustomerFormData): Promise<Customer> {
+    const response: AxiosResponse<Customer> = await apiClient.post(`${this.baseEndpoint}/`, data);
+    return response.data;
+  }
+
+  static async update(id: number, data: Partial<CustomerFormData>): Promise<Customer> {
+    const response: AxiosResponse<Customer> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
+    return response.data;
+  }
+
+  static async delete(id: number): Promise<void> {
+    await apiClient.delete(`${this.baseEndpoint}/${id}/`);
+  }
+
+  static async getMigrationInfo(): Promise<MigrationInfo> {
+    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
+    return response.data;
+  }
+}
+
+/**
+ * Contact Information API service
+ * Migrated from PowerApps pro_contactinfo entity
+ */
+export class ContactsService {
+  private static baseEndpoint = '/contacts';
+
+  static async getList(page: number = 1, filters: FilterOptions = {}): Promise<ApiResponse<ContactInfo>> {
+    const params = new URLSearchParams({ page: page.toString() });
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<ContactInfo>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  static async getDetail(id: number): Promise<ContactInfo> {
+    const response: AxiosResponse<ContactInfo> = await apiClient.get(`${this.baseEndpoint}/${id}/`);
+    return response.data;
+  }
+
+  static async create(data: ContactInfoFormData): Promise<ContactInfo> {
+    const response: AxiosResponse<ContactInfo> = await apiClient.post(`${this.baseEndpoint}/`, data);
+    return response.data;
+  }
+
+  static async update(id: number, data: Partial<ContactInfoFormData>): Promise<ContactInfo> {
+    const response: AxiosResponse<ContactInfo> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
+    return response.data;
+  }
+
+  static async delete(id: number): Promise<void> {
+    await apiClient.delete(`${this.baseEndpoint}/${id}/`);
+  }
+
+  static async getMigrationInfo(): Promise<MigrationInfo> {
+    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
     return response.data;
   }
 }
