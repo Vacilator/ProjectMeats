@@ -150,11 +150,50 @@ PowerApps Canvas App        →    React Frontend
 - `DELETE /api/v1/contacts/{id}/` - Soft delete (inactive)
 - `GET /api/v1/contacts/migration_info/` - PowerApps migration data
 
-### 5. Purchase Orders (🔄 Planned)
+### 5. Purchase Orders (✅ Completed)
 
 **PowerApps Entity**: `pro_purchaseorder`  
-**Django Model**: `PurchaseOrder` (planned)  
-**Django App**: `apps.purchase_orders` (planned)
+**Django Model**: `PurchaseOrder`  
+**Django App**: `apps.purchase_orders`
+
+#### Field Mappings
+
+| PowerApps Field | Type | Django Field | Type | Notes |
+|----------------|------|--------------|------|--------|
+| `pro_purchaseorderid` | Primary Key | `id` | AutoField | Django auto-generated |
+| `pro_po_number` | Text (100) | `po_number` | CharField(100) | Purchase order number, display field |
+| `pro_item` | Text (500) | `item` | CharField(500) | Item description |
+| `pro_quantity` | Integer | `quantity` | IntegerField | Quantity ordered, min value 1 |
+| `pro_priceperunit` | Money | `price_per_unit` | DecimalField(10,2) | Unit price, min value 0.01 |
+| `pro_purchasedate` | DateTime | `purchase_date` | DateTimeField | Date of purchase |
+| `pro_fulfillmentdate` | DateTime | `fulfillment_date` | DateTimeField | Expected fulfillment date, optional |
+| `pro_customer_lookup` | Lookup | `customer` | ForeignKey(Customer) | Customer relationship |
+| `pro_supplier_lookup` | Lookup | `supplier` | ForeignKey(Supplier) | Supplier relationship |
+| `pro_customerdocuments` | Text (500) | `customer_documents` | CharField(500) | Customer document references, optional |
+| `pro_supplierdocuments` | Text (500) | `supplier_documents` | CharField(500) | Supplier document references, optional |
+| `statecode` | State | `status` | TextChoices | Active/Inactive |
+| `statuscode` | Status | `status` | TextChoices | Combined with statecode |
+| `createdon` | DateTime | `created_on` | DateTimeField | Auto timestamp |
+| `modifiedon` | DateTime | `modified_on` | DateTimeField | Auto update |
+| `createdby` | Lookup | `created_by` | ForeignKey(User) | User reference |
+| `modifiedby` | Lookup | `modified_by` | ForeignKey(User) | User reference |
+| `ownerid` | Owner | `owner` | ForeignKey(User) | User reference |
+
+#### Computed Properties
+
+| Property | Calculation | Notes |
+|----------|-------------|--------|
+| `total_amount` | `quantity * price_per_unit` | Calculated total order value |
+| `is_fulfilled` | `fulfillment_date <= current_date` | Boolean indicating if order is past fulfillment date |
+| `has_documents` | `customer_documents OR supplier_documents` | Boolean indicating if any documents are referenced |
+
+#### API Endpoints
+- `GET /api/v1/purchase-orders/` - List with pagination/filtering
+- `POST /api/v1/purchase-orders/` - Create new record  
+- `GET /api/v1/purchase-orders/{id}/` - Get specific record
+- `PUT /api/v1/purchase-orders/{id}/` - Update record
+- `DELETE /api/v1/purchase-orders/{id}/` - Soft delete (inactive)
+- `GET /api/v1/purchase-orders/migration_info/` - PowerApps migration data
 
 ### 6. Plants (🔄 Planned)
 
@@ -450,8 +489,8 @@ const EntityScreen: React.FC = () => {
 ### Phase 2: Contact Management (✅ COMPLETED)
 - ✅ Contact Info (`pro_contactinfo`) - Full Django + React implementation with relationships
 
-### Phase 3: Transaction Data (🔄 Planned)
-- 🔄 Purchase Orders (`pro_purchaseorder`)
+### Phase 3: Transaction Data (🔄 In Progress)
+- ✅ Purchase Orders (`pro_purchaseorder`) - Backend implementation completed
 - 🔄 Supplier Plant Mapping (`pro_supplierplantmapping`)
 
 ### Phase 4: Reference Data (🔄 Planned)
@@ -466,16 +505,19 @@ const EntityScreen: React.FC = () => {
 
 ## Current Migration Status
 
-### ✅ Completed (4/9 entities)
+### ✅ Completed (4/9 entities - Backend Only)
 1. **Accounts Receivables** - Complete backend + frontend
 2. **Suppliers** - Complete backend + frontend  
 3. **Customers** - Complete backend + frontend
 4. **Contact Info** - Complete backend + frontend
 
+### 🔄 Backend Ready (1/9 entities)
+5. **Purchase Orders** - Backend implementation completed, frontend pending
+
 ### 📊 Implementation Statistics
-- **Backend**: 4 Django apps with 27 passing tests
-- **Frontend**: 4 React screens with API integration
-- **API Endpoints**: 20+ REST endpoints with OpenAPI documentation
+- **Backend**: 5 Django apps with 33 passing tests
+- **Frontend**: 4 React screens with API integration (Purchase Orders frontend not yet implemented)
+- **API Endpoints**: 25+ REST endpoints with OpenAPI documentation
 - **Database**: All migrations applied, relationships established
 - **Admin Interface**: Full Django admin with PowerApps field documentation
 
