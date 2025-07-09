@@ -124,6 +124,24 @@ export interface CarrierInfo extends OwnedEntity, StatusEntity {
   powerapps_entity_name?: string;
 }
 
+// Plant types (migrated from cr7c4_plant)
+export interface Plant extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  location?: string;
+  plant_type?: string;
+  release_number?: string;
+  load_pickup_requirements?: string;
+  load_pickup_requirements_list?: string[];
+  storage?: string;
+  storage_list?: string[];
+  supplier?: number;
+  supplier_name?: string;
+  has_location: boolean;
+  has_supplier: boolean;
+  powerapps_entity_name?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   count: number;
@@ -225,6 +243,17 @@ export interface CarrierInfoFormData {
   address?: string;
   contact_name?: string;
   release_number?: string;
+  supplier?: number;
+  status: 'active' | 'inactive';
+}
+
+export interface PlantFormData {
+  name: string;
+  location?: string;
+  plant_type?: string;
+  release_number?: string;
+  load_pickup_requirements?: string;
+  storage?: string;
   supplier?: number;
   status: 'active' | 'inactive';
 }
