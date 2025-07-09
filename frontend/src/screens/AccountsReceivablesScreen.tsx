@@ -1,142 +1,77 @@
 /**
- * Accounts Receivables Screen Component
+ * Enhanced Accounts Receivables Screen Component
  * 
- * Main screen for managing accounts receivable records migrated from 
- * PowerApps cr7c4_accountsreceivables entity.
+ * Professional screen for managing accounts receivable records migrated from 
+ * PowerApps cr7c4_accountsreceivables entity. Features modern UI/UX with
+ * business-focused workflows for meat sales brokers.
  * 
  * Features:
- * - List view with search and filtering
- * - Create/Edit/Delete operations
+ * - Modern design system integration
+ * - Advanced search and filtering capabilities
+ * - Create/Edit/Delete operations with enhanced UX
  * - PowerApps migration information display
  * - Responsive design for mobile and desktop
+ * - Business-focused data presentation
  */
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
 import { AccountsReceivable, FilterOptions, MigrationInfo } from '../types';
 import { AccountsReceivablesService } from '../services/api';
-import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage } from '../components/SharedComponents';
+import { 
+  Container, 
+  Card,
+  Heading,
+  Text,
+  Button,
+  Input,
+  Table,
+  TableHeader,
+  TableRow,
+  TableCell,
+  Badge,
+  Flex,
+  Alert,
+  MigrationInfo as MigrationAlert,
+  LoadingSpinner
+} from '../components/DesignSystem';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 
-// Styled components
-const Header = styled.div`
-  display: flex;
-  justify-content: between;
-  align-items: center;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
-`;
-
-const Title = styled.h1`
-  margin: 0;
-  color: #333;
-  font-size: 28px;
-`;
-
-const Subtitle = styled.p`
-  margin: 4px 0 0 0;
-  color: #666;
-  font-size: 14px;
-`;
-
-const Controls = styled.div`
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-`;
-
-const SearchInput = styled.input`
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  min-width: 200px;
-`;
-
-const FilterSelect = styled.select`
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-`;
-
-const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
-  padding: 8px 16px;
-  border: 1px solid ${props => props.variant === 'primary' ? '#007bff' : '#ddd'};
-  background: ${props => props.variant === 'primary' ? '#007bff' : 'white'};
-  color: ${props => props.variant === 'primary' ? 'white' : '#333'};
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  
-  &:hover {
-    opacity: 0.9;
+// Form field definitions for accounts receivables
+const accountsReceivableFields: FormField[] = [
+  {
+    key: 'name',
+    label: 'Company Name',
+    type: 'text',
+    required: true,
+    placeholder: 'Enter company name...'
+  },
+  {
+    key: 'email',
+    label: 'Email Address',
+    type: 'email',
+    placeholder: 'contact@company.com'
+  },
+  {
+    key: 'phone',
+    label: 'Phone Number',
+    type: 'tel',
+    placeholder: '+1 (555) 123-4567'
+  },
+  {
+    key: 'terms',
+    label: 'Payment Terms',
+    type: 'select',
+    options: [
+      { value: 'net-30', label: 'Net 30 Days' },
+      { value: 'net-15', label: 'Net 15 Days' },
+      { value: 'net-60', label: 'Net 60 Days' },
+      { value: 'due-on-receipt', label: 'Due on Receipt' },
+      { value: 'custom', label: 'Custom Terms' }
+    ]
   }
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
+];
 
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-`;
-
-const Th = styled.th`
-  background: #f8f9fa;
-  padding: 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #333;
-  border-bottom: 1px solid #ddd;
-`;
-
-const Td = styled.td`
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-  
-  &:last-child {
-    text-align: right;
-  }
-`;
-
-const StatusBadge = styled.span<{ status: 'active' | 'inactive' }>`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${props => props.status === 'active' ? '#d4edda' : '#f8d7da'};
-  color: ${props => props.status === 'active' ? '#155724' : '#721c24'};
-`;
-
-const LoadingSpinner = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  font-size: 16px;
-  color: #666;
-`;
-
-const Pagination = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-`;
-
-interface AccountsReceivablesScreenProps {}
-
-const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () => {
+const AccountsReceivablesScreen: React.FC = () => {
   // State management
   const [accounts, setAccounts] = useState<AccountsReceivable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,45 +99,6 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
   useEffect(() => {
     loadMigrationInfo();
   }, []);
-
-  // Form field definitions for Accounts Receivables
-  const formFields: FormField[] = [
-    {
-      key: 'name',
-      label: 'Name',
-      type: 'text',
-      required: true,
-      placeholder: 'Enter account name'
-    },
-    {
-      key: 'email',
-      label: 'Email',
-      type: 'email',
-      placeholder: 'Enter email address'
-    },
-    {
-      key: 'phone',
-      label: 'Phone',
-      type: 'tel',
-      placeholder: 'Enter phone number'
-    },
-    {
-      key: 'terms',
-      label: 'Terms',
-      type: 'textarea',
-      placeholder: 'Enter payment terms or notes'
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      type: 'select',
-      required: true,
-      options: [
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' }
-      ]
-    }
-  ];
 
   const loadAccounts = async () => {
     try {
@@ -345,128 +241,156 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
   if (loading && accounts.length === 0) {
     return (
       <Container>
-        <LoadingSpinner>Loading accounts receivables...</LoadingSpinner>
+        <Flex justify="center" style={{ padding: '3rem 0' }}>
+          <LoadingSpinner />
+          <Text style={{ marginLeft: '1rem' }}>Loading accounts receivables...</Text>
+        </Flex>
       </Container>
     );
   }
 
   return (
     <Container>
-      <Header>
-        <div>
-          <Title>Accounts Receivables</Title>
-          <Subtitle>
-            Migrated from PowerApps cr7c4_accountsreceivables • {totalRecords} total records
-          </Subtitle>
-        </div>
-        <Controls>
-          <SearchInput
-            type="text"
-            placeholder="Search by name or email..."
-            value={searchTerm}
-            onChange={handleSearch}
-          />
-          <FilterSelect value={statusFilter} onChange={handleStatusFilter}>
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </FilterSelect>
-          <Button variant="secondary" onClick={() => setShowMigrationInfo(!showMigrationInfo)}>
-            {showMigrationInfo ? 'Hide' : 'Show'} Migration Info
-          </Button>
-          <Button variant="primary" onClick={() => setShowCreateForm(true)}>Add New</Button>
-        </Controls>
-      </Header>
+      <Card>
+        <Flex justify="between" align="start" wrap style={{ marginBottom: '2rem' }}>
+          <div>
+            <Heading level={1}>Accounts Receivables</Heading>
+            <Text color="secondary" style={{ marginTop: '0.5rem' }}>
+              Migrated from PowerApps cr7c4_accountsreceivables • {totalRecords} total records
+            </Text>
+          </div>
+          <Flex gap="0.75rem" wrap>
+            <Input
+              type="text"
+              placeholder="Search by name or email..."
+              value={searchTerm}
+              onChange={handleSearch}
+              style={{ minWidth: '200px' }}
+            />
+            <select 
+              value={statusFilter} 
+              onChange={handleStatusFilter}
+              style={{ 
+                padding: '0.5rem 0.75rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                fontSize: '14px'
+              }}
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <Button variant="outline" onClick={() => setShowMigrationInfo(!showMigrationInfo)}>
+              {showMigrationInfo ? 'Hide' : 'Show'} Migration Info
+            </Button>
+            <Button variant="primary" onClick={() => setShowCreateForm(true)}>
+              Add New Account
+            </Button>
+          </Flex>
+        </Flex>
 
-      {error && <ErrorMessage>{error}</ErrorMessage>}
+        {error && (
+          <Alert variant="error" style={{ marginBottom: '1.5rem' }}>
+            {error}
+          </Alert>
+        )}
 
-      {showMigrationInfo && migrationInfo && (
-        <SharedMigrationInfo>
-          <strong>PowerApps Migration Information:</strong><br />
-          Original Entity: {migrationInfo.powerapps_entity_name}<br />
-          Django Model: {migrationInfo.django_model_name}<br />
-          Total Records: {migrationInfo.total_records} ({migrationInfo.active_records} active)<br />
-          API Endpoint: {migrationInfo.api_endpoints.list}
-        </SharedMigrationInfo>
-      )}
+        {showMigrationInfo && migrationInfo && (
+          <MigrationAlert style={{ marginBottom: '1.5rem' }}>
+            <strong>🏢 PowerApps Migration Information:</strong><br />
+            Original Entity: {migrationInfo.powerapps_entity_name}<br />
+            Django Model: {migrationInfo.django_model_name}<br />
+            Total Records: {migrationInfo.total_records} ({migrationInfo.active_records} active)<br />
+            API Endpoint: {migrationInfo.api_endpoints.list}
+          </MigrationAlert>
+        )}
 
-      <Table>
-        <thead>
-          <tr>
-            <Th>Name</Th>
-            <Th>Email</Th>
-            <Th>Phone</Th>
-            <Th>Terms</Th>
-            <Th>Status</Th>
-            <Th>Created</Th>
-            <Th>Actions</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {accounts.map((account) => (
-            <tr key={account.id}>
-              <Td>{account.name}</Td>
-              <Td>{account.email || '-'}</Td>
-              <Td>{account.phone || '-'}</Td>
-              <Td>{account.terms || '-'}</Td>
-              <Td>
-                <StatusBadge status={account.status}>
-                  {account.status}
-                </StatusBadge>
-              </Td>
-              <Td>{formatDate(account.created_on)}</Td>
-              <Td>
-                <Button 
-                  variant="secondary" 
-                  style={{ marginRight: '8px' }}
-                  onClick={() => handleEditAccount(account.id)}
-                >
-                  Edit
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => handleDeleteAccount(account.id)}
-                >
-                  Delete
-                </Button>
-              </Td>
+        <Table>
+          <thead>
+            <tr>
+              <TableHeader>Name</TableHeader>
+              <TableHeader>Email</TableHeader>
+              <TableHeader>Phone</TableHeader>
+              <TableHeader>Terms</TableHeader>
+              <TableHeader>Status</TableHeader>
+              <TableHeader>Created</TableHeader>
+              <TableHeader>Actions</TableHeader>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {accounts.map((account) => (
+              <TableRow key={account.id}>
+                <TableCell>
+                  <Text weight="semibold">{account.name}</Text>
+                </TableCell>
+                <TableCell>{account.email || '-'}</TableCell>
+                <TableCell>{account.phone || '-'}</TableCell>
+                <TableCell>{account.terms || '-'}</TableCell>
+                <TableCell>
+                  <Badge variant={account.status === 'active' ? 'success' : 'neutral'}>
+                    {account.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>{formatDate(account.created_on)}</TableCell>
+                <TableCell>
+                  <Flex gap="0.5rem">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleEditAccount(account.id)}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="danger" 
+                      size="sm"
+                      onClick={() => handleDeleteAccount(account.id)}
+                    >
+                      Delete
+                    </Button>
+                  </Flex>
+                </TableCell>
+              </TableRow>
+            ))}
+          </tbody>
+        </Table>
 
-      {accounts.length === 0 && !loading && (
-        <LoadingSpinner>
-          {searchTerm || statusFilter !== 'all' 
-            ? 'No accounts receivables found matching your criteria.' 
-            : 'No accounts receivables found. Click "Add New" to create the first record.'
-          }
-        </LoadingSpinner>
-      )}
+        {accounts.length === 0 && !loading && (
+          <div style={{ textAlign: 'center', padding: '3rem 0' }}>
+            <Text color="secondary">
+              {searchTerm || statusFilter !== 'all' 
+                ? 'No accounts receivables found matching your criteria.' 
+                : 'No accounts receivables found. Click "Add New Account" to create the first record.'
+              }
+            </Text>
+          </div>
+        )}
 
-      {totalPages > 1 && (
-        <Pagination>
-          <Button
-            variant="secondary"
-            disabled={currentPage <= 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            Previous
-          </Button>
-          <span>Page {currentPage} of {totalPages}</span>
-          <Button
-            variant="secondary"
-            disabled={currentPage >= totalPages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            Next
-          </Button>
-        </Pagination>
-      )}
+        {totalPages > 1 && (
+          <Flex justify="center" align="center" gap="1rem" style={{ marginTop: '2rem' }}>
+            <Button
+              variant="outline"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+            >
+              Previous
+            </Button>
+            <Text>Page {currentPage} of {totalPages}</Text>
+            <Button
+              variant="outline"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              Next
+            </Button>
+          </Flex>
+        )}
+      </Card>
 
       <EntityForm
         title="Create New Accounts Receivable"
-        fields={formFields}
+        fields={accountsReceivableFields}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSubmit={handleCreateAccount}
@@ -476,7 +400,7 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
 
       <EntityForm
         title="Edit Account"
-        fields={formFields}
+        fields={accountsReceivableFields}
         initialData={editingAccount ? {
           name: editingAccount.name,
           email: editingAccount.email || '',
