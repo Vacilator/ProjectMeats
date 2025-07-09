@@ -18,14 +18,17 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.contrib.auth.models import User
 
-from .models import Supplier, SupplierPlantMapping
+from .models import Supplier, SupplierPlantMapping, SupplierLocation
 from .serializers import (
     SupplierListSerializer,
     SupplierDetailSerializer,
     SupplierCreateSerializer,
     SupplierPlantMappingListSerializer,
     SupplierPlantMappingDetailSerializer,
-    SupplierPlantMappingCreateSerializer
+    SupplierPlantMappingCreateSerializer,
+    SupplierLocationListSerializer,
+    SupplierLocationDetailSerializer,
+    SupplierLocationCreateSerializer
 )
 
 
@@ -365,5 +368,155 @@ class SupplierPlantMappingViewSet(viewsets.ModelViewSet):
                 "list": "/api/v1/supplier-plant-mappings/",
                 "detail": "/api/v1/supplier-plant-mappings/{id}/",
                 "migration_info": "/api/v1/supplier-plant-mappings/migration_info/"
+            }
+        }, status=status.HTTP_200_OK)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Supplier Locations",
+        description="Retrieve a paginated list of all supplier location records migrated from PowerApps pro_supplier_locations.",
+        tags=["Supplier Locations"]
+    ),
+    create=extend_schema(
+        summary="Create Supplier Location",
+        description="Create a new supplier location record with automatic ownership assignment.",
+        tags=["Supplier Locations"]
+    ),
+    retrieve=extend_schema(
+        summary="Get Supplier Location",
+        description="Retrieve detailed information for a specific supplier location record.",
+        tags=["Supplier Locations"]
+    ),
+    update=extend_schema(
+        summary="Update Supplier Location",
+        description="Update an existing supplier location record.",
+        tags=["Supplier Locations"]
+    ),
+    destroy=extend_schema(
+        summary="Delete Supplier Location",
+        description="Soft delete a supplier location record (sets status to inactive).",
+        tags=["Supplier Locations"]
+    )
+)
+class SupplierLocationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Supplier Location records.
+    
+    Provides CRUD operations for supplier locations migrated from
+    PowerApps pro_supplier_locations entity.
+    
+    Features:
+    - Comprehensive filtering and search
+    - PowerApps migration information endpoint
+    - Automatic ownership assignment
+    - Soft delete (status=inactive)
+    """
+    
+    def get_queryset(self):
+        """Return queryset with optimized database queries."""
+        return SupplierLocation.objects.select_related(
+            'supplier',
+            'created_by',
+            'modified_by',
+            'owner'
+        ).all()
+    
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action == 'list':
+            return SupplierLocationListSerializer
+        elif self.action == 'create':
+            return SupplierLocationCreateSerializer
+        else:
+            return SupplierLocationDetailSerializer
+    
+    # Filtering and search configuration
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'location_type', 'supplier', 'city', 'state', 'country']
+    search_fields = ['name', 'address', 'city', 'contact_name', 'supplier__name']
+    ordering_fields = ['name', 'created_on', 'modified_on', 'city', 'supplier__name']
+    ordering = ['supplier__name', 'name']
+    
+    def perform_create(self, serializer):
+        """Set ownership fields when creating new supplier location."""
+        # In a real application, you'd use the authenticated user
+        # For now, we'll use the first available user or create a default
+        try:
+            default_user = User.objects.first()
+            if not default_user:
+                default_user = User.objects.create_user(
+                    username='system',
+                    email='system@projectmeats.com'
+                )
+        except Exception:
+            default_user = None
+            
+        serializer.save(
+            created_by=default_user,
+            modified_by=default_user,
+            owner=default_user
+        )
+    
+    def perform_update(self, serializer):
+        """Update modified_by field when updating supplier location."""
+        try:
+            default_user = User.objects.first()
+        except Exception:
+            default_user = None
+            
+        serializer.save(modified_by=default_user)
+    
+    def perform_destroy(self, instance):
+        """Soft delete by setting status to inactive instead of actual deletion."""
+        instance.status = 'inactive'
+        instance.save(update_fields=['status'])
+    
+    @action(detail=False, methods=['get'])
+    def migration_info(self, request):
+        """
+        PowerApps migration information endpoint.
+        
+        Returns metadata about the migration from PowerApps pro_supplier_locations
+        to Django SupplierLocation model.
+        """
+        total_count = SupplierLocation.objects.count()
+        active_count = SupplierLocation.objects.filter(status='active').count()
+        
+        # Field mappings from PowerApps to Django
+        field_mappings = {
+            "pro_supplier_locationsid": "id",
+            "name": "name",
+            "pro_supplier_lookup": "supplier",
+            "address": "address",
+            "city": "city", 
+            "state": "state",
+            "postal_code": "postal_code",
+            "country": "country",
+            "location_type": "location_type",
+            "contact_name": "contact_name",
+            "contact_phone": "contact_phone",
+            "contact_email": "contact_email",
+            "notes": "notes",
+            "statecode": "status",
+            "statuscode": "status",
+            "CreatedOn": "created_on",
+            "ModifiedOn": "modified_on",
+            "CreatedBy": "created_by",
+            "ModifiedBy": "modified_by",
+            "OwnerId": "owner"
+        }
+        
+        return Response({
+            "powerapps_entity_name": "pro_supplier_locations",
+            "django_model_name": "SupplierLocation",
+            "django_app_name": "suppliers",
+            "total_records": total_count,
+            "active_records": active_count,
+            "field_mappings": field_mappings,
+            "api_endpoints": {
+                "list": "/api/v1/supplier-locations/",
+                "detail": "/api/v1/supplier-locations/{id}/",
+                "migration_info": "/api/v1/supplier-locations/migration_info/"
             }
         }, status=status.HTTP_200_OK)
