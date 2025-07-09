@@ -127,6 +127,7 @@ const SuppliersScreen: React.FC = () => {
   useEffect(() => {
     loadSuppliers();
     loadMigrationInfo();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load contacts for all suppliers
@@ -134,6 +135,7 @@ const SuppliersScreen: React.FC = () => {
     if (suppliers.length > 0) {
       loadSupplierContacts();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suppliers]);
 
   // Form field definitions for Suppliers

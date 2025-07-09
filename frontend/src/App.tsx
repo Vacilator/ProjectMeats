@@ -10,10 +10,8 @@ import styled, { createGlobalStyle } from 'styled-components';
 import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
 import SuppliersScreen from './screens/SuppliersScreen';
 import CustomersScreen from './screens/CustomersScreen';
-import ContactsScreen from './screens/ContactsScreen';
 import PurchaseOrdersScreen from './screens/PurchaseOrdersScreen';
-import SupplierPlantMappingsScreen from './screens/SupplierPlantMappingsScreen';
-import CarrierInfoScreen from './screens/CarrierInfoScreen';
+// Hidden screens as requested: ContactsScreen, SupplierPlantMappingsScreen, CarrierInfoScreen
 
 // Global styles
 const GlobalStyle = createGlobalStyle`
@@ -115,10 +113,7 @@ const App: React.FC = () => {
               </NavLink>
               <NavLink href="/suppliers">Suppliers</NavLink>
               <NavLink href="/customers">Customers</NavLink>
-              <NavLink href="/contacts">Contact Info</NavLink>
               <NavLink href="/purchase-orders">Purchase Orders</NavLink>
-              <NavLink href="/supplier-plant-mappings">Supplier Plant Mappings</NavLink>
-              <NavLink href="/carrier-info">Carrier Info</NavLink>
             </Navigation>
           </HeaderContent>
         </Header>
@@ -129,10 +124,7 @@ const App: React.FC = () => {
             <Route path="/accounts-receivables" element={<AccountsReceivablesScreen />} />
             <Route path="/suppliers" element={<SuppliersScreen />} />
             <Route path="/customers" element={<CustomersScreen />} />
-            <Route path="/contacts" element={<ContactsScreen />} />
             <Route path="/purchase-orders" element={<PurchaseOrdersScreen />} />
-            <Route path="/supplier-plant-mappings" element={<SupplierPlantMappingsScreen />} />
-            <Route path="/carrier-info" element={<CarrierInfoScreen />} />
           </Routes>
         </Main>
         
