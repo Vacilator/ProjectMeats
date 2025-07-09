@@ -12,10 +12,11 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Customer, FilterOptions } from '../types';
+import { Customer, FilterOptions, ContactInfo } from '../types';
 import type { MigrationInfo } from '../types';
-import { CustomersService } from '../services/api';
+import { CustomersService, ContactsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
+import EntityForm, { FormField } from '../components/EntityForm';
 
 // Reuse styled components from SuppliersScreen for consistency
 const Header = styled.div`
@@ -116,11 +117,94 @@ const CustomersScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customerContacts, setCustomerContacts] = useState<Record<number, ContactInfo[]>>({});
 
   useEffect(() => {
     loadCustomers();
     loadMigrationInfo();
   }, []);
+
+  // Load contacts for all customers
+  useEffect(() => {
+    if (customers.length > 0) {
+      loadCustomerContacts();
+    }
+  }, [customers]);
+
+  // Form field definitions for Customers
+  const customerFormFields: FormField[] = [
+    {
+      key: 'name',
+      label: 'Customer Name',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter customer name'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' }
+      ]
+    }
+  ];
+
+  // Form field definitions for Contact Info (for customers)
+  const contactFormFields: FormField[] = [
+    {
+      key: 'name',
+      label: 'Contact Name',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter contact person name'
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      type: 'email',
+      placeholder: 'Enter email address'
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      type: 'tel',
+      placeholder: 'Enter phone number'
+    },
+    {
+      key: 'position',
+      label: 'Position',
+      type: 'text',
+      placeholder: 'Enter job title/position'
+    },
+    {
+      key: 'contact_type',
+      label: 'Contact Type',
+      type: 'select',
+      options: [
+        { value: 'primary', label: 'Primary Contact' },
+        { value: 'billing', label: 'Billing Contact' },
+        { value: 'technical', label: 'Technical Contact' },
+        { value: 'sales', label: 'Sales Contact' }
+      ]
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' }
+      ]
+    }
+  ];
 
   const loadCustomers = async () => {
     try {
@@ -145,6 +229,33 @@ const CustomersScreen: React.FC = () => {
     }
   };
 
+  const loadCustomerContacts = async () => {
+    try {
+      // Load all contacts and filter by customer ID
+      const response = await ContactsService.getList(1, {});
+      const contactsMap: Record<number, ContactInfo[]> = {};
+      
+      // Initialize empty arrays for all customers
+      customers.forEach(customer => {
+        contactsMap[customer.id] = [];
+      });
+      
+      // Group contacts by customer ID
+      response.results.forEach(contact => {
+        if (contact.customer) {
+          if (!contactsMap[contact.customer]) {
+            contactsMap[contact.customer] = [];
+          }
+          contactsMap[contact.customer].push(contact);
+        }
+      });
+      
+      setCustomerContacts(contactsMap);
+    } catch (err) {
+      console.error('Error loading customer contacts:', err);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     loadCustomers();
@@ -160,6 +271,70 @@ const CustomersScreen: React.FC = () => {
         console.error('Error deleting customer:', err);
       }
     }
+  };
+
+  // Form handling functions
+  const handleCreateCustomer = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmitting(true);
+      // Type-safe conversion
+      const customerData = {
+        name: formData.name as string,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await CustomersService.create(customerData);
+      setShowCreateForm(false);
+      loadCustomers(); // Reload the list to show new customer
+      setError(null);
+    } catch (err) {
+      setError('Failed to create customer. Please try again.');
+      console.error('Error creating customer:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateContact = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmitting(true);
+      // Type-safe conversion with customer ID
+      const contactData = {
+        name: formData.name as string,
+        email: formData.email as string || undefined,
+        phone: formData.phone as string || undefined,
+        position: formData.position as string || undefined,
+        contact_type: formData.contact_type as string || undefined,
+        customer: selectedCustomerId as number,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await ContactsService.create(contactData);
+      setShowContactForm(false);
+      setSelectedCustomerId(null);
+      loadCustomerContacts(); // Reload contacts to show new contact
+      setError(null);
+    } catch (err) {
+      setError('Failed to create contact. Please try again.');
+      console.error('Error creating contact:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async (formData: Record<string, any>) => {
+    console.log('Saving customer draft:', formData);
+    localStorage.setItem('customerDraft', JSON.stringify(formData));
+  };
+
+  const handleSaveContactDraft = async (formData: Record<string, any>) => {
+    console.log('Saving contact draft:', formData);
+    localStorage.setItem('contactDraft', JSON.stringify(formData));
+  };
+
+  const handleAddContact = (customerId: number) => {
+    setSelectedCustomerId(customerId);
+    setShowContactForm(true);
   };
 
   if (loading) {
@@ -189,7 +364,7 @@ const CustomersScreen: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </form>
-          <Button variant="primary">Add Customer</Button>
+          <Button variant="primary" onClick={() => setShowCreateForm(true)}>Add Customer</Button>
           <Button variant="secondary">Export</Button>
         </Controls>
       </Header>
@@ -208,6 +383,7 @@ const CustomersScreen: React.FC = () => {
           <tr>
             <TableHeader>Name</TableHeader>
             <TableHeader>Status</TableHeader>
+            <TableHeader>Contacts</TableHeader>
             <TableHeader>Created</TableHeader>
             <TableHeader>Owner</TableHeader>
             <TableHeader>Actions</TableHeader>
@@ -223,6 +399,17 @@ const CustomersScreen: React.FC = () => {
                 <StatusBadge status={customer.status}>
                   {customer.status}
                 </StatusBadge>
+              </TableCell>
+              <TableCell>
+                {customerContacts[customer.id]?.length || 0} contacts
+                <br />
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleAddContact(customer.id)}
+                  style={{ fontSize: '12px', padding: '4px 8px', marginTop: '4px' }}
+                >
+                  Add Contact
+                </Button>
               </TableCell>
               <TableCell>
                 {new Date(customer.created_on).toLocaleDateString()}
@@ -253,6 +440,29 @@ const CustomersScreen: React.FC = () => {
       {customers.length === 0 && !loading && (
         <LoadingMessage>No customers found. Create your first customer to get started.</LoadingMessage>
       )}
+
+      <EntityForm
+        title="Create New Customer"
+        fields={customerFormFields}
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        onSubmit={handleCreateCustomer}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
+
+      <EntityForm
+        title="Add Contact to Customer"
+        fields={contactFormFields}
+        isOpen={showContactForm}
+        onClose={() => {
+          setShowContactForm(false);
+          setSelectedCustomerId(null);
+        }}
+        onSubmit={handleCreateContact}
+        onSaveDraft={handleSaveContactDraft}
+        isSubmitting={isSubmitting}
+      />
     </Container>
   );
 };

@@ -17,6 +17,7 @@ import { Supplier, FilterOptions } from '../types';
 import type { MigrationInfo } from '../types';
 import { SuppliersService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
+import EntityForm, { FormField } from '../components/EntityForm';
 
 // Styled components
 const Header = styled.div`
@@ -117,11 +118,45 @@ const SuppliersScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadSuppliers();
     loadMigrationInfo();
   }, []);
+
+  // Form field definitions for Suppliers
+  const formFields: FormField[] = [
+    {
+      key: 'name',
+      label: 'Supplier Name',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter supplier name'
+    },
+    {
+      key: 'credit_application_date',
+      label: 'Credit Application Date',
+      type: 'date',
+      placeholder: 'Select credit application date'
+    },
+    {
+      key: 'delivery_type_profile',
+      label: 'Delivery Type Profile',
+      type: 'checkbox'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' }
+      ]
+    }
+  ];
 
   const loadSuppliers = async () => {
     try {
@@ -163,6 +198,35 @@ const SuppliersScreen: React.FC = () => {
     }
   };
 
+  // Form handling functions
+  const handleCreateSupplier = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmitting(true);
+      // Type-safe conversion
+      const supplierData = {
+        name: formData.name as string,
+        credit_application_date: formData.credit_application_date as string || undefined,
+        delivery_type_profile: Boolean(formData.delivery_type_profile),
+        status: formData.status as 'active' | 'inactive'
+      };
+      await SuppliersService.create(supplierData);
+      setShowCreateForm(false);
+      loadSuppliers(); // Reload the list to show new supplier
+      setError(null);
+    } catch (err) {
+      setError('Failed to create supplier. Please try again.');
+      console.error('Error creating supplier:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async (formData: Record<string, any>) => {
+    console.log('Saving supplier draft:', formData);
+    localStorage.setItem('supplierDraft', JSON.stringify(formData));
+  };
+
   if (loading) {
     return (
       <Container>
@@ -190,7 +254,7 @@ const SuppliersScreen: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </form>
-          <Button variant="primary">Add Supplier</Button>
+          <Button variant="primary" onClick={() => setShowCreateForm(true)}>Add Supplier</Button>
           <Button variant="secondary">Export</Button>
         </Controls>
       </Header>
@@ -262,6 +326,16 @@ const SuppliersScreen: React.FC = () => {
       {suppliers.length === 0 && !loading && (
         <LoadingMessage>No suppliers found. Create your first supplier to get started.</LoadingMessage>
       )}
+
+      <EntityForm
+        title="Create New Supplier"
+        fields={formFields}
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        onSubmit={handleCreateSupplier}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
     </Container>
   );
 };
