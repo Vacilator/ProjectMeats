@@ -32,6 +32,7 @@ THIRD_PARTY_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',
+    'django_filters',
 ]
 
 LOCAL_APPS = [
@@ -42,6 +43,7 @@ LOCAL_APPS = [
     'apps.contacts',
     'apps.purchase_orders',
     'apps.plants',
+    'apps.carriers',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
