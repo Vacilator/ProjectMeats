@@ -13,6 +13,7 @@ import CustomersScreen from './screens/CustomersScreen';
 import ContactsScreen from './screens/ContactsScreen';
 import PurchaseOrdersScreen from './screens/PurchaseOrdersScreen';
 import SupplierPlantMappingsScreen from './screens/SupplierPlantMappingsScreen';
+import CarrierInfoScreen from './screens/CarrierInfoScreen';
 
 // Global styles
 const GlobalStyle = createGlobalStyle`
@@ -117,6 +118,7 @@ const App: React.FC = () => {
               <NavLink href="/contacts">Contact Info</NavLink>
               <NavLink href="/purchase-orders">Purchase Orders</NavLink>
               <NavLink href="/supplier-plant-mappings">Supplier Plant Mappings</NavLink>
+              <NavLink href="/carrier-info">Carrier Info</NavLink>
             </Navigation>
           </HeaderContent>
         </Header>
@@ -130,6 +132,7 @@ const App: React.FC = () => {
             <Route path="/contacts" element={<ContactsScreen />} />
             <Route path="/purchase-orders" element={<PurchaseOrdersScreen />} />
             <Route path="/supplier-plant-mappings" element={<SupplierPlantMappingsScreen />} />
+            <Route path="/carrier-info" element={<CarrierInfoScreen />} />
           </Routes>
         </Main>
         

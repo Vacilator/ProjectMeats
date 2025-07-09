@@ -109,6 +109,21 @@ export interface SupplierPlantMapping extends OwnedEntity, StatusEntity {
   powerapps_entity_name?: string;
 }
 
+// Carrier Info types (migrated from cr7c4_carrierinfo)
+export interface CarrierInfo extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  address?: string;
+  contact_name?: string;
+  release_number?: string;
+  supplier?: number;
+  supplier_name?: string;
+  has_contact_info: boolean;
+  has_address: boolean;
+  has_supplier: boolean;
+  powerapps_entity_name?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   count: number;
@@ -202,5 +217,14 @@ export interface SupplierPlantMappingFormData {
   customer: number;
   contact_info?: number;
   documents_reference?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface CarrierInfoFormData {
+  name: string;
+  address?: string;
+  contact_name?: string;
+  release_number?: string;
+  supplier?: number;
   status: 'active' | 'inactive';
 }
