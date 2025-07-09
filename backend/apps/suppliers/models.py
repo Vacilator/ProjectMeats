@@ -184,3 +184,125 @@ class SupplierPlantMapping(OwnedModel, StatusModel):
     def get_powerapps_entity_name(cls):
         """Returns the original PowerApps entity name for reference."""
         return "pro_supplierplantmapping"
+
+
+class SupplierLocation(OwnedModel, StatusModel):
+    """
+    Supplier Location entity migrated from PowerApps pro_supplier_locations.
+    
+    PowerApps Field Mappings:
+    - pro_locationname -> name (Primary field, required)
+    - pro_supplier_locationsid -> id (Django auto-generated)
+    - pro_address -> address (Location address)
+    - pro_city -> city (City name)
+    - pro_state -> state (State/province)
+    - pro_zipcode -> zip_code (Postal/ZIP code)
+    - pro_country -> country (Country name)
+    - pro_supplier_lookup -> supplier (Foreign key to Supplier)
+    + Standard PowerApps audit fields via OwnedModel base class
+    + Standard PowerApps status fields via StatusModel base class
+    
+    PowerApps Description: "Supplier location and address management"
+    """
+    
+    # Primary field - equivalent to pro_locationname (PrimaryName field in PowerApps)
+    name = models.CharField(
+        max_length=850,  # Standard PowerApps text field length
+        help_text="Equivalent to PowerApps pro_locationname field (Primary Name)"
+    )
+    
+    # Address fields - equivalent to PowerApps address fields
+    address = models.CharField(
+        max_length=500,  # Street address
+        blank=True,
+        null=True,
+        help_text="Equivalent to PowerApps pro_address field"
+    )
+    
+    city = models.CharField(
+        max_length=100,  # City name
+        blank=True,
+        null=True,
+        help_text="Equivalent to PowerApps pro_city field"
+    )
+    
+    state = models.CharField(
+        max_length=100,  # State/province
+        blank=True,
+        null=True,
+        help_text="Equivalent to PowerApps pro_state field"
+    )
+    
+    zip_code = models.CharField(
+        max_length=20,  # ZIP/postal code
+        blank=True,
+        null=True,
+        help_text="Equivalent to PowerApps pro_zipcode field"
+    )
+    
+    country = models.CharField(
+        max_length=100,  # Country name
+        blank=True,
+        null=True,
+        help_text="Equivalent to PowerApps pro_country field"
+    )
+    
+    # Foreign key relationship - equivalent to PowerApps lookup field
+    supplier = models.ForeignKey(
+        'suppliers.Supplier',
+        on_delete=models.PROTECT,
+        related_name='locations',
+        help_text="Equivalent to PowerApps pro_supplier_lookup field"
+    )
+    
+    class Meta:
+        verbose_name = "Supplier Location"
+        verbose_name_plural = "Supplier Locations"
+        db_table = "supplier_locations"
+        ordering = ['supplier__name', 'name']
+        
+    def __str__(self):
+        """String representation using the primary name field and supplier."""
+        return f"{self.supplier.name} - {self.name}"
+    
+    def clean(self):
+        """Model validation - ensure name is provided."""
+        from django.core.exceptions import ValidationError
+        if not self.name or not self.name.strip():
+            raise ValidationError({'name': 'Name is required and cannot be empty.'})
+    
+    @property
+    def has_address(self):
+        """Helper property to check if address information is provided."""
+        return bool(self.address and self.address.strip())
+    
+    @property
+    def has_complete_address(self):
+        """Helper property to check if complete address is provided."""
+        return bool(
+            self.address and self.address.strip() and
+            self.city and self.city.strip() and
+            self.state and self.state.strip() and
+            self.zip_code and self.zip_code.strip()
+        )
+    
+    @property
+    def formatted_address(self):
+        """Helper property to get formatted address string."""
+        parts = []
+        if self.address:
+            parts.append(self.address)
+        if self.city:
+            parts.append(self.city)
+        if self.state:
+            parts.append(self.state)
+        if self.zip_code:
+            parts.append(self.zip_code)
+        if self.country:
+            parts.append(self.country)
+        return ", ".join(parts) if parts else ""
+    
+    @classmethod
+    def get_powerapps_entity_name(cls):
+        """Returns the original PowerApps entity name for reference."""
+        return "pro_supplier_locations"
