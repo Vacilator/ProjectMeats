@@ -15,6 +15,7 @@ import styled from 'styled-components';
 import { AccountsReceivable, FilterOptions, MigrationInfo } from '../types';
 import { AccountsReceivablesService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage } from '../components/SharedComponents';
+import EntityForm, { FormField } from '../components/EntityForm';
 
 // Styled components
 const Header = styled.div`
@@ -146,6 +147,8 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
   const [totalRecords, setTotalRecords] = useState(0);
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showMigrationInfo, setShowMigrationInfo] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load data on component mount and when filters change
   useEffect(() => {
@@ -155,6 +158,45 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
   useEffect(() => {
     loadMigrationInfo();
   }, []);
+
+  // Form field definitions for Accounts Receivables
+  const formFields: FormField[] = [
+    {
+      key: 'name',
+      label: 'Name',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter account name'
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      type: 'email',
+      placeholder: 'Enter email address'
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      type: 'tel',
+      placeholder: 'Enter phone number'
+    },
+    {
+      key: 'terms',
+      label: 'Terms',
+      type: 'textarea',
+      placeholder: 'Enter payment terms or notes'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' }
+      ]
+    }
+  ];
 
   const loadAccounts = async () => {
     try {
@@ -201,6 +243,51 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
     return new Date(dateString).toLocaleDateString();
   };
 
+  // Form handling functions
+  const handleCreateAccount = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmitting(true);
+      // Type-safe conversion
+      const accountData = {
+        name: formData.name as string,
+        email: formData.email as string || undefined,
+        phone: formData.phone as string || undefined,
+        terms: formData.terms as string || undefined,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await AccountsReceivablesService.create(accountData);
+      setShowCreateForm(false);
+      loadAccounts(); // Reload the list to show new account
+      setError(null);
+    } catch (err) {
+      setError('Failed to create account. Please try again.');
+      console.error('Error creating account:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async (formData: Record<string, any>) => {
+    // For now, just log the draft - in a real app this might save to localStorage
+    // or a dedicated draft API endpoint
+    console.log('Saving draft:', formData);
+    // You could save to localStorage here:
+    localStorage.setItem('accountsReceivableDraft', JSON.stringify(formData));
+  };
+
+  const handleDeleteAccount = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this account receivable?')) {
+      try {
+        await AccountsReceivablesService.delete(id);
+        loadAccounts(); // Reload the list
+      } catch (err) {
+        setError('Failed to delete account. Please try again.');
+        console.error('Error deleting account:', err);
+      }
+    }
+  };
+
   if (loading && accounts.length === 0) {
     return (
       <Container>
@@ -233,7 +320,7 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
           <Button variant="secondary" onClick={() => setShowMigrationInfo(!showMigrationInfo)}>
             {showMigrationInfo ? 'Hide' : 'Show'} Migration Info
           </Button>
-          <Button variant="primary">Add New</Button>
+          <Button variant="primary" onClick={() => setShowCreateForm(true)}>Add New</Button>
         </Controls>
       </Header>
 
@@ -278,7 +365,12 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
                 <Button variant="secondary" style={{ marginRight: '8px' }}>
                   Edit
                 </Button>
-                <Button variant="secondary">Delete</Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleDeleteAccount(account.id)}
+                >
+                  Delete
+                </Button>
               </Td>
             </tr>
           ))}
@@ -313,6 +405,16 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
           </Button>
         </Pagination>
       )}
+
+      <EntityForm
+        title="Create New Accounts Receivable"
+        fields={formFields}
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        onSubmit={handleCreateAccount}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
     </Container>
   );
 };

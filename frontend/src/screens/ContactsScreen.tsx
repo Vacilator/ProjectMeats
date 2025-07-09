@@ -1,6 +1,5 @@
 /**
- * Contact Inf// Styled components with unique color scheme for contacts
-const Header = styled.div` Screen Component
+ * Contact Info Screen Component
  * 
  * Main screen for managing contact information records migrated from 
  * PowerApps pro_contactinfo entity.
