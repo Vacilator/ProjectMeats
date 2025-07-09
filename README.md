@@ -2,6 +2,8 @@
 
 A comprehensive business management application migrated from PowerApps/Dataverse to Django REST Framework (backend) and React (frontend). This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
+**🚀 New to ProjectMeats?** Start with the **[Setup Overview](SETUP_OVERVIEW.md)** for a comprehensive setup guide and links to all documentation.
+
 ## 🏗️ Architecture Overview
 
 ```
@@ -115,6 +117,7 @@ make docs       # Generate API documentation
 
 ## 📚 Documentation
 
+- **[Setup Overview](SETUP_OVERVIEW.md)** - **Start here! Complete setup guide and documentation index**
 - **[Agent Quick Start Guide](docs/agent_quick_start.md)** - **Required reading for all agents**
 - **[Agent Activity Log](docs/agent_activity_log.md)** - **Required logging for all work**
 - **[Backend Setup Guide](docs/backend_setup.md)** - Detailed backend development setup
