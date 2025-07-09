@@ -30,6 +30,11 @@ help:
 	@echo "Documentation:"
 	@echo "  make docs      - Generate API documentation"
 	@echo "  make clean     - Clean build artifacts"
+	@echo ""
+	@echo "Agent Activity Logging:"
+	@echo "  make agent-log - View recent agent activity log entries"
+	@echo "  make agent-log-edit - Edit agent activity log"
+	@echo "  make agent-status   - View agent activity summary"
 
 # Setup commands
 setup: setup-backend setup-frontend
@@ -89,6 +94,30 @@ docs:
 	@echo "📚 Generating API documentation..."
 	cd backend && python manage.py spectacular --file ../docs/api_schema.yml
 	@echo "✅ API schema generated at docs/api_schema.yml"
+
+# Agent activity logging commands
+agent-log:
+	@echo "📝 Opening agent activity log..."
+	@echo "File: docs/agent_activity_log.md"
+	@echo ""
+	@echo "Recent entries:"
+	@tail -n 20 docs/agent_activity_log.md 2>/dev/null || echo "No log entries yet"
+
+agent-log-edit:
+	@echo "📝 Opening agent activity log for editing..."
+	@echo "Remember to use the template provided in the file!"
+	@${EDITOR:-nano} docs/agent_activity_log.md
+
+agent-status:
+	@echo "📊 Agent Activity Summary:"
+	@echo ""
+	@grep -c "## \[" docs/agent_activity_log.md 2>/dev/null | sed 's/^/Total log entries: /' || echo "Total log entries: 0"
+	@echo ""
+	@echo "Recent agent activities:"
+	@grep "## \[" docs/agent_activity_log.md 2>/dev/null | head -5 || echo "No activities logged yet"
+	@echo ""
+	@echo "To view full log: make agent-log"
+	@echo "To add entry: make agent-log-edit"
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."

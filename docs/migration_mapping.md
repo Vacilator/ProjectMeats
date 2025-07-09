@@ -550,4 +550,16 @@ const EntityScreen: React.FC = () => {
 
 ---
 
+## 📝 Agent Activity Tracking
+
+**IMPORTANT**: All agents working on this migration project must log their activities in the [Agent Activity Log](./agent_activity_log.md). This includes:
+- Initial objectives and work items
+- Progress updates and completed tasks  
+- Issues encountered and resolutions
+- Handoffs between agents
+
+This ensures coordination and prevents duplicate work across the migration project.
+
+---
+
 This document is living documentation that will be updated as the migration progresses. Each completed entity will have its mappings fully documented with examples and validation results.
