@@ -72,6 +72,43 @@ export interface ContactInfo extends OwnedEntity, StatusEntity {
   powerapps_entity_name?: string;
 }
 
+// Purchase Order types (migrated from pro_purchaseorder)
+export interface PurchaseOrder extends OwnedEntity, StatusEntity {
+  id: number;
+  po_number: string;
+  item: string;
+  quantity: number;
+  price_per_unit: string;
+  total_amount: string;
+  purchase_date: string;
+  fulfillment_date?: string;
+  customer: number;
+  customer_name?: string;
+  supplier: number;
+  supplier_name?: string;
+  customer_documents?: string;
+  supplier_documents?: string;
+  is_fulfilled: boolean;
+  has_documents: boolean;
+  powerapps_entity_name?: string;
+}
+
+// Supplier Plant Mapping types (migrated from pro_supplierplantmapping)
+export interface SupplierPlantMapping extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  supplier: number;
+  supplier_name?: string;
+  customer: number;
+  customer_name?: string;
+  contact_info?: number;
+  contact_info_name?: string;
+  documents_reference?: string;
+  has_contact_info: boolean;
+  has_documents: boolean;
+  powerapps_entity_name?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   count: number;
@@ -142,5 +179,28 @@ export interface ContactInfoFormData {
   contact_type?: string;
   customer?: number;
   supplier?: number;
+  status: 'active' | 'inactive';
+}
+
+export interface PurchaseOrderFormData {
+  po_number: string;
+  item: string;
+  quantity: number;
+  price_per_unit: string;
+  purchase_date: string;
+  fulfillment_date?: string;
+  customer: number;
+  supplier: number;
+  customer_documents?: string;
+  supplier_documents?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface SupplierPlantMappingFormData {
+  name: string;
+  supplier: number;
+  customer: number;
+  contact_info?: number;
+  documents_reference?: string;
   status: 'active' | 'inactive';
 }

@@ -14,6 +14,10 @@ import {
   CustomerFormData,
   ContactInfo,
   ContactInfoFormData,
+  PurchaseOrder,
+  PurchaseOrderFormData,
+  SupplierPlantMapping,
+  SupplierPlantMappingFormData,
   ApiResponse, 
   MigrationInfo,
   FilterOptions 
@@ -251,6 +255,92 @@ export class ContactsService {
 
   static async update(id: number, data: Partial<ContactInfoFormData>): Promise<ContactInfo> {
     const response: AxiosResponse<ContactInfo> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
+    return response.data;
+  }
+
+  static async delete(id: number): Promise<void> {
+    await apiClient.delete(`${this.baseEndpoint}/${id}/`);
+  }
+
+  static async getMigrationInfo(): Promise<MigrationInfo> {
+    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
+    return response.data;
+  }
+}
+
+/**
+ * Purchase Orders API service
+ * Migrated from PowerApps pro_purchaseorder entity
+ */
+export class PurchaseOrdersService {
+  private static baseEndpoint = '/purchase-orders';
+
+  static async getList(page: number = 1, filters: FilterOptions = {}): Promise<ApiResponse<PurchaseOrder>> {
+    const params = new URLSearchParams({ page: page.toString() });
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<PurchaseOrder>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  static async getDetail(id: number): Promise<PurchaseOrder> {
+    const response: AxiosResponse<PurchaseOrder> = await apiClient.get(`${this.baseEndpoint}/${id}/`);
+    return response.data;
+  }
+
+  static async create(data: PurchaseOrderFormData): Promise<PurchaseOrder> {
+    const response: AxiosResponse<PurchaseOrder> = await apiClient.post(`${this.baseEndpoint}/`, data);
+    return response.data;
+  }
+
+  static async update(id: number, data: Partial<PurchaseOrderFormData>): Promise<PurchaseOrder> {
+    const response: AxiosResponse<PurchaseOrder> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
+    return response.data;
+  }
+
+  static async delete(id: number): Promise<void> {
+    await apiClient.delete(`${this.baseEndpoint}/${id}/`);
+  }
+
+  static async getMigrationInfo(): Promise<MigrationInfo> {
+    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
+    return response.data;
+  }
+}
+
+/**
+ * Supplier Plant Mappings API service
+ * Migrated from PowerApps pro_supplierplantmapping entity
+ */
+export class SupplierPlantMappingsService {
+  private static baseEndpoint = '/supplier-plant-mappings';
+
+  static async getList(page: number = 1, filters: FilterOptions = {}): Promise<ApiResponse<SupplierPlantMapping>> {
+    const params = new URLSearchParams({ page: page.toString() });
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<SupplierPlantMapping>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  static async getDetail(id: number): Promise<SupplierPlantMapping> {
+    const response: AxiosResponse<SupplierPlantMapping> = await apiClient.get(`${this.baseEndpoint}/${id}/`);
+    return response.data;
+  }
+
+  static async create(data: SupplierPlantMappingFormData): Promise<SupplierPlantMapping> {
+    const response: AxiosResponse<SupplierPlantMapping> = await apiClient.post(`${this.baseEndpoint}/`, data);
+    return response.data;
+  }
+
+  static async update(id: number, data: Partial<SupplierPlantMappingFormData>): Promise<SupplierPlantMapping> {
+    const response: AxiosResponse<SupplierPlantMapping> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
     return response.data;
   }
 
