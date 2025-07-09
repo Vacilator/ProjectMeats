@@ -13,9 +13,9 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Supplier, FilterOptions } from '../types';
+import { Supplier, ContactInfo } from '../types';
 import type { MigrationInfo } from '../types';
-import { SuppliersService } from '../services/api';
+import { SuppliersService, ContactsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 
@@ -119,12 +119,22 @@ const SuppliersScreen: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [supplierContacts, setSupplierContacts] = useState<Record<number, ContactInfo[]>>({});
 
   useEffect(() => {
     loadSuppliers();
     loadMigrationInfo();
   }, []);
+
+  // Load contacts for all suppliers
+  useEffect(() => {
+    if (suppliers.length > 0) {
+      loadSupplierContacts();
+    }
+  }, [suppliers]);
 
   // Form field definitions for Suppliers
   const formFields: FormField[] = [
@@ -158,6 +168,56 @@ const SuppliersScreen: React.FC = () => {
     }
   ];
 
+  // Form field definitions for Contact Info (for suppliers)
+  const contactFormFields: FormField[] = [
+    {
+      key: 'name',
+      label: 'Contact Name',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter contact person name'
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      type: 'email',
+      placeholder: 'Enter email address'
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      type: 'tel',
+      placeholder: 'Enter phone number'
+    },
+    {
+      key: 'position',
+      label: 'Position',
+      type: 'text',
+      placeholder: 'Enter job title/position'
+    },
+    {
+      key: 'contact_type',
+      label: 'Contact Type',
+      type: 'select',
+      options: [
+        { value: 'primary', label: 'Primary Contact' },
+        { value: 'billing', label: 'Billing Contact' },
+        { value: 'technical', label: 'Technical Contact' },
+        { value: 'procurement', label: 'Procurement Contact' }
+      ]
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' }
+      ]
+    }
+  ];
+
   const loadSuppliers = async () => {
     try {
       setLoading(true);
@@ -178,6 +238,33 @@ const SuppliersScreen: React.FC = () => {
       setMigrationInfo(info);
     } catch (err) {
       console.error('Error loading migration info:', err);
+    }
+  };
+
+  const loadSupplierContacts = async () => {
+    try {
+      // Load all contacts and filter by supplier ID
+      const response = await ContactsService.getList(1, {});
+      const contactsMap: Record<number, ContactInfo[]> = {};
+      
+      // Initialize empty arrays for all suppliers
+      suppliers.forEach(supplier => {
+        contactsMap[supplier.id] = [];
+      });
+      
+      // Group contacts by supplier ID
+      response.results.forEach(contact => {
+        if (contact.supplier) {
+          if (!contactsMap[contact.supplier]) {
+            contactsMap[contact.supplier] = [];
+          }
+          contactsMap[contact.supplier].push(contact);
+        }
+      });
+      
+      setSupplierContacts(contactsMap);
+    } catch (err) {
+      console.error('Error loading supplier contacts:', err);
     }
   };
 
@@ -227,6 +314,43 @@ const SuppliersScreen: React.FC = () => {
     localStorage.setItem('supplierDraft', JSON.stringify(formData));
   };
 
+  const handleCreateContact = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmitting(true);
+      // Type-safe conversion with supplier ID
+      const contactData = {
+        name: formData.name as string,
+        email: formData.email as string || undefined,
+        phone: formData.phone as string || undefined,
+        position: formData.position as string || undefined,
+        contact_type: formData.contact_type as string || undefined,
+        supplier: selectedSupplierId as number,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await ContactsService.create(contactData);
+      setShowContactForm(false);
+      setSelectedSupplierId(null);
+      loadSupplierContacts(); // Reload contacts to show new contact
+      setError(null);
+    } catch (err) {
+      setError('Failed to create contact. Please try again.');
+      console.error('Error creating contact:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveContactDraft = async (formData: Record<string, any>) => {
+    console.log('Saving supplier contact draft:', formData);
+    localStorage.setItem('supplierContactDraft', JSON.stringify(formData));
+  };
+
+  const handleAddContact = (supplierId: number) => {
+    setSelectedSupplierId(supplierId);
+    setShowContactForm(true);
+  };
+
   if (loading) {
     return (
       <Container>
@@ -273,6 +397,7 @@ const SuppliersScreen: React.FC = () => {
           <tr>
             <TableHeader>Name</TableHeader>
             <TableHeader>Status</TableHeader>
+            <TableHeader>Contacts</TableHeader>
             <TableHeader>Delivery Type</TableHeader>
             <TableHeader>Credit Application</TableHeader>
             <TableHeader>A/R Link</TableHeader>
@@ -290,6 +415,17 @@ const SuppliersScreen: React.FC = () => {
                 <StatusBadge status={supplier.status}>
                   {supplier.status}
                 </StatusBadge>
+              </TableCell>
+              <TableCell>
+                {supplierContacts[supplier.id]?.length || 0} contacts
+                <br />
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleAddContact(supplier.id)}
+                  style={{ fontSize: '12px', padding: '4px 8px', marginTop: '4px' }}
+                >
+                  Add Contact
+                </Button>
               </TableCell>
               <TableCell>
                 {supplier.delivery_type_profile ? '✅ Yes' : '❌ No'}
@@ -334,6 +470,19 @@ const SuppliersScreen: React.FC = () => {
         onClose={() => setShowCreateForm(false)}
         onSubmit={handleCreateSupplier}
         onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
+
+      <EntityForm
+        title="Add Contact to Supplier"
+        fields={contactFormFields}
+        isOpen={showContactForm}
+        onClose={() => {
+          setShowContactForm(false);
+          setSelectedSupplierId(null);
+        }}
+        onSubmit={handleCreateContact}
+        onSaveDraft={handleSaveContactDraft}
         isSubmitting={isSubmitting}
       />
     </Container>

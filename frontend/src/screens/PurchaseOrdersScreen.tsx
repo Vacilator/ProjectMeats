@@ -13,10 +13,11 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { PurchaseOrder, FilterOptions } from '../types';
+import { PurchaseOrder, Customer, Supplier } from '../types';
 import type { MigrationInfo } from '../types';
-import { PurchaseOrdersService } from '../services/api';
+import { PurchaseOrdersService, CustomersService, SuppliersService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
+import EntityForm, { FormField } from '../components/EntityForm';
 
 // Styled components (reusing consistent patterns)
 const Header = styled.div`
@@ -149,6 +150,10 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showMigrationInfo, setShowMigrationInfo] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   // Load data on component mount and when filters change
   useEffect(() => {
@@ -157,14 +162,94 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
 
   useEffect(() => {
     loadMigrationInfo();
+    loadCustomersAndSuppliers();
   }, []);
+
+  // Form field definitions for Purchase Orders
+  const formFields: FormField[] = [
+    {
+      key: 'po_number',
+      label: 'PO Number',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter purchase order number'
+    },
+    {
+      key: 'item',
+      label: 'Item',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter item description'
+    },
+    {
+      key: 'quantity',
+      label: 'Quantity',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter quantity'
+    },
+    {
+      key: 'price_per_unit',
+      label: 'Price per Unit',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter price per unit'
+    },
+    {
+      key: 'purchase_date',
+      label: 'Purchase Date',
+      type: 'date',
+      required: true
+    },
+    {
+      key: 'fulfillment_date',
+      label: 'Fulfillment Date',
+      type: 'date'
+    },
+    {
+      key: 'customer',
+      label: 'Customer',
+      type: 'select',
+      required: true,
+      options: customers.map(customer => ({ value: customer.id, label: customer.name }))
+    },
+    {
+      key: 'supplier',
+      label: 'Supplier',
+      type: 'select',
+      required: true,
+      options: suppliers.map(supplier => ({ value: supplier.id, label: supplier.name }))
+    },
+    {
+      key: 'customer_documents',
+      label: 'Customer Documents',
+      type: 'textarea',
+      placeholder: 'Enter customer document references'
+    },
+    {
+      key: 'supplier_documents',
+      label: 'Supplier Documents',
+      type: 'textarea',
+      placeholder: 'Enter supplier document references'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' }
+      ]
+    }
+  ];
 
   const loadPurchaseOrders = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const filters: FilterOptions = {};
+      const filters: any = {};
       if (searchTerm) filters.search = searchTerm;
       if (statusFilter !== 'all') filters.status = statusFilter as 'active' | 'inactive';
       
@@ -190,6 +275,19 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
     }
   };
 
+  const loadCustomersAndSuppliers = async () => {
+    try {
+      const [customersResponse, suppliersResponse] = await Promise.all([
+        CustomersService.getList(1, {}),
+        SuppliersService.getList(1, {})
+      ]);
+      setCustomers(customersResponse.results);
+      setSuppliers(suppliersResponse.results);
+    } catch (err) {
+      console.error('Error loading customers and suppliers:', err);
+    }
+  };
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1); // Reset to first page
@@ -202,6 +300,42 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };
+
+  // Form handling functions
+  const handleCreatePurchaseOrder = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmitting(true);
+      // Type-safe conversion
+      const purchaseOrderData = {
+        po_number: formData.po_number as string,
+        item: formData.item as string,
+        quantity: Number(formData.quantity),
+        price_per_unit: formData.price_per_unit as string,
+        purchase_date: formData.purchase_date as string,
+        fulfillment_date: formData.fulfillment_date as string || undefined,
+        customer: Number(formData.customer),
+        supplier: Number(formData.supplier),
+        customer_documents: formData.customer_documents as string || undefined,
+        supplier_documents: formData.supplier_documents as string || undefined,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await PurchaseOrdersService.create(purchaseOrderData);
+      setShowCreateForm(false);
+      loadPurchaseOrders(); // Reload the list to show new purchase order
+      setError(null);
+    } catch (err) {
+      setError('Failed to create purchase order. Please try again.');
+      console.error('Error creating purchase order:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async (formData: Record<string, any>) => {
+    console.log('Saving purchase order draft:', formData);
+    localStorage.setItem('purchaseOrderDraft', JSON.stringify(formData));
   };
 
   const formatCurrency = (amount: string) => {
@@ -242,6 +376,12 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
             onClick={() => setShowMigrationInfo(!showMigrationInfo)}
           >
             {showMigrationInfo ? 'Hide' : 'Show'} Migration Info
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => setShowCreateForm(true)}
+          >
+            Add Purchase Order
           </Button>
         </Controls>
       </Header>
@@ -342,6 +482,16 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
           </Button>
         </Pagination>
       )}
+
+      <EntityForm
+        title="Create New Purchase Order"
+        fields={formFields}
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        onSubmit={handleCreatePurchaseOrder}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
     </Container>
   );
 };
