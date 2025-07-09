@@ -1,0 +1,168 @@
+"""
+Carrier Info API views for ProjectMeats.
+
+RESTful API endpoints for managing carrier information records
+migrated from PowerApps cr7c4_carrierinfo entity.
+"""
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+from drf_spectacular.utils import extend_schema, extend_schema_view
+
+from .models import CarrierInfo
+from .serializers import (
+    CarrierInfoListSerializer,
+    CarrierInfoDetailSerializer,
+    CarrierInfoCreateSerializer
+)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Carrier Infos",
+        description="Retrieve a paginated list of all carrier info records migrated from PowerApps cr7c4_carrierinfo.",
+        tags=["Carrier Info"]
+    ),
+    create=extend_schema(
+        summary="Create Carrier Info",
+        description="Create a new carrier info record with automatic ownership assignment.",
+        tags=["Carrier Info"]
+    ),
+    retrieve=extend_schema(
+        summary="Get Carrier Info",
+        description="Retrieve detailed information for a specific carrier info record.",
+        tags=["Carrier Info"]
+    ),
+    update=extend_schema(
+        summary="Update Carrier Info",
+        description="Update an existing carrier info record.",
+        tags=["Carrier Info"]
+    ),
+    partial_update=extend_schema(
+        summary="Partially Update Carrier Info",
+        description="Partially update an existing carrier info record.",
+        tags=["Carrier Info"]
+    ),
+    destroy=extend_schema(
+        summary="Delete Carrier Info",
+        description="Soft delete a carrier info record (mark as inactive).",
+        tags=["Carrier Info"]
+    )
+)
+class CarrierInfoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Carrier Info management.
+    
+    Provides CRUD operations for carrier information records
+    migrated from PowerApps cr7c4_carrierinfo entity.
+    """
+    queryset = CarrierInfo.objects.all()
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['status', 'supplier']
+    search_fields = ['name', 'contact_name', 'address', 'release_number']
+    ordering_fields = ['name', 'created_on', 'modified_on']
+    ordering = ['name']
+    
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action == 'list':
+            return CarrierInfoListSerializer
+        elif self.action == 'create':
+            return CarrierInfoCreateSerializer
+        else:
+            return CarrierInfoDetailSerializer
+    
+    def perform_create(self, serializer):
+        """Set ownership fields automatically on creation."""
+        # In a real implementation, you would use request.user
+        # For now, using a default user (assumes user with ID 1 exists)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        default_user = User.objects.first()  # Get first available user
+        
+        if default_user:
+            serializer.save(
+                created_by=default_user,
+                modified_by=default_user,
+                owner=default_user
+            )
+        else:
+            serializer.save()
+    
+    def perform_update(self, serializer):
+        """Set modified_by field automatically on update."""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        default_user = User.objects.first()
+        
+        if default_user:
+            serializer.save(modified_by=default_user)
+        else:
+            serializer.save()
+    
+    def perform_destroy(self, instance):
+        """Soft delete by setting status to inactive instead of actual deletion."""
+        instance.status = 'inactive'
+        instance.save()
+    
+    @extend_schema(
+        summary="Get PowerApps Migration Info",
+        description="Returns information about the PowerApps to Django migration for verification and documentation.",
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "powerapps_entity_name": {"type": "string"},
+                    "django_model_name": {"type": "string"},
+                    "total_records": {"type": "integer"},
+                    "active_records": {"type": "integer"},
+                    "field_mappings": {"type": "object"}
+                }
+            }
+        },
+        tags=["Carrier Info"]
+    )
+    @action(detail=False, methods=['get'])
+    def migration_info(self, request):
+        """
+        Endpoint to get PowerApps migration information.
+        Useful for documentation and verification.
+        """
+        queryset = self.get_queryset()
+        total_count = queryset.count()
+        active_count = queryset.filter(status='active').count()
+        
+        field_mappings = {
+            "cr7c4_name": "name",
+            "cr7c4_address": "address",
+            "cr7c4_contactname": "contact_name",
+            "cr7c4_releasenumber": "release_number",
+            "cr7c4_supplierid": "supplier",
+            "statecode/statuscode": "status",
+            "CreatedOn": "created_on",
+            "ModifiedOn": "modified_on",
+            "CreatedBy": "created_by",
+            "ModifiedBy": "modified_by",
+            "OwnerId": "owner"
+        }
+        
+        return Response({
+            "powerapps_entity_name": "cr7c4_carrierinfo",
+            "django_model_name": "CarrierInfo",
+            "django_app_name": "carriers",
+            "total_records": total_count,
+            "active_records": active_count,
+            "field_mappings": field_mappings,
+            "computed_fields": {
+                "has_contact_info": "bool(contact_name)",
+                "has_address": "bool(address)",
+                "has_supplier": "supplier is not None"
+            },
+            "api_endpoints": {
+                "list": "/api/v1/carrier-infos/",
+                "detail": "/api/v1/carrier-infos/{id}/",
+                "migration_info": "/api/v1/carrier-infos/migration_info/"
+            }
+        }, status=status.HTTP_200_OK)
