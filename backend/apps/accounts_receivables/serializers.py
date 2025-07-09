@@ -5,10 +5,11 @@ Handles serialization/deserialization between Django models and JSON API respons
 Migrated from PowerApps cr7c4_accountsreceivables entity.
 """
 from rest_framework import serializers
+from apps.core.serializers import BaseListSerializer, BaseDetailSerializer, BaseCreateSerializer
 from .models import AccountsReceivable
 
 
-class AccountsReceivableListSerializer(serializers.ModelSerializer):
+class AccountsReceivableListSerializer(BaseListSerializer):
     """
     Lightweight serializer for list views and minimal data representation.
     Includes only essential fields for performance.
@@ -27,21 +28,15 @@ class AccountsReceivableListSerializer(serializers.ModelSerializer):
             'created_on',
             'modified_on',
         ]
-        read_only_fields = ['id', 'created_on', 'modified_on', 'has_contact_info']
+        read_only_fields = ['has_contact_info']
 
 
-class AccountsReceivableDetailSerializer(serializers.ModelSerializer):
+class AccountsReceivableDetailSerializer(BaseDetailSerializer):
     """
     Complete serializer for detail views with all PowerApps migrated fields.
     Includes relationship fields and metadata.
     """
     has_contact_info = serializers.BooleanField(read_only=True)
-    powerapps_entity_name = serializers.SerializerMethodField()
-    
-    # Owner information (read-only for API consumers)
-    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
-    modified_by_username = serializers.CharField(source='modified_by.username', read_only=True)
-    owner_username = serializers.CharField(source='owner.username', read_only=True)
     
     class Meta:
         model = AccountsReceivable
@@ -63,20 +58,7 @@ class AccountsReceivableDetailSerializer(serializers.ModelSerializer):
             'modified_by_username',
             'owner_username',
         ]
-        read_only_fields = [
-            'id', 
-            'created_on', 
-            'modified_on', 
-            'has_contact_info',
-            'powerapps_entity_name',
-            'created_by_username',
-            'modified_by_username', 
-            'owner_username'
-        ]
-    
-    def get_powerapps_entity_name(self, obj):
-        """Return the original PowerApps entity name for reference."""
-        return obj.get_powerapps_entity_name()
+        read_only_fields = ['has_contact_info']
     
     def validate_name(self, value):
         """Ensure name is provided and not empty (PowerApps required field)."""
@@ -103,7 +85,7 @@ class AccountsReceivableDetailSerializer(serializers.ModelSerializer):
         return value
 
 
-class AccountsReceivableCreateSerializer(serializers.ModelSerializer):
+class AccountsReceivableCreateSerializer(BaseCreateSerializer):
     """
     Serializer for creating new Accounts Receivable records.
     Minimal fields required for creation, following PowerApps patterns.
