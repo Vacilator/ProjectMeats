@@ -27,6 +27,13 @@ build/
 .env.test.local
 .env.production.local
 
+# Python virtual environments
+venv/
+env/
+.venv/
+.env/
+backend/venv/
+
 # IDE
 .vscode/
 .idea/
