@@ -11,13 +11,12 @@ Endpoints:
 - PUT /api/v1/customers/{id}/ - Update customer
 - DELETE /api/v1/customers/{id}/ - Delete customer
 """
-from rest_framework import viewsets, status, filters
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from django.contrib.auth.models import User
 
+from apps.core.views import PowerAppsModelViewSet
 from .models import Customer
 from .serializers import (
     CustomerListSerializer,
@@ -58,7 +57,7 @@ from .serializers import (
         tags=["Customers"]
     )
 )
-class CustomerViewSet(viewsets.ModelViewSet):
+class CustomerViewSet(PowerAppsModelViewSet):
     """
     ViewSet for managing Customer entities.
     
@@ -74,74 +73,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
     - Maintains PowerApps status (Active/Inactive) pattern
     """
     queryset = Customer.objects.all()
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status']
     search_fields = ['name']
     ordering_fields = ['name', 'created_on', 'modified_on', 'status']
-    ordering = ['name']  # Default ordering
     
-    def get_serializer_class(self):
-        """Return appropriate serializer based on action."""
-        if self.action == 'list':
-            return CustomerListSerializer
-        elif self.action == 'create':
-            return CustomerCreateSerializer
-        return CustomerDetailSerializer
-    
-    def get_queryset(self):
-        """
-        Optionally filter queryset based on query parameters.
-        
-        Supports filtering by:
-        - active: only active records (status='active')
-        """
-        queryset = super().get_queryset()
-        
-        # Filter by active status
-        if self.request.query_params.get('active') == 'true':
-            queryset = queryset.filter(status='active')
-        
-        return queryset
-    
-    def perform_create(self, serializer):
-        """
-        Set ownership fields when creating new records.
-        Maps to PowerApps CreatedBy/ModifiedBy/OwnerId pattern.
-        """
-        # In production, get the authenticated user
-        # For now, we'll create a default user if none exists
-        user = self.request.user if self.request.user.is_authenticated else self._get_default_user()
-        
-        serializer.save(
-            created_by=user,
-            modified_by=user,
-            owner=user
-        )
-    
-    def perform_update(self, serializer):
-        """Update modified_by field when updating records."""
-        user = self.request.user if self.request.user.is_authenticated else self._get_default_user()
-        serializer.save(modified_by=user)
-    
-    def perform_destroy(self, instance):
-        """
-        Soft delete by setting status to inactive (PowerApps pattern).
-        Preserves data for audit trails.
-        """
-        instance.status = 'inactive'
-        instance.save()
-    
-    def _get_default_user(self):
-        """Get or create a default user for development/testing."""
-        user, created = User.objects.get_or_create(
-            username='system',
-            defaults={
-                'email': 'system@projectmeats.com',
-                'first_name': 'System',
-                'last_name': 'User'
-            }
-        )
-        return user
+    # Define serializer classes for base class
+    list_serializer_class = CustomerListSerializer
+    detail_serializer_class = CustomerDetailSerializer
+    create_serializer_class = CustomerCreateSerializer
     
     @extend_schema(
         summary="Get PowerApps Migration Info",
