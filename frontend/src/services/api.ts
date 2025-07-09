@@ -22,6 +22,8 @@ import {
   CarrierInfoFormData,
   Plant,
   PlantFormData,
+  SupplierLocation,
+  SupplierLocationFormData,
   ApiResponse, 
   MigrationInfo,
   FilterOptions 
@@ -430,6 +432,48 @@ export class PlantsService {
 
   static async update(id: number, data: Partial<PlantFormData>): Promise<Plant> {
     const response: AxiosResponse<Plant> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
+    return response.data;
+  }
+
+  static async delete(id: number): Promise<void> {
+    await apiClient.delete(`${this.baseEndpoint}/${id}/`);
+  }
+
+  static async getMigrationInfo(): Promise<MigrationInfo> {
+    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
+    return response.data;
+  }
+}
+/**
+ * Supplier Locations API service
+ * Migrated from PowerApps pro_supplier_locations entity
+ */
+export class SupplierLocationsService {
+  private static baseEndpoint = '/supplier-locations';
+
+  static async getList(page: number = 1, filters: FilterOptions = {}): Promise<ApiResponse<SupplierLocation>> {
+    const params = new URLSearchParams({ page: page.toString() });
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<SupplierLocation>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  static async getDetail(id: number): Promise<SupplierLocation> {
+    const response: AxiosResponse<SupplierLocation> = await apiClient.get(`${this.baseEndpoint}/${id}/`);
+    return response.data;
+  }
+
+  static async create(data: SupplierLocationFormData): Promise<SupplierLocation> {
+    const response: AxiosResponse<SupplierLocation> = await apiClient.post(`${this.baseEndpoint}/`, data);
+    return response.data;
+  }
+
+  static async update(id: number, data: Partial<SupplierLocationFormData>): Promise<SupplierLocation> {
+    const response: AxiosResponse<SupplierLocation> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
     return response.data;
   }
 

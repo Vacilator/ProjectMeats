@@ -142,6 +142,28 @@ export interface Plant extends OwnedEntity, StatusEntity {
   powerapps_entity_name?: string;
 }
 
+// Supplier Location types (migrated from pro_supplier_locations)
+export interface SupplierLocation extends OwnedEntity, StatusEntity {
+  id: number;
+  name: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  location_type?: string;
+  contact_name?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  supplier: number;
+  supplier_name?: string;
+  notes?: string;
+  has_address: boolean;
+  has_contact_info: boolean;
+  full_address?: string;
+  powerapps_entity_name?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   count: number;
@@ -255,5 +277,21 @@ export interface PlantFormData {
   load_pickup_requirements?: string;
   storage?: string;
   supplier?: number;
+  status: 'active' | 'inactive';
+}
+
+export interface SupplierLocationFormData {
+  name: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  location_type?: string;
+  contact_name?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  supplier: number;
+  notes?: string;
   status: 'active' | 'inactive';
 }

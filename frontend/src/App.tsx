@@ -12,6 +12,7 @@ import SuppliersScreen from './screens/SuppliersScreen';
 import CustomersScreen from './screens/CustomersScreen';
 import PurchaseOrdersScreen from './screens/PurchaseOrdersScreen';
 import PlantsScreen from './screens/PlantsScreen';
+import SupplierLocationsScreen from './screens/SupplierLocationsScreen';
 // Hidden screens as requested: ContactsScreen, SupplierPlantMappingsScreen, CarrierInfoScreen
 
 // Global styles
@@ -116,6 +117,7 @@ const App: React.FC = () => {
               <NavLink href="/customers">Customers</NavLink>
               <NavLink href="/purchase-orders">Purchase Orders</NavLink>
               <NavLink href="/plants">Plants</NavLink>
+              <NavLink href="/supplier-locations">Supplier Locations</NavLink>
             </Navigation>
           </HeaderContent>
         </Header>
@@ -128,6 +130,7 @@ const App: React.FC = () => {
             <Route path="/customers" element={<CustomersScreen />} />
             <Route path="/purchase-orders" element={<PurchaseOrdersScreen />} />
             <Route path="/plants" element={<PlantsScreen />} />
+            <Route path="/supplier-locations" element={<SupplierLocationsScreen />} />
           </Routes>
         </Main>
         
