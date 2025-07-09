@@ -4,13 +4,12 @@ Carrier Info API views for ProjectMeats.
 RESTful API endpoints for managing carrier information records
 migrated from PowerApps cr7c4_carrierinfo entity.
 """
-from rest_framework import viewsets, status
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
+from apps.core.views import PowerAppsModelViewSet
 from .models import CarrierInfo
 from .serializers import (
     CarrierInfoListSerializer,
@@ -51,7 +50,7 @@ from .serializers import (
         tags=["Carrier Info"]
     )
 )
-class CarrierInfoViewSet(viewsets.ModelViewSet):
+class CarrierInfoViewSet(PowerAppsModelViewSet):
     """
     ViewSet for Carrier Info management.
     
@@ -59,53 +58,14 @@ class CarrierInfoViewSet(viewsets.ModelViewSet):
     migrated from PowerApps cr7c4_carrierinfo entity.
     """
     queryset = CarrierInfo.objects.all()
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'supplier']
     search_fields = ['name', 'contact_name', 'address', 'release_number']
     ordering_fields = ['name', 'created_on', 'modified_on']
-    ordering = ['name']
     
-    def get_serializer_class(self):
-        """Return appropriate serializer based on action."""
-        if self.action == 'list':
-            return CarrierInfoListSerializer
-        elif self.action == 'create':
-            return CarrierInfoCreateSerializer
-        else:
-            return CarrierInfoDetailSerializer
-    
-    def perform_create(self, serializer):
-        """Set ownership fields automatically on creation."""
-        # In a real implementation, you would use request.user
-        # For now, using a default user (assumes user with ID 1 exists)
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        default_user = User.objects.first()  # Get first available user
-        
-        if default_user:
-            serializer.save(
-                created_by=default_user,
-                modified_by=default_user,
-                owner=default_user
-            )
-        else:
-            serializer.save()
-    
-    def perform_update(self, serializer):
-        """Set modified_by field automatically on update."""
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        default_user = User.objects.first()
-        
-        if default_user:
-            serializer.save(modified_by=default_user)
-        else:
-            serializer.save()
-    
-    def perform_destroy(self, instance):
-        """Soft delete by setting status to inactive instead of actual deletion."""
-        instance.status = 'inactive'
-        instance.save()
+    # Define serializer classes for base class
+    list_serializer_class = CarrierInfoListSerializer
+    detail_serializer_class = CarrierInfoDetailSerializer
+    create_serializer_class = CarrierInfoCreateSerializer
     
     @extend_schema(
         summary="Get PowerApps Migration Info",

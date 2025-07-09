@@ -12,8 +12,6 @@ from .views import CarrierInfoViewSet
 router = DefaultRouter()
 router.register(r'carrier-infos', CarrierInfoViewSet, basename='carrierinfo')
 
-app_name = 'carriers'
-
 urlpatterns = [
     path('', include(router.urls)),
 ]

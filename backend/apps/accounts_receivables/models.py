@@ -58,6 +58,21 @@ class AccountsReceivable(OwnedModel, StatusModel):
     class Meta:
         verbose_name = "Accounts Receivable"
         verbose_name_plural = "Accounts Receivables"
+        # Add database indexes for common query patterns
+        indexes = [
+            models.Index(fields=['name'], name='ar_name_idx'),
+            models.Index(fields=['status'], name='ar_status_idx'),
+            models.Index(fields=['email'], name='ar_email_idx'),
+            models.Index(fields=['created_on'], name='ar_created_idx'),
+            models.Index(fields=['status', 'name'], name='ar_status_name_idx'),
+        ]
+        # Add database constraints for data integrity
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(name__isnull=False) & ~models.Q(name=''),
+                name='ar_name_not_empty'
+            ),
+        ]
         db_table = "accounts_receivables"
         ordering = ['name']
         
