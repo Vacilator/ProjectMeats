@@ -1,19 +1,25 @@
 /**
  * Main App component for ProjectMeats frontend.
  * 
- * Provides routing and layout for the React application
- * migrated from PowerApps.
+ * Professional meat sales broker application with modern UI/UX.
+ * Provides comprehensive business management tools for end-to-end
+ * transaction processing, supplier/customer relationships, and financial tracking.
  */
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
+import { colors, typography, spacing, borderRadius, shadows } from './components/DesignSystem';
+import DashboardScreen from './screens/DashboardScreen';
 import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
 import SuppliersScreen from './screens/SuppliersScreen';
 import CustomersScreen from './screens/CustomersScreen';
 import PurchaseOrdersScreen from './screens/PurchaseOrdersScreen';
-// Hidden screens as requested: ContactsScreen, SupplierPlantMappingsScreen, CarrierInfoScreen
+// Additional screens for complete functionality:
+import ContactsScreen from './screens/ContactsScreen';
+import SupplierPlantMappingsScreen from './screens/SupplierPlantMappingsScreen';
+import CarrierInfoScreen from './screens/CarrierInfoScreen';
 
-// Global styles
+// Enhanced global styles with design system
 const GlobalStyle = createGlobalStyle`
   * {
     margin: 0;
@@ -22,18 +28,27 @@ const GlobalStyle = createGlobalStyle`
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
+    font-family: ${typography.fontFamily.sans};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #f5f5f5;
-    color: #333;
+    background-color: ${colors.surface};
+    color: ${colors.text.primary};
+    line-height: ${typography.lineHeight.normal};
   }
 
   code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-      monospace;
+    font-family: ${typography.fontFamily.mono};
+  }
+
+  /* Accessibility improvements */
+  *:focus {
+    outline: 2px solid ${colors.primary[500]};
+    outline-offset: 2px;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
   }
 `;
 
@@ -41,63 +56,185 @@ const AppContainer = styled.div`
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: ${colors.surface};
 `;
 
 const Header = styled.header`
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 16px 24px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: ${colors.background};
+  border-bottom: 1px solid ${colors.neutral[200]};
+  box-shadow: ${shadows.sm};
+  position: sticky;
+  top: 0;
+  z-index: 100;
 `;
 
 const HeaderContent = styled.div`
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 ${spacing.lg};
+  height: 70px;
+  
+  @media (max-width: 768px) {
+    padding: 0 ${spacing.md};
+    height: 60px;
+  }
 `;
 
-const Logo = styled.h1`
-  color: #007bff;
-  font-size: 24px;
-  font-weight: 600;
+const Logo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${spacing.sm};
+`;
+
+const LogoIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, ${colors.primary[600]} 0%, ${colors.primary[700]} 100%);
+  border-radius: ${borderRadius.md};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${colors.text.inverse};
+  font-weight: 700;
+  font-size: 18px;
+`;
+
+const LogoText = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const LogoTitle = styled.h1`
+  color: ${colors.text.primary};
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1;
+`;
+
+const LogoSubtitle = styled.span`
+  color: ${colors.text.secondary};
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 2px;
 `;
 
 const Navigation = styled.nav`
   display: flex;
-  gap: 24px;
+  gap: ${spacing.xs};
+  
+  @media (max-width: 768px) {
+    display: none; /* Could implement mobile menu here */
+  }
 `;
 
-const NavLink = styled.a`
-  color: #666;
+const NavItem = ({ to, children, icon }: { to: string; children: React.ReactNode; icon?: string }) => {
+  const location = useLocation();
+  const isActive = location.pathname === to;
+  
+  return (
+    <NavLinkStyled as={Link} to={to} $isActive={isActive}>
+      {icon && <span style={{ marginRight: spacing.xs }}>{icon}</span>}
+      {children}
+    </NavLinkStyled>
+  );
+};
+
+const NavLinkStyled = styled.div<{ $isActive?: boolean }>`
+  color: ${props => props.$isActive ? colors.primary[600] : colors.text.secondary};
   text-decoration: none;
-  font-weight: 500;
+  font-weight: ${props => props.$isActive ? typography.fontWeight.semibold : typography.fontWeight.medium};
+  font-size: ${typography.fontSize.sm};
+  padding: ${spacing.sm} ${spacing.md};
+  border-radius: ${borderRadius.md};
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
   
   &:hover {
-    color: #007bff;
+    color: ${colors.primary[600]};
+    background-color: ${colors.primary[50]};
   }
   
-  &.active {
-    color: #007bff;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 2px;
-  }
+  ${props => props.$isActive && `
+    background-color: ${colors.primary[50]};
+    box-shadow: inset 0 0 0 1px ${colors.primary[200]};
+  `}
 `;
 
 const Main = styled.main`
   flex: 1;
-  padding: 0;
+  padding: ${spacing.lg} 0;
+  min-height: calc(100vh - 70px - 60px); /* minus header and footer */
 `;
 
 const Footer = styled.footer`
-  background: #fff;
-  border-top: 1px solid #e0e0e0;
-  padding: 16px 24px;
+  background: ${colors.background};
+  border-top: 1px solid ${colors.neutral[200]};
+  padding: ${spacing.lg};
   text-align: center;
-  color: #666;
-  font-size: 14px;
+  
+  @media (max-width: 768px) {
+    padding: ${spacing.md};
+  }
 `;
+
+const FooterContent = styled.div`
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: ${spacing.md};
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    text-align: center;
+  }
+`;
+
+const FooterText = styled.p`
+  color: ${colors.text.secondary};
+  font-size: ${typography.fontSize.sm};
+  margin: 0;
+`;
+
+const FooterLinks = styled.div`
+  display: flex;
+  gap: ${spacing.lg};
+  
+  @media (max-width: 768px) {
+    gap: ${spacing.md};
+  }
+`;
+
+const FooterLink = styled.a`
+  color: ${colors.text.muted};
+  text-decoration: none;
+  font-size: ${typography.fontSize.sm};
+  
+  &:hover {
+    color: ${colors.primary[600]};
+  }
+`;
+
+// Navigation component with location awareness
+const NavigationWithLocation: React.FC = () => {
+  return (
+    <Navigation>
+      <NavItem to="/dashboard" icon="📊">Dashboard</NavItem>
+      <NavItem to="/accounts-receivables" icon="📋">Accounts</NavItem>
+      <NavItem to="/suppliers" icon="🏢">Suppliers</NavItem>
+      <NavItem to="/customers" icon="👥">Customers</NavItem>
+      <NavItem to="/purchase-orders" icon="📦">Orders</NavItem>
+      <NavItem to="/contacts" icon="📞">Contacts</NavItem>
+    </Navigation>
+  );
+};
 
 const App: React.FC = () => {
   return (
@@ -106,30 +243,42 @@ const App: React.FC = () => {
       <AppContainer>
         <Header>
           <HeaderContent>
-            <Logo>ProjectMeats</Logo>
-            <Navigation>
-              <NavLink href="/accounts-receivables" className="active">
-                Accounts Receivables
-              </NavLink>
-              <NavLink href="/suppliers">Suppliers</NavLink>
-              <NavLink href="/customers">Customers</NavLink>
-              <NavLink href="/purchase-orders">Purchase Orders</NavLink>
-            </Navigation>
+            <Logo>
+              <LogoIcon>🥩</LogoIcon>
+              <LogoText>
+                <LogoTitle>ProjectMeats</LogoTitle>
+                <LogoSubtitle>Sales Management</LogoSubtitle>
+              </LogoText>
+            </Logo>
+            <NavigationWithLocation />
           </HeaderContent>
         </Header>
         
         <Main>
           <Routes>
-            <Route path="/" element={<Navigate to="/accounts-receivables" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardScreen />} />
             <Route path="/accounts-receivables" element={<AccountsReceivablesScreen />} />
             <Route path="/suppliers" element={<SuppliersScreen />} />
             <Route path="/customers" element={<CustomersScreen />} />
             <Route path="/purchase-orders" element={<PurchaseOrdersScreen />} />
+            <Route path="/contacts" element={<ContactsScreen />} />
+            <Route path="/supplier-plant-mappings" element={<SupplierPlantMappingsScreen />} />
+            <Route path="/carriers" element={<CarrierInfoScreen />} />
           </Routes>
         </Main>
         
         <Footer>
-          ProjectMeats © 2024 | Migrated from PowerApps/Dataverse to Django + React
+          <FooterContent>
+            <FooterText>
+              ProjectMeats © 2024 | Professional Meat Sales Management Platform
+            </FooterText>
+            <FooterLinks>
+              <FooterLink href="#support">Support</FooterLink>
+              <FooterLink href="#documentation">Documentation</FooterLink>
+              <FooterLink href="#api">API</FooterLink>
+            </FooterLinks>
+          </FooterContent>
         </Footer>
       </AppContainer>
     </Router>
