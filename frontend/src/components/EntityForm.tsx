@@ -124,6 +124,36 @@ const TextArea = styled.textarea`
   }
 `;
 
+const FileInput = styled.input`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  }
+  
+  &::file-selector-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    
+    &:hover {
+      background-color: #0056b3;
+    }
+  }
+`;
+
 const FormActions = styled.div`
   display: flex;
   gap: 12px;
@@ -172,10 +202,12 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' | 'danger' }>`
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' | 'date';
+  type: 'text' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' | 'date' | 'file';
   required?: boolean;
   placeholder?: string;
   options?: { value: string | number; label: string }[];
+  accept?: string; // For file inputs
+  multiple?: boolean; // For multiple file uploads
 }
 
 // Props interface
@@ -204,7 +236,7 @@ const EntityForm: React.FC<EntityFormProps> = ({
   const [isDraft, setIsDraft] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Auto-save draft functionality
+  // Manual save draft functionality (auto-save removed to prevent typing interference)
   const saveDraft = useCallback(async () => {
     if (onSaveDraft && hasChanges) {
       try {
@@ -216,14 +248,6 @@ const EntityForm: React.FC<EntityFormProps> = ({
       }
     }
   }, [formData, hasChanges, onSaveDraft]);
-
-  // Auto-save draft after 2 seconds of inactivity
-  useEffect(() => {
-    if (hasChanges) {
-      const timer = setTimeout(saveDraft, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [hasChanges, saveDraft]);
 
   // Reset form when opened/closed
   useEffect(() => {
@@ -286,6 +310,24 @@ const EntityForm: React.FC<EntityFormProps> = ({
             checked={value}
             onChange={(e) => handleFieldChange(field.key, e.target.checked)}
             style={{ width: 'auto', marginRight: '8px' }}
+          />
+        );
+
+      case 'file':
+        return (
+          <FileInput
+            type="file"
+            onChange={(e) => {
+              const files = e.target.files;
+              if (field.multiple) {
+                handleFieldChange(field.key, files);
+              } else {
+                handleFieldChange(field.key, files?.[0] || null);
+              }
+            }}
+            accept={field.accept}
+            multiple={field.multiple}
+            required={field.required}
           />
         );
 

@@ -18,6 +18,7 @@ import type { MigrationInfo } from '../types';
 import { PurchaseOrdersService, CustomersService, SuppliersService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // Styled components (reusing consistent patterns)
 const Header = styled.div`
@@ -151,6 +152,10 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showMigrationInfo, setShowMigrationInfo] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingPurchaseOrder, setEditingPurchaseOrder] = useState<PurchaseOrder | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingPurchaseOrderId, setDeletingPurchaseOrderId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -158,6 +163,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
   // Load data on component mount and when filters change
   useEffect(() => {
     loadPurchaseOrders();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchTerm, statusFilter]);
 
   useEffect(() => {
@@ -223,14 +229,18 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
     {
       key: 'customer_documents',
       label: 'Customer Documents',
-      type: 'textarea',
-      placeholder: 'Enter customer document references'
+      type: 'file',
+      accept: '.pdf,.doc,.docx,.txt,.jpg,.png',
+      multiple: true,
+      placeholder: 'Upload customer documents'
     },
     {
       key: 'supplier_documents',
       label: 'Supplier Documents',
-      type: 'textarea',
-      placeholder: 'Enter supplier document references'
+      type: 'file',
+      accept: '.pdf,.doc,.docx,.txt,.jpg,.png',
+      multiple: true,
+      placeholder: 'Upload supplier documents'
     },
     {
       key: 'status',
@@ -338,6 +348,74 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
     localStorage.setItem('purchaseOrderDraft', JSON.stringify(formData));
   };
 
+  const handleEditPurchaseOrder = async (id: number) => {
+    const order = purchaseOrders.find(po => po.id === id);
+    if (order) {
+      setEditingPurchaseOrder(order);
+      setShowEditForm(true);
+    }
+  };
+
+  const handleUpdatePurchaseOrder = async (formData: Record<string, any>) => {
+    if (!editingPurchaseOrder) return;
+    
+    try {
+      setIsSubmitting(true);
+      // Type-safe conversion for update
+      const updateData = {
+        po_number: formData.po_number as string,
+        item: formData.item as string,
+        quantity: Number(formData.quantity),
+        price_per_unit: formData.price_per_unit as string,
+        purchase_date: formData.purchase_date as string,
+        fulfillment_date: formData.fulfillment_date as string || undefined,
+        customer: Number(formData.customer),
+        supplier: Number(formData.supplier),
+        customer_documents: formData.customer_documents || undefined,
+        supplier_documents: formData.supplier_documents || undefined,
+        status: formData.status as 'active' | 'inactive'
+      };
+      
+      await PurchaseOrdersService.update(editingPurchaseOrder.id, updateData);
+      setShowEditForm(false);
+      setEditingPurchaseOrder(null);
+      loadPurchaseOrders(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to update purchase order. Please try again.');
+      console.error('Error updating purchase order:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeletePurchaseOrder = (id: number) => {
+    setDeletingPurchaseOrderId(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingPurchaseOrderId) return;
+    
+    try {
+      await PurchaseOrdersService.delete(deletingPurchaseOrderId);
+      loadPurchaseOrders(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete purchase order. Please try again.');
+      console.error('Error deleting purchase order:', err);
+    } finally {
+      setShowDeleteConfirm(false);
+      setDeletingPurchaseOrderId(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeletingPurchaseOrderId(null);
+  };
+
   const formatCurrency = (amount: string) => {
     return `$${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
   };
@@ -415,6 +493,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
             <Th>Purchase Date</Th>
             <Th>Fulfillment</Th>
             <Th>Status</Th>
+            <Th>Actions</Th>
           </tr>
         </thead>
         <tbody>
@@ -449,6 +528,21 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
               </Td>
               <Td>
                 <StatusBadge status={order.status}>{order.status}</StatusBadge>
+              </Td>
+              <Td>
+                <Button 
+                  variant="secondary" 
+                  style={{ marginRight: '8px' }}
+                  onClick={() => handleEditPurchaseOrder(order.id)}
+                >
+                  Edit
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleDeletePurchaseOrder(order.id)}
+                >
+                  Delete
+                </Button>
               </Td>
             </tr>
           ))}
@@ -491,6 +585,42 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
         onSubmit={handleCreatePurchaseOrder}
         onSaveDraft={handleSaveDraft}
         isSubmitting={isSubmitting}
+      />
+
+      <EntityForm
+        title="Edit Purchase Order"
+        fields={formFields}
+        initialData={editingPurchaseOrder ? {
+          po_number: editingPurchaseOrder.po_number,
+          item: editingPurchaseOrder.item,
+          quantity: editingPurchaseOrder.quantity,
+          price_per_unit: editingPurchaseOrder.price_per_unit,
+          purchase_date: editingPurchaseOrder.purchase_date,
+          fulfillment_date: editingPurchaseOrder.fulfillment_date || '',
+          customer: editingPurchaseOrder.customer,
+          supplier: editingPurchaseOrder.supplier,
+          customer_documents: editingPurchaseOrder.customer_documents || '',
+          supplier_documents: editingPurchaseOrder.supplier_documents || '',
+          status: editingPurchaseOrder.status
+        } : {}}
+        isOpen={showEditForm}
+        onClose={() => {
+          setShowEditForm(false);
+          setEditingPurchaseOrder(null);
+        }}
+        onSubmit={handleUpdatePurchaseOrder}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        title="Delete Purchase Order"
+        message="Are you sure you want to delete this purchase order? This action cannot be undone and will permanently remove all associated data."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
       />
     </Container>
   );

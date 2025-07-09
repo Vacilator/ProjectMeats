@@ -16,6 +16,7 @@ import { AccountsReceivable, FilterOptions, MigrationInfo } from '../types';
 import { AccountsReceivablesService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // Styled components
 const Header = styled.div`
@@ -148,11 +149,16 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showMigrationInfo, setShowMigrationInfo] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<AccountsReceivable | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccountId, setDeletingAccountId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load data on component mount and when filters change
   useEffect(() => {
     loadAccounts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchTerm, statusFilter]);
 
   useEffect(() => {
@@ -277,15 +283,63 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
   };
 
   const handleDeleteAccount = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this account receivable?')) {
-      try {
-        await AccountsReceivablesService.delete(id);
-        loadAccounts(); // Reload the list
-      } catch (err) {
-        setError('Failed to delete account. Please try again.');
-        console.error('Error deleting account:', err);
-      }
+    setDeletingAccountId(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleEditAccount = (id: number) => {
+    const account = accounts.find(acc => acc.id === id);
+    if (account) {
+      setEditingAccount(account);
+      setShowEditForm(true);
     }
+  };
+
+  const handleUpdateAccount = async (formData: Record<string, any>) => {
+    if (!editingAccount) return;
+    
+    try {
+      setIsSubmitting(true);
+      const accountData = {
+        name: formData.name as string,
+        email: formData.email as string || undefined,
+        phone: formData.phone as string || undefined,
+        terms: formData.terms as string || undefined,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await AccountsReceivablesService.update(editingAccount.id, accountData);
+      setShowEditForm(false);
+      setEditingAccount(null);
+      loadAccounts(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to update account. Please try again.');
+      console.error('Error updating account:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingAccountId) return;
+    
+    try {
+      await AccountsReceivablesService.delete(deletingAccountId);
+      loadAccounts(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete account. Please try again.');
+      console.error('Error deleting account:', err);
+    } finally {
+      setShowDeleteConfirm(false);
+      setDeletingAccountId(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeletingAccountId(null);
   };
 
   if (loading && accounts.length === 0) {
@@ -362,7 +416,11 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
               </Td>
               <Td>{formatDate(account.created_on)}</Td>
               <Td>
-                <Button variant="secondary" style={{ marginRight: '8px' }}>
+                <Button 
+                  variant="secondary" 
+                  style={{ marginRight: '8px' }}
+                  onClick={() => handleEditAccount(account.id)}
+                >
                   Edit
                 </Button>
                 <Button 
@@ -414,6 +472,36 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
         onSubmit={handleCreateAccount}
         onSaveDraft={handleSaveDraft}
         isSubmitting={isSubmitting}
+      />
+
+      <EntityForm
+        title="Edit Account"
+        fields={formFields}
+        initialData={editingAccount ? {
+          name: editingAccount.name,
+          email: editingAccount.email || '',
+          phone: editingAccount.phone || '',
+          terms: editingAccount.terms || '',
+          status: editingAccount.status
+        } : {}}
+        isOpen={showEditForm}
+        onClose={() => {
+          setShowEditForm(false);
+          setEditingAccount(null);
+        }}
+        onSubmit={handleUpdateAccount}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        title="Delete Account"
+        message="Are you sure you want to delete this account receivable? This action cannot be undone and will permanently remove all associated data."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
       />
     </Container>
   );

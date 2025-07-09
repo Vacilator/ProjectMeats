@@ -12,7 +12,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Customer, FilterOptions, ContactInfo } from '../types';
+import { Customer, ContactInfo } from '../types';
 import type { MigrationInfo } from '../types';
 import { CustomersService, ContactsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
@@ -126,6 +126,7 @@ const CustomersScreen: React.FC = () => {
   useEffect(() => {
     loadCustomers();
     loadMigrationInfo();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load contacts for all customers
@@ -133,6 +134,7 @@ const CustomersScreen: React.FC = () => {
     if (customers.length > 0) {
       loadCustomerContacts();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customers]);
 
   // Form field definitions for Customers
