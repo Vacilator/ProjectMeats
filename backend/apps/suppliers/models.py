@@ -136,15 +136,15 @@ class SupplierPlantMapping(OwnedModel, StatusModel):
         help_text="Equivalent to PowerApps Contact Info lookup field"
     )
     
-    # Plant relationship - placeholder for future Plant entity implementation
-    # plant = models.ForeignKey(
-    #     'plants.Plant',
-    #     on_delete=models.PROTECT,
-    #     blank=True,
-    #     null=True,
-    #     related_name='supplier_mappings',
-    #     help_text="Equivalent to PowerApps Plant lookup field (placeholder)"
-    # )
+    # Plant relationship - now available with Plant entity implementation
+    plant = models.ForeignKey(
+        'plants.Plant',
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        related_name='supplier_mappings',
+        help_text="Equivalent to PowerApps Plant lookup field"
+    )
     
     # Document-related fields (based on PowerApps description mentioning documents)
     documents_reference = models.CharField(

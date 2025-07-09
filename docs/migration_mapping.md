@@ -195,11 +195,48 @@ PowerApps Canvas App        →    React Frontend
 - `DELETE /api/v1/purchase-orders/{id}/` - Soft delete (inactive)
 - `GET /api/v1/purchase-orders/migration_info/` - PowerApps migration data
 
-### 6. Plants (🔄 Planned)
+### 6. Plants (✅ Completed)
 
 **PowerApps Entity**: `cr7c4_plant`  
-**Django Model**: `Plant` (planned)  
-**Django App**: `apps.plants` (planned)
+**Django Model**: `Plant`  
+**Django App**: `apps.plants`
+
+#### Field Mappings
+
+| PowerApps Field | Type | Django Field | Type | Notes |
+|----------------|------|--------------|------|--------|
+| `cr7c4_plantid` | Primary Key | `id` | AutoField | Django auto-generated |
+| `cr7c4_plantname` | Text (100) | `name` | CharField(100) | Primary field, required |
+| `cr7c4_location` | Text (200) | `location` | CharField(200) | Plant location, optional |
+| `cr7c4_planttype` | Picklist | `plant_type` | CharField(50) | Plant type choices, optional |
+| `cr7c4_releasenumber` | Text (100) | `release_number` | CharField(100) | Release number, optional |
+| `cr7c4_loadpickuprequirements` | Multi-select Picklist | `load_pickup_requirements` | CharField(200) | Comma-separated values |
+| `cr7c4_storage` | Multi-select Picklist | `storage` | CharField(200) | Comma-separated storage types |
+| `cr7c4_supplierid` | Lookup | `supplier` | ForeignKey(Supplier) | Supplier relationship, optional |
+| `statecode` | State | `status` | TextChoices | Active/Inactive |
+| `statuscode` | Status | `status` | TextChoices | Combined with statecode |
+| `createdon` | DateTime | `created_on` | DateTimeField | Auto timestamp |
+| `modifiedon` | DateTime | `modified_on` | DateTimeField | Auto update |
+| `createdby` | Lookup | `created_by` | ForeignKey(User) | User reference |
+| `modifiedby` | Lookup | `modified_by` | ForeignKey(User) | User reference |
+| `ownerid` | Owner | `owner` | ForeignKey(User) | User reference |
+
+#### Computed Properties
+
+| Property | Calculation | Notes |
+|----------|-------------|--------|
+| `has_location` | `bool(location and location.strip())` | Boolean indicating if location is specified |
+| `has_supplier` | `supplier is not None` | Boolean indicating if supplier is linked |
+| `load_pickup_requirements_list` | `load_pickup_requirements.split(',')` | Multi-select as Python list |
+| `storage_list` | `storage.split(',')` | Multi-select as Python list |
+
+#### API Endpoints
+- `GET /api/v1/plants/` - List with pagination/filtering
+- `POST /api/v1/plants/` - Create new record
+- `GET /api/v1/plants/{id}/` - Get specific record
+- `PUT /api/v1/plants/{id}/` - Update record
+- `DELETE /api/v1/plants/{id}/` - Soft delete (inactive)
+- `GET /api/v1/plants/migration_info/` - PowerApps migration data
 
 ### 7. Carrier Info (🔄 Planned)
 
@@ -519,8 +556,8 @@ const EntityScreen: React.FC = () => {
 - ✅ Purchase Orders (`pro_purchaseorder`) - Backend implementation completed
 - ✅ Supplier Plant Mapping (`pro_supplierplantmapping`) - Backend implementation completed
 
-### Phase 4: Reference Data (🔄 Planned)
-- 🔄 Plants (`cr7c4_plant`)
+### Phase 4: Reference Data (🔄 In Progress)
+- ✅ Plants (`cr7c4_plant`) - Backend implementation completed
 - 🔄 Carrier Info (`cr7c4_carrierinfo`)
 - 🔄 Supplier Locations (`pro_supplier_locations`)
 
@@ -537,14 +574,15 @@ const EntityScreen: React.FC = () => {
 3. **Customers** - Complete backend + frontend
 4. **Contact Info** - Complete backend + frontend
 
-### 🔄 Backend Ready (2/9 entities)
+### 🔄 Backend Ready (3/9 entities)
 5. **Purchase Orders** - Backend implementation completed, frontend pending
 6. **Supplier Plant Mapping** - Backend implementation completed, frontend pending
+7. **Plants** - Backend implementation completed, frontend pending
 
 ### 📊 Implementation Statistics
-- **Backend**: 6 Django apps with 45 passing tests
-- **Frontend**: 4 React screens with API integration (Purchase Orders & Supplier Plant Mapping frontends not yet implemented)
-- **API Endpoints**: 30+ REST endpoints with OpenAPI documentation
+- **Backend**: 7 Django apps with 55 passing tests
+- **Frontend**: 4 React screens with API integration (Purchase Orders, Supplier Plant Mapping & Plants frontends not yet implemented)
+- **API Endpoints**: 36+ REST endpoints with OpenAPI documentation
 - **Database**: All migrations applied, relationships established
 - **Admin Interface**: Full Django admin with PowerApps field documentation
 
