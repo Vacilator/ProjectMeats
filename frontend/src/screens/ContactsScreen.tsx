@@ -17,6 +17,8 @@ import { ContactInfo, FilterOptions } from '../types';
 import type { MigrationInfo } from '../types';
 import { ContactsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
+import EntityForm, { FormField } from '../components/EntityForm';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // Styled components with unique color scheme for contacts
 const Header = styled.div`
@@ -150,11 +152,62 @@ const ContactsScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingContact, setEditingContact] = useState<ContactInfo | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingContactId, setDeletingContactId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadContacts();
     loadMigrationInfo();
   }, []);
+
+  // Form field definitions for ContactInfo
+  const formFields: FormField[] = [
+    {
+      key: 'name',
+      label: 'Name',
+      type: 'text',
+      required: true,
+      placeholder: 'Enter contact name'
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      type: 'email',
+      placeholder: 'Enter email address'
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      type: 'text',
+      placeholder: 'Enter phone number'
+    },
+    {
+      key: 'position',
+      label: 'Position',
+      type: 'text',
+      placeholder: 'Enter position/title'
+    },
+    {
+      key: 'contact_type',
+      label: 'Contact Type',
+      type: 'text',
+      placeholder: 'Enter contact type'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' }
+      ]
+    }
+  ];
 
   const loadContacts = async () => {
     try {
@@ -184,16 +237,95 @@ const ContactsScreen: React.FC = () => {
     loadContacts();
   };
 
-  const handleDeleteContact = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this contact?')) {
-      try {
-        await ContactsService.delete(id);
-        loadContacts(); // Reload the list
-      } catch (err) {
-        setError('Failed to delete contact. Please try again.');
-        console.error('Error deleting contact:', err);
-      }
+  // Form handling functions
+  const handleCreateContact = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmitting(true);
+      const contactData = {
+        name: formData.name as string,
+        email: formData.email as string || undefined,
+        phone: formData.phone as string || undefined,
+        position: formData.position as string || undefined,
+        contact_type: formData.contact_type as string || undefined,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await ContactsService.create(contactData);
+      setShowCreateForm(false);
+      loadContacts(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to create contact. Please try again.');
+      console.error('Error creating contact:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleSaveDraft = async (formData: Record<string, any>) => {
+    console.log('Saving contact draft:', formData);
+    localStorage.setItem('contactDraft', JSON.stringify(formData));
+  };
+
+  const handleEditContact = (id: number) => {
+    const contact = contacts.find(c => c.id === id);
+    if (contact) {
+      setEditingContact(contact);
+      setShowEditForm(true);
+    }
+  };
+
+  const handleUpdateContact = async (formData: Record<string, any>) => {
+    if (!editingContact) return;
+    
+    try {
+      setIsSubmitting(true);
+      const contactData = {
+        name: formData.name as string,
+        email: formData.email as string || undefined,
+        phone: formData.phone as string || undefined,
+        position: formData.position as string || undefined,
+        contact_type: formData.contact_type as string || undefined,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await ContactsService.update(editingContact.id, contactData);
+      setShowEditForm(false);
+      setEditingContact(null);
+      loadContacts(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to update contact. Please try again.');
+      console.error('Error updating contact:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteContact = async (id: number) => {
+    setDeletingContactId(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingContactId) return;
+    
+    try {
+      await ContactsService.delete(deletingContactId);
+      loadContacts(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete contact. Please try again.');
+      console.error('Error deleting contact:', err);
+    } finally {
+      setShowDeleteConfirm(false);
+      setDeletingContactId(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeletingContactId(null);
   };
 
   if (loading) {
@@ -223,7 +355,7 @@ const ContactsScreen: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </form>
-          <Button variant="primary">Add Contact</Button>
+          <Button variant="primary" onClick={() => setShowCreateForm(true)}>Add Contact</Button>
           <Button variant="secondary">Export</Button>
         </Controls>
       </Header>
@@ -315,7 +447,7 @@ const ContactsScreen: React.FC = () => {
               <TableCell>
                 <Button 
                   variant="secondary" 
-                  onClick={() => console.log('Edit contact:', contact.id)}
+                  onClick={() => handleEditContact(contact.id)}
                   style={{ marginRight: '8px' }}
                 >
                   Edit
@@ -335,6 +467,47 @@ const ContactsScreen: React.FC = () => {
       {contacts.length === 0 && !loading && (
         <LoadingMessage>No contacts found. Create your first contact to get started.</LoadingMessage>
       )}
+
+      <EntityForm
+        title="Create New Contact"
+        fields={formFields}
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        onSubmit={handleCreateContact}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
+
+      <EntityForm
+        title="Edit Contact"
+        fields={formFields}
+        initialData={editingContact ? {
+          name: editingContact.name,
+          email: editingContact.email || '',
+          phone: editingContact.phone || '',
+          position: editingContact.position || '',
+          contact_type: editingContact.contact_type || '',
+          status: editingContact.status
+        } : {}}
+        isOpen={showEditForm}
+        onClose={() => {
+          setShowEditForm(false);
+          setEditingContact(null);
+        }}
+        onSubmit={handleUpdateContact}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        title="Delete Contact"
+        message="Are you sure you want to delete this contact? This action cannot be undone and will permanently remove all associated data."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </Container>
   );
 };

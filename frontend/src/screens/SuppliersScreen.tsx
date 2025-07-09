@@ -18,6 +18,7 @@ import type { MigrationInfo } from '../types';
 import { SuppliersService, ContactsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // Styled components
 const Header = styled.div`
@@ -119,6 +120,10 @@ const SuppliersScreen: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingSupplierId, setDeletingSupplierId] = useState<number | null>(null);
   const [showContactForm, setShowContactForm] = useState(false);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -275,16 +280,63 @@ const SuppliersScreen: React.FC = () => {
     loadSuppliers();
   };
 
-  const handleDeleteSupplier = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this supplier?')) {
-      try {
-        await SuppliersService.delete(id);
-        loadSuppliers(); // Reload the list
-      } catch (err) {
-        setError('Failed to delete supplier. Please try again.');
-        console.error('Error deleting supplier:', err);
-      }
+  const handleEditSupplier = (id: number) => {
+    const supplier = suppliers.find(s => s.id === id);
+    if (supplier) {
+      setEditingSupplier(supplier);
+      setShowEditForm(true);
     }
+  };
+
+  const handleUpdateSupplier = async (formData: Record<string, any>) => {
+    if (!editingSupplier) return;
+    
+    try {
+      setIsSubmitting(true);
+      const supplierData = {
+        name: formData.name as string,
+        credit_application_date: formData.credit_application_date as string || undefined,
+        delivery_type_profile: Boolean(formData.delivery_type_profile),
+        status: formData.status as 'active' | 'inactive'
+      };
+      await SuppliersService.update(editingSupplier.id, supplierData);
+      setShowEditForm(false);
+      setEditingSupplier(null);
+      loadSuppliers(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to update supplier. Please try again.');
+      console.error('Error updating supplier:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSupplier = async (id: number) => {
+    setDeletingSupplierId(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingSupplierId) return;
+    
+    try {
+      await SuppliersService.delete(deletingSupplierId);
+      loadSuppliers(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete supplier. Please try again.');
+      console.error('Error deleting supplier:', err);
+    } finally {
+      setShowDeleteConfirm(false);
+      setDeletingSupplierId(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeletingSupplierId(null);
   };
 
   // Form handling functions
@@ -444,7 +496,7 @@ const SuppliersScreen: React.FC = () => {
               <TableCell>
                 <Button 
                   variant="secondary" 
-                  onClick={() => console.log('Edit supplier:', supplier.id)}
+                  onClick={() => handleEditSupplier(supplier.id)}
                   style={{ marginRight: '8px' }}
                 >
                   Edit
@@ -476,6 +528,25 @@ const SuppliersScreen: React.FC = () => {
       />
 
       <EntityForm
+        title="Edit Supplier"
+        fields={formFields}
+        initialData={editingSupplier ? {
+          name: editingSupplier.name,
+          credit_application_date: editingSupplier.credit_application_date || '',
+          delivery_type_profile: editingSupplier.delivery_type_profile,
+          status: editingSupplier.status
+        } : {}}
+        isOpen={showEditForm}
+        onClose={() => {
+          setShowEditForm(false);
+          setEditingSupplier(null);
+        }}
+        onSubmit={handleUpdateSupplier}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
+
+      <EntityForm
         title="Add Contact to Supplier"
         fields={contactFormFields}
         isOpen={showContactForm}
@@ -486,6 +557,16 @@ const SuppliersScreen: React.FC = () => {
         onSubmit={handleCreateContact}
         onSaveDraft={handleSaveContactDraft}
         isSubmitting={isSubmitting}
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        title="Delete Supplier"
+        message="Are you sure you want to delete this supplier? This action cannot be undone and will permanently remove all associated data."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
       />
     </Container>
   );

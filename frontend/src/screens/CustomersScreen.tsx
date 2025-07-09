@@ -17,6 +17,7 @@ import type { MigrationInfo } from '../types';
 import { CustomersService, ContactsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // Reuse styled components from SuppliersScreen for consistency
 const Header = styled.div`
@@ -118,6 +119,10 @@ const CustomersScreen: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingCustomerId, setDeletingCustomerId] = useState<number | null>(null);
   const [showContactForm, setShowContactForm] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -263,16 +268,61 @@ const CustomersScreen: React.FC = () => {
     loadCustomers();
   };
 
-  const handleDeleteCustomer = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this customer?')) {
-      try {
-        await CustomersService.delete(id);
-        loadCustomers(); // Reload the list
-      } catch (err) {
-        setError('Failed to delete customer. Please try again.');
-        console.error('Error deleting customer:', err);
-      }
+  const handleEditCustomer = (id: number) => {
+    const customer = customers.find(c => c.id === id);
+    if (customer) {
+      setEditingCustomer(customer);
+      setShowEditForm(true);
     }
+  };
+
+  const handleUpdateCustomer = async (formData: Record<string, any>) => {
+    if (!editingCustomer) return;
+    
+    try {
+      setIsSubmitting(true);
+      const customerData = {
+        name: formData.name as string,
+        status: formData.status as 'active' | 'inactive'
+      };
+      await CustomersService.update(editingCustomer.id, customerData);
+      setShowEditForm(false);
+      setEditingCustomer(null);
+      loadCustomers(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to update customer. Please try again.');
+      console.error('Error updating customer:', err);
+      throw err; // Re-throw to prevent form from closing
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteCustomer = async (id: number) => {
+    setDeletingCustomerId(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingCustomerId) return;
+    
+    try {
+      await CustomersService.delete(deletingCustomerId);
+      loadCustomers(); // Reload the list
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete customer. Please try again.');
+      console.error('Error deleting customer:', err);
+    } finally {
+      setShowDeleteConfirm(false);
+      setDeletingCustomerId(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeletingCustomerId(null);
   };
 
   // Form handling functions
@@ -422,7 +472,7 @@ const CustomersScreen: React.FC = () => {
               <TableCell>
                 <Button 
                   variant="secondary" 
-                  onClick={() => console.log('Edit customer:', customer.id)}
+                  onClick={() => handleEditCustomer(customer.id)}
                   style={{ marginRight: '8px' }}
                 >
                   Edit
@@ -454,6 +504,23 @@ const CustomersScreen: React.FC = () => {
       />
 
       <EntityForm
+        title="Edit Customer"
+        fields={customerFormFields}
+        initialData={editingCustomer ? {
+          name: editingCustomer.name,
+          status: editingCustomer.status
+        } : {}}
+        isOpen={showEditForm}
+        onClose={() => {
+          setShowEditForm(false);
+          setEditingCustomer(null);
+        }}
+        onSubmit={handleUpdateCustomer}
+        onSaveDraft={handleSaveDraft}
+        isSubmitting={isSubmitting}
+      />
+
+      <EntityForm
         title="Add Contact to Customer"
         fields={contactFormFields}
         isOpen={showContactForm}
@@ -464,6 +531,16 @@ const CustomersScreen: React.FC = () => {
         onSubmit={handleCreateContact}
         onSaveDraft={handleSaveContactDraft}
         isSubmitting={isSubmitting}
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        title="Delete Customer"
+        message="Are you sure you want to delete this customer? This action cannot be undone and will permanently remove all associated data."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
       />
     </Container>
   );
