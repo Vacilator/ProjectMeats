@@ -34,6 +34,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='accountsreceivable',
-            constraint=models.CheckConstraint(condition=models.Q(('name__isnull', False), models.Q(('name', ''), _negated=True)), name='ar_name_not_empty'),
+            constraint=models.CheckConstraint(check=models.Q(name__isnull=False) & ~models.Q(name=''), name='ar_name_not_empty'),
         ),
     ]

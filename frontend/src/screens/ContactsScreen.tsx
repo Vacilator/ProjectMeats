@@ -1,5 +1,6 @@
 /**
- * Contact Information Screen Component
+ * Contact Inf// Styled components with unique color scheme for contacts
+const Header = styled.div` Screen Component
  * 
  * Main screen for managing contact information records migrated from 
  * PowerApps pro_contactinfo entity.
@@ -13,16 +14,12 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { ContactInfo, FilterOptions, MigrationInfo } from '../types';
+import { ContactInfo, FilterOptions } from '../types';
+import type { MigrationInfo } from '../types';
 import { ContactsService } from '../services/api';
+import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 
 // Styled components with unique color scheme for contacts
-const Container = styled.div`
-  padding: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
-`;
-
 const Header = styled.div`
   display: flex;
   justify-content: between;
@@ -148,29 +145,6 @@ const RelationshipTag = styled.span<{ type: 'customer' | 'supplier' }>`
   `}
 `;
 
-const LoadingMessage = styled.div`
-  text-align: center;
-  padding: 40px;
-  color: #666;
-`;
-
-const ErrorMessage = styled.div`
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-`;
-
-const MigrationInfo = styled.div`
-  background-color: #e2e3ff;
-  color: #3d3d99;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  font-size: 14px;
-`;
-
 const ContactsScreen: React.FC = () => {
   const [contacts, setContacts] = useState<ContactInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -258,10 +232,10 @@ const ContactsScreen: React.FC = () => {
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
       {migrationInfo && (
-        <MigrationInfo>
+        <SharedMigrationInfo>
           📞 PowerApps Migration Status: {migrationInfo.active_records} active contacts 
           from {migrationInfo.powerapps_entity_name} entity
-        </MigrationInfo>
+        </SharedMigrationInfo>
       )}
 
       <Table>

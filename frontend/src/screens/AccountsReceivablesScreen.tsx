@@ -14,14 +14,9 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { AccountsReceivable, FilterOptions, MigrationInfo } from '../types';
 import { AccountsReceivablesService } from '../services/api';
+import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage } from '../components/SharedComponents';
 
 // Styled components
-const Container = styled.div`
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-`;
-
 const Header = styled.div`
   display: flex;
   justify-content: between;
@@ -127,23 +122,6 @@ const LoadingSpinner = styled.div`
   height: 200px;
   font-size: 16px;
   color: #666;
-`;
-
-const ErrorMessage = styled.div`
-  background: #f8d7da;
-  color: #721c24;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-`;
-
-const MigrationInfo = styled.div`
-  background: #e7f3ff;
-  border: 1px solid #b8daff;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 20px;
-  font-size: 14px;
 `;
 
 const Pagination = styled.div`
@@ -262,13 +240,13 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
       {showMigrationInfo && migrationInfo && (
-        <MigrationInfo>
+        <SharedMigrationInfo>
           <strong>PowerApps Migration Information:</strong><br />
           Original Entity: {migrationInfo.powerapps_entity_name}<br />
           Django Model: {migrationInfo.django_model_name}<br />
           Total Records: {migrationInfo.total_records} ({migrationInfo.active_records} active)<br />
           API Endpoint: {migrationInfo.api_endpoints.list}
-        </MigrationInfo>
+        </SharedMigrationInfo>
       )}
 
       <Table>

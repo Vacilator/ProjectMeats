@@ -13,16 +13,12 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { PurchaseOrder, FilterOptions, MigrationInfo } from '../types';
+import { PurchaseOrder, FilterOptions } from '../types';
+import type { MigrationInfo } from '../types';
 import { PurchaseOrdersService } from '../services/api';
+import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 
 // Styled components (reusing consistent patterns)
-const Container = styled.div`
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-`;
-
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
@@ -131,32 +127,6 @@ const FulfillmentBadge = styled.span<{ fulfilled: boolean }>`
   color: ${props => props.fulfilled ? '#856404' : '#0c5460'};
 `;
 
-const LoadingSpinner = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  font-size: 16px;
-  color: #666;
-`;
-
-const ErrorMessage = styled.div`
-  background: #f8d7da;
-  color: #721c24;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-`;
-
-const MigrationInfo = styled.div`
-  background: #e7f3ff;
-  border: 1px solid #b8daff;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 20px;
-  font-size: 14px;
-`;
-
 const Pagination = styled.div`
   display: flex;
   justify-content: center;
@@ -241,7 +211,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
   if (loading && purchaseOrders.length === 0) {
     return (
       <Container>
-        <LoadingSpinner>Loading purchase orders...</LoadingSpinner>
+        <LoadingMessage>Loading purchase orders...</LoadingMessage>
       </Container>
     );
   }
@@ -279,7 +249,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
       {showMigrationInfo && migrationInfo && (
-        <MigrationInfo>
+        <SharedMigrationInfo>
           <strong>PowerApps Migration Info:</strong><br />
           Entity: {migrationInfo.powerapps_entity_name} → {migrationInfo.django_model_name}<br />
           Records: {migrationInfo.active_records} active / {migrationInfo.total_records} total<br />
@@ -289,7 +259,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
               {JSON.stringify(migrationInfo.field_mappings, null, 2)}
             </pre>
           </details>
-        </MigrationInfo>
+        </SharedMigrationInfo>
       )}
 
       <Table>

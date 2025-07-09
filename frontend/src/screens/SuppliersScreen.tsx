@@ -13,16 +13,12 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Supplier, FilterOptions, MigrationInfo } from '../types';
+import { Supplier, FilterOptions } from '../types';
+import type { MigrationInfo } from '../types';
 import { SuppliersService } from '../services/api';
+import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 
 // Styled components
-const Container = styled.div`
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-`;
-
 const Header = styled.div`
   display: flex;
   justify-content: between;
@@ -115,29 +111,6 @@ const StatusBadge = styled.span<{ status: string }>`
   `}
 `;
 
-const LoadingMessage = styled.div`
-  text-align: center;
-  padding: 40px;
-  color: #666;
-`;
-
-const ErrorMessage = styled.div`
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-`;
-
-const MigrationInfo = styled.div`
-  background-color: #d1ecf1;
-  color: #0c5460;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  font-size: 14px;
-`;
-
 const SuppliersScreen: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,10 +198,10 @@ const SuppliersScreen: React.FC = () => {
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
       {migrationInfo && (
-        <MigrationInfo>
+        <SharedMigrationInfo>
           📊 PowerApps Migration Status: {migrationInfo.active_records} active suppliers 
           from {migrationInfo.powerapps_entity_name} entity
-        </MigrationInfo>
+        </SharedMigrationInfo>
       )}
 
       <Table>
