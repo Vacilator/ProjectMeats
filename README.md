@@ -115,6 +115,8 @@ make docs       # Generate API documentation
 
 ## 📚 Documentation
 
+- **[Agent Quick Start Guide](docs/agent_quick_start.md)** - **Required reading for all agents**
+- **[Agent Activity Log](docs/agent_activity_log.md)** - **Required logging for all work**
 - **[Backend Setup Guide](docs/backend_setup.md)** - Detailed backend development setup
 - **[Frontend Setup Guide](docs/frontend_setup.md)** - React development environment
 - **[API Reference](docs/api_reference.md)** - Complete API documentation
@@ -163,10 +165,18 @@ REACT_APP_ENVIRONMENT=development
 
 ## 👥 Contributing
 
+### 🚨 **REQUIRED: Agent Activity Logging**
+**ALL AGENTS MUST** log their work in [docs/agent_activity_log.md](docs/agent_activity_log.md):
+- Log initial objectives when starting work
+- Update progress regularly during development
+- Document completed work and handoffs
+
+### Development Guidelines
 1. **New Developers**: Follow [docs/backend_setup.md](docs/backend_setup.md) and [docs/frontend_setup.md](docs/frontend_setup.md)
 2. **Entity Migration**: Use existing patterns from `accounts_receivables` 
 3. **Code Review**: Ensure PowerApps field mappings are documented
 4. **Testing**: Add tests for new functionality
+5. **Documentation**: Update [agent activity log](docs/agent_activity_log.md) for all work
 
 ## 📝 PowerApps Legacy
 
