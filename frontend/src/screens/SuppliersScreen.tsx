@@ -113,6 +113,72 @@ const StatusBadge = styled.span<{ status: string }>`
   `}
 `;
 
+const ClickableContactCount = styled.span`
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: underline;
+  
+  &:hover {
+    color: #0056b3;
+  }
+`;
+
+const ContactModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ContactModalContent = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 500px;
+  max-width: 80vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+`;
+
+const ContactList = styled.div`
+  margin-top: 16px;
+`;
+
+const ContactItem = styled.div`
+  padding: 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const ContactHeader = styled.div`
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 8px;
+`;
+
+const ContactDetails = styled.div`
+  font-size: 14px;
+  color: #666;
+  
+  & > div {
+    margin-bottom: 4px;
+  }
+`;
+
 const SuppliersScreen: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +194,8 @@ const SuppliersScreen: React.FC = () => {
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [supplierContacts, setSupplierContacts] = useState<Record<number, ContactInfo[]>>({});
+  const [showContactsModal, setShowContactsModal] = useState(false);
+  const [selectedSupplierForContacts, setSelectedSupplierForContacts] = useState<Supplier | null>(null);
 
   useEffect(() => {
     loadSuppliers();
@@ -269,7 +337,8 @@ const SuppliersScreen: React.FC = () => {
         }
       });
       
-      setSupplierContacts(contactsMap);
+      // Force state update
+      setSupplierContacts({ ...contactsMap });
     } catch (err) {
       console.error('Error loading supplier contacts:', err);
     }
@@ -384,7 +453,12 @@ const SuppliersScreen: React.FC = () => {
       await ContactsService.create(contactData);
       setShowContactForm(false);
       setSelectedSupplierId(null);
-      loadSupplierContacts(); // Reload contacts to show new contact
+      
+      // Force reload of supplier contacts with a small delay to ensure backend is updated
+      setTimeout(() => {
+        loadSupplierContacts();
+      }, 100);
+      
       setError(null);
     } catch (err) {
       setError('Failed to create contact. Please try again.');
@@ -403,6 +477,11 @@ const SuppliersScreen: React.FC = () => {
   const handleAddContact = (supplierId: number) => {
     setSelectedSupplierId(supplierId);
     setShowContactForm(true);
+  };
+
+  const handleShowContacts = (supplier: Supplier) => {
+    setSelectedSupplierForContacts(supplier);
+    setShowContactsModal(true);
   };
 
   if (loading) {
@@ -471,7 +550,9 @@ const SuppliersScreen: React.FC = () => {
                 </StatusBadge>
               </TableCell>
               <TableCell>
-                {supplierContacts[supplier.id]?.length || 0} contacts
+                <ClickableContactCount onClick={() => handleShowContacts(supplier)}>
+                  {supplierContacts[supplier.id]?.length || 0} contacts
+                </ClickableContactCount>
                 <br />
                 <Button 
                   variant="secondary" 
@@ -570,6 +651,59 @@ const SuppliersScreen: React.FC = () => {
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
       />
+
+      {showContactsModal && selectedSupplierForContacts && (
+        <ContactModal onClick={() => setShowContactsModal(false)}>
+          <ContactModalContent onClick={(e) => e.stopPropagation()}>
+            <ContactHeader>
+              <h3>Contacts for {selectedSupplierForContacts.name}</h3>
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowContactsModal(false)}
+                style={{ padding: '4px 8px' }}
+              >
+                ✕
+              </Button>
+            </ContactHeader>
+            
+            {supplierContacts[selectedSupplierForContacts.id]?.length > 0 ? (
+              <ContactList>
+                {supplierContacts[selectedSupplierForContacts.id].map((contact) => (
+                  <ContactItem key={contact.id}>
+                    <ContactHeader>
+                      <span>{contact.name}</span>
+                      <StatusBadge status={contact.status}>
+                        {contact.status}
+                      </StatusBadge>
+                    </ContactHeader>
+                    <ContactDetails>
+                      {contact.email && <div>📧 {contact.email}</div>}
+                      {contact.phone && <div>📞 {contact.phone}</div>}
+                      {contact.position && <div>💼 {contact.position}</div>}
+                      {contact.contact_type && <div>🏷️ {contact.contact_type}</div>}
+                    </ContactDetails>
+                  </ContactItem>
+                ))}
+              </ContactList>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px', color: '#666' }}>
+                No contacts found for this supplier.
+                <br />
+                <Button 
+                  variant="primary" 
+                  onClick={() => {
+                    setShowContactsModal(false);
+                    handleAddContact(selectedSupplierForContacts.id);
+                  }}
+                  style={{ marginTop: '16px' }}
+                >
+                  Add First Contact
+                </Button>
+              </div>
+            )}
+          </ContactModalContent>
+        </ContactModal>
+      )}
     </Container>
   );
 };

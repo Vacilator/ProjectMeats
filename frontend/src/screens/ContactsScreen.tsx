@@ -158,11 +158,21 @@ const ContactsScreen: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingContactId, setDeletingContactId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  const loadContacts = useCallback(async () => {
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const loadContacts = useCallback(async (search?: string) => {
     try {
       setLoading(true);
-      const response = await ContactsService.getList(1, { search: searchTerm });
+      const response = await ContactsService.getList(1, { search: search || debouncedSearchTerm });
       setContacts(response.results);
       setError(null);
     } catch (err) {
@@ -171,7 +181,7 @@ const ContactsScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, [debouncedSearchTerm]);
 
   const loadMigrationInfo = useCallback(async () => {
     try {
@@ -184,8 +194,11 @@ const ContactsScreen: React.FC = () => {
 
   useEffect(() => {
     loadContacts();
+  }, [debouncedSearchTerm]);
+
+  useEffect(() => {
     loadMigrationInfo();
-  }, [loadContacts, loadMigrationInfo]);
+  }, []);
 
   // Form field definitions for ContactInfo
   const formFields: FormField[] = [
@@ -232,9 +245,8 @@ const ContactsScreen: React.FC = () => {
     }
   ];
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    loadContacts();
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
   // Form handling functions
@@ -347,14 +359,12 @@ const ContactsScreen: React.FC = () => {
           </Subtitle>
         </div>
         <Controls>
-          <form onSubmit={handleSearch}>
-            <SearchInput
-              type="text"
-              placeholder="Search contacts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </form>
+          <SearchInput
+            type="text"
+            placeholder="Search contacts..."
+            value={searchTerm}
+            onChange={handleSearch}
+          />
           <Button variant="primary" onClick={() => setShowCreateForm(true)}>Add Contact</Button>
           <Button variant="secondary">Export</Button>
         </Controls>

@@ -11,10 +11,14 @@ from .models import ContactInfo
 class ContactInfoListSerializer(serializers.ModelSerializer):
     """
     Lightweight serializer for list views and minimal data representation.
-    Includes only essential fields for performance.
+    Includes only essential fields for performance and relationship names.
     """
     has_contact_details = serializers.BooleanField(read_only=True)
     has_relationships = serializers.BooleanField(read_only=True)
+    
+    # Related object display names for list view
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
     
     class Meta:
         model = ContactInfo
@@ -25,13 +29,25 @@ class ContactInfoListSerializer(serializers.ModelSerializer):
             'phone',
             'position',
             'contact_type',
+            'customer',
+            'customer_name',
+            'supplier',
+            'supplier_name',
             'status',
             'has_contact_details',
             'has_relationships',
             'created_on',
             'modified_on',
         ]
-        read_only_fields = ['id', 'created_on', 'modified_on', 'has_contact_details', 'has_relationships']
+        read_only_fields = [
+            'id', 
+            'created_on', 
+            'modified_on', 
+            'has_contact_details', 
+            'has_relationships',
+            'customer_name',
+            'supplier_name'
+        ]
 
 
 class ContactInfoDetailSerializer(serializers.ModelSerializer):
