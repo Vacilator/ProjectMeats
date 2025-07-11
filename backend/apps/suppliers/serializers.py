@@ -5,7 +5,7 @@ Handles serialization/deserialization between Django models and JSON API respons
 Migrated from PowerApps cr7c4_supplier entity.
 """
 from rest_framework import serializers
-from .models import Supplier, SupplierPlantMapping
+from .models import Supplier, SupplierPlantMapping, SupplierLocation
 
 
 class SupplierListSerializer(serializers.ModelSerializer):
@@ -265,6 +265,156 @@ class SupplierPlantMappingCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """
         Create new SupplierPlantMapping with automatic owner assignment.
+        
+        Note: In production, you'd set the owner/created_by from the 
+        authenticated user in the view.
+        """
+        # For now, we'll leave ownership fields for the view to handle
+        return super().create(validated_data)
+
+
+class SupplierLocationListSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for list views and minimal data representation.
+    Includes only essential fields for performance.
+    """
+    has_address = serializers.BooleanField(read_only=True)
+    has_contact_info = serializers.BooleanField(read_only=True)
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    
+    class Meta:
+        model = SupplierLocation
+        fields = [
+            'id',
+            'name',
+            'city',
+            'state',
+            'location_type',
+            'supplier',
+            'supplier_name',
+            'status',
+            'has_address',
+            'has_contact_info',
+            'created_on',
+            'modified_on',
+        ]
+        read_only_fields = [
+            'id', 
+            'created_on', 
+            'modified_on', 
+            'has_address',
+            'has_contact_info',
+            'supplier_name'
+        ]
+
+
+class SupplierLocationDetailSerializer(serializers.ModelSerializer):
+    """
+    Complete serializer for detail views with all PowerApps migrated fields.
+    Includes relationship fields and metadata.
+    """
+    has_address = serializers.BooleanField(read_only=True)
+    has_contact_info = serializers.BooleanField(read_only=True)
+    powerapps_entity_name = serializers.SerializerMethodField()
+    full_address = serializers.CharField(read_only=True)
+    
+    # Owner information (read-only for API consumers)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    modified_by_username = serializers.CharField(source='modified_by.username', read_only=True)
+    owner_username = serializers.CharField(source='owner.username', read_only=True)
+    
+    # Related object display names
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    
+    class Meta:
+        model = SupplierLocation
+        fields = [
+            'id',
+            'name',
+            'address',
+            'city',
+            'state',
+            'postal_code',
+            'country',
+            'location_type',
+            'contact_name',
+            'contact_phone',
+            'contact_email',
+            'supplier',
+            'supplier_name',
+            'notes',
+            'status',
+            'has_address',
+            'has_contact_info',
+            'full_address',
+            'powerapps_entity_name',
+            'created_on',
+            'modified_on',
+            'created_by',
+            'modified_by',
+            'owner',
+            'created_by_username',
+            'modified_by_username',
+            'owner_username',
+        ]
+        read_only_fields = [
+            'id', 
+            'created_on', 
+            'modified_on', 
+            'has_address',
+            'has_contact_info',
+            'full_address',
+            'powerapps_entity_name',
+            'created_by_username',
+            'modified_by_username', 
+            'owner_username',
+            'supplier_name'
+        ]
+    
+    def get_powerapps_entity_name(self, obj):
+        """Return the original PowerApps entity name for reference."""
+        return obj.get_powerapps_entity_name()
+    
+    def validate_name(self, value):
+        """Ensure name is provided and not empty (PowerApps required field)."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Location name is required and cannot be empty.")
+        return value.strip()
+
+
+class SupplierLocationCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating new SupplierLocation records.
+    Minimal fields required for creation, following PowerApps patterns.
+    """
+    
+    class Meta:
+        model = SupplierLocation
+        fields = [
+            'name',
+            'address',
+            'city',
+            'state',
+            'postal_code',
+            'country',
+            'location_type',
+            'contact_name',
+            'contact_phone',
+            'contact_email',
+            'supplier',
+            'notes',
+            'status',
+        ]
+    
+    def validate_name(self, value):
+        """Name is required (PowerApps primary field)."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Location name is required and cannot be empty.")
+        return value.strip()
+    
+    def create(self, validated_data):
+        """
+        Create new SupplierLocation with automatic owner assignment.
         
         Note: In production, you'd set the owner/created_by from the 
         authenticated user in the view.
