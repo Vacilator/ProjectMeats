@@ -395,22 +395,22 @@ const Dashboard: React.FC = () => {
           Quick Actions
         </Heading>
         <QuickActionGrid>
-          <QuickActionCard onClick={() => window.location.href = '/purchase-orders'}>
+          <QuickActionCard onClick={() => navigate('/purchase-orders')}>
             <QuickActionIcon>📋</QuickActionIcon>
             <Heading level={4}>New Order</Heading>
             <Text size="sm" color="secondary">Create purchase order</Text>
           </QuickActionCard>
 
-          <QuickActionCard onClick={() => window.location.href = '/customers'}>
+          <QuickActionCard onClick={() => navigate('/customers')}>
             <QuickActionIcon>👥</QuickActionIcon>
             <Heading level={4}>Add Customer</Heading>
             <Text size="sm" color="secondary">Register new customer</Text>
           </QuickActionCard>
 
-          <QuickActionCard onClick={() => window.location.href = '/suppliers'}>
+          <QuickActionCard onClick={() => navigate('/suppliers')}>
             <QuickActionIcon>🏢</QuickActionIcon>
             <Heading level={4}>Manage Suppliers</Heading>
-            <Text size="sm" color="secondary">Supplier relationships</Text>
+<Text size="sm" color="secondary">Supplier relationships</Text>
           </QuickActionCard>
 
           <QuickActionCard onClick={() => alert('Reports feature coming soon!')}>
