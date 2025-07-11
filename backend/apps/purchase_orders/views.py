@@ -152,9 +152,8 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
 
         if max_amount:
             try:
-                Decimal(max_amount)
-                # Same limitation as min_amount
-                pass
+                max_val = Decimal(max_amount)
+                queryset = queryset.filter(total_amount__lte=max_val)
             except (ValueError, TypeError):
                 pass
 
