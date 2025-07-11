@@ -24,6 +24,39 @@ REST_FRAMEWORK = {
 }
 ```
 
+## Performance Optimizations
+
+### Database Indexes
+The API has been optimized with strategic database indexes:
+
+- **Suppliers**: Indexed on name, status, delivery_type_profile, accounts_receivable, credit_application_date
+- **Customers**: Indexed on name, status
+- **Contacts**: Indexed on name, status, contact_type, customer, supplier, email
+- **Purchase Orders**: Indexed on po_number, purchase_date, status, customer, supplier
+- **Accounts Receivables**: Indexed on name, status, email, created_on
+
+### Query Optimization
+All ViewSets use `select_related()` to minimize database queries:
+
+```python
+# Example: Supplier queries optimized
+queryset = Supplier.objects.select_related(
+    'accounts_receivable', 'created_by', 'modified_by', 'owner'
+).all()
+```
+
+### Pagination
+All list endpoints use pagination (20 items per page by default):
+
+```json
+{
+  "count": 156,
+  "next": "http://localhost:8000/api/v1/suppliers/?page=3",
+  "previous": "http://localhost:8000/api/v1/suppliers/?page=1",
+  "results": [...]
+}
+```
+
 ## API Documentation
 
 - **Swagger UI**: http://localhost:8000/api/docs/
