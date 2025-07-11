@@ -471,6 +471,7 @@ const ContactsScreen: React.FC = () => {
       <EntityForm
         title="Create New Contact"
         fields={formFields}
+        initialData={{}}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSubmit={handleCreateContact}

@@ -496,6 +496,7 @@ const CustomersScreen: React.FC = () => {
       <EntityForm
         title="Create New Customer"
         fields={customerFormFields}
+        initialData={{}}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSubmit={handleCreateCustomer}
@@ -523,6 +524,7 @@ const CustomersScreen: React.FC = () => {
       <EntityForm
         title="Add Contact to Customer"
         fields={contactFormFields}
+        initialData={{}}
         isOpen={showContactForm}
         onClose={() => {
           setShowContactForm(false);

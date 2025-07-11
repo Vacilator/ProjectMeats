@@ -580,6 +580,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
       <EntityForm
         title="Create New Purchase Order"
         fields={formFields}
+        initialData={{}}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSubmit={handleCreatePurchaseOrder}

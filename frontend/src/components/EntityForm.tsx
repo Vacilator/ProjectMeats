@@ -8,7 +8,7 @@
  * - Generic form field handling
  * - Modal overlay for clean UX
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 
 // Styled Components
@@ -235,6 +235,9 @@ const EntityForm: React.FC<EntityFormProps> = ({
   const [formData, setFormData] = useState<Record<string, any>>(initialData);
   const [isDraft, setIsDraft] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Use a ref to track if we've initialized this form session
+  const initializedRef = useRef(false);
 
   // Manual save draft functionality (auto-save removed to prevent typing interference)
   const saveDraft = useCallback(async () => {
@@ -249,12 +252,15 @@ const EntityForm: React.FC<EntityFormProps> = ({
     }
   }, [formData, hasChanges, onSaveDraft]);
 
-  // Reset form when opened/closed
+  // Reset form when opened/closed, but only reset when opening or when initialData actually changes
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !initializedRef.current) {
       setFormData(initialData);
       setIsDraft(false);
       setHasChanges(false);
+      initializedRef.current = true;
+    } else if (!isOpen) {
+      initializedRef.current = false;
     }
   }, [isOpen, initialData]);
 
