@@ -20,6 +20,8 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
     # Related object display names for list view
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    origin_location_name = serializers.CharField(source='origin_location.name', read_only=True)
+    end_location_name = serializers.CharField(source='end_location.name', read_only=True)
     
     class Meta:
         model = PurchaseOrder
@@ -34,6 +36,10 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
             'fulfillment_date',
             'customer_name',
             'supplier_name',
+            'origin_location',
+            'origin_location_name',
+            'end_location',
+            'end_location_name',
             'status',
             'is_fulfilled',
             'has_documents',
@@ -48,7 +54,9 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
             'is_fulfilled',
             'has_documents',
             'customer_name',
-            'supplier_name'
+            'supplier_name',
+            'origin_location_name',
+            'end_location_name'
         ]
 
 
@@ -74,6 +82,8 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     # Related object display names
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    origin_location_name = serializers.CharField(source='origin_location.name', read_only=True)
+    end_location_name = serializers.CharField(source='end_location.name', read_only=True)
     
     class Meta:
         model = PurchaseOrder
@@ -90,6 +100,10 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
             'customer_name',
             'supplier',
             'supplier_name',
+            'origin_location',
+            'origin_location_name',
+            'end_location',
+            'end_location_name',
             'customer_documents',
             'customer_documents_url',
             'supplier_documents',
@@ -120,6 +134,8 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
             'owner_username',
             'customer_name',
             'supplier_name',
+            'origin_location_name',
+            'end_location_name',
             'customer_documents_url',
             'supplier_documents_url'
         ]
@@ -192,6 +208,8 @@ class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
             'fulfillment_date',
             'customer',
             'supplier',
+            'origin_location',
+            'end_location',
             'customer_documents',
             'supplier_documents',
             'status',

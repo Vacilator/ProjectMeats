@@ -13,9 +13,9 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { PurchaseOrder, Customer, Supplier } from '../types';
+import { PurchaseOrder, Customer, Supplier, Plant } from '../types';
 import type { MigrationInfo } from '../types';
-import { PurchaseOrdersService, CustomersService, SuppliersService } from '../services/api';
+import { PurchaseOrdersService, CustomersService, SuppliersService, PlantsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -159,6 +159,9 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [plants, setPlants] = useState<Plant[]>([]);
+  const [supplierPlants, setSupplierPlants] = useState<Plant[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<number | null>(null);
 
   // Load data on component mount and when filters change
   useEffect(() => {
@@ -171,8 +174,8 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
     loadCustomersAndSuppliers();
   }, []);
 
-  // Form field definitions for Purchase Orders
-  const formFields: FormField[] = [
+  // Form field definitions for Purchase Orders - dynamic based on selected supplier
+  const getFormFields = (): FormField[] => [
     {
       key: 'po_number',
       label: 'PO Number',
@@ -225,6 +228,19 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
       type: 'select',
       required: true,
       options: suppliers.map(supplier => ({ value: supplier.id, label: supplier.name }))
+    },
+    {
+      key: 'origin_location',
+      label: 'Origin Location',
+      type: 'select',
+      options: supplierPlants.map(plant => ({ value: plant.id, label: `${plant.name}${plant.location ? ` (${plant.location})` : ''}` })),
+      placeholder: selectedSupplier ? 'Select origin plant' : 'Select supplier first'
+    },
+    {
+      key: 'end_location',
+      label: 'End Location',
+      type: 'select',
+      options: plants.map(plant => ({ value: plant.id, label: `${plant.name}${plant.location ? ` (${plant.location})` : ''}` }))
     },
     {
       key: 'customer_documents',
@@ -287,14 +303,26 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
 
   const loadCustomersAndSuppliers = async () => {
     try {
-      const [customersResponse, suppliersResponse] = await Promise.all([
+      const [customersResponse, suppliersResponse, plantsResponse] = await Promise.all([
         CustomersService.getList(1, {}),
-        SuppliersService.getList(1, {})
+        SuppliersService.getList(1, {}),
+        PlantsService.getList(1, { active: 'true' })
       ]);
       setCustomers(customersResponse.results);
       setSuppliers(suppliersResponse.results);
+      setPlants(plantsResponse.results);
     } catch (err) {
-      console.error('Error loading customers and suppliers:', err);
+      console.error('Error loading customers, suppliers, and plants:', err);
+    }
+  };
+
+  const loadSupplierPlants = async (supplierId: number) => {
+    try {
+      const response = await PlantsService.getList(1, { supplier: supplierId.toString(), active: 'true' });
+      setSupplierPlants(response.results);
+    } catch (err) {
+      console.error('Error loading supplier plants:', err);
+      setSupplierPlants([]);
     }
   };
 
@@ -326,12 +354,16 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
         fulfillment_date: formData.fulfillment_date as string || undefined,
         customer: Number(formData.customer),
         supplier: Number(formData.supplier),
+        origin_location: formData.origin_location ? Number(formData.origin_location) : undefined,
+        end_location: formData.end_location ? Number(formData.end_location) : undefined,
         customer_documents: formData.customer_documents as string || undefined,
         supplier_documents: formData.supplier_documents as string || undefined,
         status: formData.status as 'active' | 'inactive'
       };
       await PurchaseOrdersService.create(purchaseOrderData);
       setShowCreateForm(false);
+      setSelectedSupplier(null);
+      setSupplierPlants([]);
       loadPurchaseOrders(); // Reload the list to show new purchase order
       setError(null);
     } catch (err) {
@@ -352,6 +384,11 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
     const order = purchaseOrders.find(po => po.id === id);
     if (order) {
       setEditingPurchaseOrder(order);
+      setSelectedSupplier(order.supplier);
+      // Load plants for the supplier of the order being edited
+      if (order.supplier) {
+        await loadSupplierPlants(order.supplier);
+      }
       setShowEditForm(true);
     }
   };
@@ -371,6 +408,8 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
         fulfillment_date: formData.fulfillment_date as string || undefined,
         customer: Number(formData.customer),
         supplier: Number(formData.supplier),
+        origin_location: formData.origin_location ? Number(formData.origin_location) : undefined,
+        end_location: formData.end_location ? Number(formData.end_location) : undefined,
         customer_documents: formData.customer_documents || undefined,
         supplier_documents: formData.supplier_documents || undefined,
         status: formData.status as 'active' | 'inactive'
@@ -379,6 +418,8 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
       await PurchaseOrdersService.update(editingPurchaseOrder.id, updateData);
       setShowEditForm(false);
       setEditingPurchaseOrder(null);
+      setSelectedSupplier(null);
+      setSupplierPlants([]);
       loadPurchaseOrders(); // Reload the list
       setError(null);
     } catch (err) {
@@ -490,6 +531,8 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
             <Th>Total</Th>
             <Th>Customer</Th>
             <Th>Supplier</Th>
+            <Th>Origin</Th>
+            <Th>Destination</Th>
             <Th>Purchase Date</Th>
             <Th>Fulfillment</Th>
             <Th>Status</Th>
@@ -536,6 +579,8 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
               <Td><strong>{formatCurrency(order.total_amount)}</strong></Td>
               <Td>{order.customer_name}</Td>
               <Td>{order.supplier_name}</Td>
+              <Td>{order.origin_location_name || '-'}</Td>
+              <Td>{order.end_location_name || '-'}</Td>
               <Td>{formatDate(order.purchase_date)}</Td>
               <Td>
                 {order.fulfillment_date ? (
@@ -602,7 +647,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
 
       <EntityForm
         title="Create New Purchase Order"
-        fields={formFields}
+        fields={getFormFields()}
         initialData={{}}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
@@ -613,7 +658,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
 
       <EntityForm
         title="Edit Purchase Order"
-        fields={formFields}
+        fields={getFormFields()}
         initialData={editingPurchaseOrder ? {
           po_number: editingPurchaseOrder.po_number,
           item: editingPurchaseOrder.item,
@@ -623,6 +668,8 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
           fulfillment_date: editingPurchaseOrder.fulfillment_date || '',
           customer: editingPurchaseOrder.customer,
           supplier: editingPurchaseOrder.supplier,
+          origin_location: editingPurchaseOrder.origin_location || '',
+          end_location: editingPurchaseOrder.end_location || '',
           customer_documents: editingPurchaseOrder.customer_documents || '',
           supplier_documents: editingPurchaseOrder.supplier_documents || '',
           status: editingPurchaseOrder.status

@@ -84,6 +84,25 @@ class PurchaseOrder(OwnedModel, StatusModel):
         help_text="Equivalent to PowerApps pro_supplier_lookup field"
     )
     
+    # Location fields for plant-to-plant shipping
+    origin_location = models.ForeignKey(
+        'plants.Plant',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='outbound_purchase_orders',
+        help_text="Origin plant location (typically from supplier's plants)"
+    )
+    
+    end_location = models.ForeignKey(
+        'plants.Plant',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='inbound_purchase_orders',
+        help_text="Destination plant location"
+    )
+    
     # Document uploads - equivalent to pro_customerdocuments and pro_supplierdocuments
     # Changed from CharField to FileField to support actual file uploads
     customer_documents = models.FileField(
@@ -111,6 +130,8 @@ class PurchaseOrder(OwnedModel, StatusModel):
             models.Index(fields=['status']),
             models.Index(fields=['customer']),
             models.Index(fields=['supplier']),
+            models.Index(fields=['origin_location']),
+            models.Index(fields=['end_location']),
         ]
     
     def __str__(self):

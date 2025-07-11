@@ -13,9 +13,9 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Supplier, ContactInfo } from '../types';
+import { Supplier, ContactInfo, Plant } from '../types';
 import type { MigrationInfo } from '../types';
-import { SuppliersService, ContactsService } from '../services/api';
+import { SuppliersService, ContactsService, PlantsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -194,8 +194,11 @@ const SuppliersScreen: React.FC = () => {
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [supplierContacts, setSupplierContacts] = useState<Record<number, ContactInfo[]>>({});
+  const [supplierPlants, setSupplierPlants] = useState<Record<number, Plant[]>>({});
   const [showContactsModal, setShowContactsModal] = useState(false);
   const [selectedSupplierForContacts, setSelectedSupplierForContacts] = useState<Supplier | null>(null);
+  const [showPlantsModal, setShowPlantsModal] = useState(false);
+  const [selectedSupplierForPlants, setSelectedSupplierForPlants] = useState<Supplier | null>(null);
 
   useEffect(() => {
     loadSuppliers();
@@ -207,6 +210,7 @@ const SuppliersScreen: React.FC = () => {
   useEffect(() => {
     if (suppliers.length > 0) {
       loadSupplierContacts();
+      loadSupplierPlants();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suppliers]);
@@ -341,6 +345,34 @@ const SuppliersScreen: React.FC = () => {
       setSupplierContacts({ ...contactsMap });
     } catch (err) {
       console.error('Error loading supplier contacts:', err);
+    }
+  };
+
+  const loadSupplierPlants = async () => {
+    try {
+      // Load all plants and filter by supplier ID
+      const response = await PlantsService.getList(1, {});
+      const plantsMap: Record<number, Plant[]> = {};
+      
+      // Initialize empty arrays for all suppliers
+      suppliers.forEach(supplier => {
+        plantsMap[supplier.id] = [];
+      });
+      
+      // Group plants by supplier ID
+      response.results.forEach(plant => {
+        if (plant.supplier) {
+          if (!plantsMap[plant.supplier]) {
+            plantsMap[plant.supplier] = [];
+          }
+          plantsMap[plant.supplier].push(plant);
+        }
+      });
+      
+      // Force state update
+      setSupplierPlants({ ...plantsMap });
+    } catch (err) {
+      console.error('Error loading supplier plants:', err);
     }
   };
 
@@ -484,6 +516,11 @@ const SuppliersScreen: React.FC = () => {
     setShowContactsModal(true);
   };
 
+  const handleShowPlants = (supplier: Supplier) => {
+    setSelectedSupplierForPlants(supplier);
+    setShowPlantsModal(true);
+  };
+
   if (loading) {
     return (
       <Container>
@@ -531,6 +568,7 @@ const SuppliersScreen: React.FC = () => {
             <TableHeader>Name</TableHeader>
             <TableHeader>Status</TableHeader>
             <TableHeader>Contacts</TableHeader>
+            <TableHeader>Plants</TableHeader>
             <TableHeader>Delivery Type</TableHeader>
             <TableHeader>Credit Application</TableHeader>
             <TableHeader>A/R Link</TableHeader>
@@ -560,6 +598,19 @@ const SuppliersScreen: React.FC = () => {
                   style={{ fontSize: '12px', padding: '4px 8px', marginTop: '4px' }}
                 >
                   Add Contact
+                </Button>
+              </TableCell>
+              <TableCell>
+                <ClickableContactCount onClick={() => handleShowPlants(supplier)}>
+                  {supplierPlants[supplier.id]?.length || 0} plants
+                </ClickableContactCount>
+                <br />
+                <Button 
+                  variant="secondary" 
+                  onClick={() => alert('Plant management feature coming soon!')}
+                  style={{ fontSize: '12px', padding: '4px 8px', marginTop: '4px' }}
+                >
+                  Manage Plants
                 </Button>
               </TableCell>
               <TableCell>
@@ -698,6 +749,58 @@ const SuppliersScreen: React.FC = () => {
                   style={{ marginTop: '16px' }}
                 >
                   Add First Contact
+                </Button>
+              </div>
+            )}
+          </ContactModalContent>
+        </ContactModal>
+      )}
+
+      {showPlantsModal && selectedSupplierForPlants && (
+        <ContactModal onClick={() => setShowPlantsModal(false)}>
+          <ContactModalContent onClick={(e) => e.stopPropagation()}>
+            <ContactHeader>
+              <h3>Plants for {selectedSupplierForPlants.name}</h3>
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowPlantsModal(false)}
+                style={{ padding: '4px 8px' }}
+              >
+                ✕
+              </Button>
+            </ContactHeader>
+            
+            {supplierPlants[selectedSupplierForPlants.id]?.length > 0 ? (
+              <ContactList>
+                {supplierPlants[selectedSupplierForPlants.id].map((plant) => (
+                  <ContactItem key={plant.id}>
+                    <ContactHeader>
+                      <span>{plant.name}</span>
+                      <StatusBadge status={plant.status}>
+                        {plant.status}
+                      </StatusBadge>
+                    </ContactHeader>
+                    <ContactDetails>
+                      {plant.location && <div>📍 {plant.location}</div>}
+                      {plant.plant_type && <div>🏭 {plant.plant_type}</div>}
+                      {plant.release_number && <div>🔢 Release: {plant.release_number}</div>}
+                    </ContactDetails>
+                  </ContactItem>
+                ))}
+              </ContactList>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px', color: '#666' }}>
+                No plants found for this supplier.
+                <br />
+                <Button 
+                  variant="primary" 
+                  onClick={() => {
+                    setShowPlantsModal(false);
+                    alert('Plant creation feature coming soon!');
+                  }}
+                  style={{ marginTop: '16px' }}
+                >
+                  Add First Plant
                 </Button>
               </div>
             )}

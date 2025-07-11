@@ -86,6 +86,10 @@ export interface PurchaseOrder extends OwnedEntity, StatusEntity {
   customer_name?: string;
   supplier: number;
   supplier_name?: string;
+  origin_location?: number;
+  origin_location_name?: string;
+  end_location?: number;
+  end_location_name?: string;
   customer_documents?: string;
   customer_documents_url?: string;
   supplier_documents?: string;
@@ -248,6 +252,8 @@ export interface PurchaseOrderFormData {
   fulfillment_date?: string;
   customer: number;
   supplier: number;
+  origin_location?: number;
+  end_location?: number;
   customer_documents?: string | File;
   supplier_documents?: string | File;
   status: 'active' | 'inactive';
