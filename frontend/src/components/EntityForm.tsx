@@ -344,8 +344,24 @@ const EntityForm: React.FC<EntityFormProps> = ({
 
   if (!isOpen) return null;
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay 
+      role="dialog" 
+      aria-modal="true" 
+      onClick={onClose}
+    >
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <FormHeader justify="between" align="center">
           <div>
