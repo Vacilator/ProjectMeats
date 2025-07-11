@@ -486,10 +486,8 @@ const SuppliersScreen: React.FC = () => {
       setShowContactForm(false);
       setSelectedSupplierId(null);
       
-      // Force reload of supplier contacts with a small delay to ensure backend is updated
-      setTimeout(() => {
-        loadSupplierContacts();
-      }, 100);
+      // Reload supplier contacts after backend update is confirmed
+      await loadSupplierContacts();
       
       setError(null);
     } catch (err) {
