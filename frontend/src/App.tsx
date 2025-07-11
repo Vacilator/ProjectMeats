@@ -9,7 +9,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
 import { colors, typography, spacing, borderRadius, shadows } from './components/DesignSystem';
-import ErrorBoundary from './components/ErrorBoundary';
 import DashboardScreen from './screens/DashboardScreen';
 import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
 import SuppliersScreen from './screens/SuppliersScreen';
@@ -241,56 +240,52 @@ const NavigationWithLocation: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <Router>
-        <GlobalStyle />
-        <AppContainer>
-          <Header>
-            <HeaderContent>
-              <Logo>
-                <LogoIcon>🥩</LogoIcon>
-                <LogoText>
-                  <LogoTitle>ProjectMeats</LogoTitle>
-                  <LogoSubtitle>Sales Management</LogoSubtitle>
-                </LogoText>
-              </Logo>
-              <NavigationWithLocation />
-            </HeaderContent>
-          </Header>
-          
-          <Main>
-            <ErrorBoundary>
-              <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<ErrorBoundary><DashboardScreen /></ErrorBoundary>} />
-                <Route path="/accounts-receivables" element={<ErrorBoundary><AccountsReceivablesScreen /></ErrorBoundary>} />
-                <Route path="/suppliers" element={<ErrorBoundary><SuppliersScreen /></ErrorBoundary>} />
-                <Route path="/customers" element={<ErrorBoundary><CustomersScreen /></ErrorBoundary>} />
-                <Route path="/purchase-orders" element={<ErrorBoundary><PurchaseOrdersScreen /></ErrorBoundary>} />
-                <Route path="/plants" element={<ErrorBoundary><PlantsScreen /></ErrorBoundary>} />
-                <Route path="/supplier-locations" element={<ErrorBoundary><SupplierLocationsScreen /></ErrorBoundary>} />
-                <Route path="/contacts" element={<ErrorBoundary><ContactsScreen /></ErrorBoundary>} />
-                <Route path="/supplier-plant-mappings" element={<ErrorBoundary><SupplierPlantMappingsScreen /></ErrorBoundary>} />
-                <Route path="/carriers" element={<ErrorBoundary><CarrierInfoScreen /></ErrorBoundary>} />
-              </Routes>
-            </ErrorBoundary>
-          </Main>
-          
-          <Footer>
-            <FooterContent>
-              <FooterText>
-                ProjectMeats © 2024 | Professional Meat Sales Management Platform
-              </FooterText>
-              <FooterLinks>
-                <FooterLink href="#support">Support</FooterLink>
-                <FooterLink href="#documentation">Documentation</FooterLink>
-                <FooterLink href="#api">API</FooterLink>
-              </FooterLinks>
-            </FooterContent>
-          </Footer>
-        </AppContainer>
-      </Router>
-    </ErrorBoundary>
+    <Router>
+      <GlobalStyle />
+      <AppContainer>
+        <Header>
+          <HeaderContent>
+            <Logo>
+              <LogoIcon>🥩</LogoIcon>
+              <LogoText>
+                <LogoTitle>ProjectMeats</LogoTitle>
+                <LogoSubtitle>Sales Management</LogoSubtitle>
+              </LogoText>
+            </Logo>
+            <NavigationWithLocation />
+          </HeaderContent>
+        </Header>
+        
+        <Main>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardScreen />} />
+            <Route path="/accounts-receivables" element={<AccountsReceivablesScreen />} />
+            <Route path="/suppliers" element={<SuppliersScreen />} />
+            <Route path="/customers" element={<CustomersScreen />} />
+            <Route path="/purchase-orders" element={<PurchaseOrdersScreen />} />
+            <Route path="/plants" element={<PlantsScreen />} />
+            <Route path="/supplier-locations" element={<SupplierLocationsScreen />} />
+            <Route path="/contacts" element={<ContactsScreen />} />
+            <Route path="/supplier-plant-mappings" element={<SupplierPlantMappingsScreen />} />
+            <Route path="/carriers" element={<CarrierInfoScreen />} />
+          </Routes>
+        </Main>
+        
+        <Footer>
+          <FooterContent>
+            <FooterText>
+              ProjectMeats © 2024 | Professional Meat Sales Management Platform
+            </FooterText>
+            <FooterLinks>
+              <FooterLink href="#support">Support</FooterLink>
+              <FooterLink href="#documentation">Documentation</FooterLink>
+              <FooterLink href="#api">API</FooterLink>
+            </FooterLinks>
+          </FooterContent>
+        </Footer>
+      </AppContainer>
+    </Router>
   );
 };
 
