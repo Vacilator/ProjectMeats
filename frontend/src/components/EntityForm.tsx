@@ -1,201 +1,199 @@
 /**
- * Reusable Entity Form Component
+ * Enhanced Reusable Entity Form Component
  * 
- * Provides a modal form with draft functionality for creating/editing entities.
+ * Professional modal form with modern design system integration.
  * Features:
  * - Real-time draft saving as fields are entered
  * - Create, Save Draft, and Close options
- * - Generic form field handling
- * - Modal overlay for clean UX
+ * - Generic form field handling with validation
+ * - Modern modal overlay with accessibility
+ * - Responsive design for mobile and desktop
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
+import { 
+  Button, 
+  Input, 
+  Label, 
+  Card,
+  Heading,
+  Flex,
+  colors,
+  spacing,
+  borderRadius,
+  typography
+} from './DesignSystem';
 
-// Styled Components
+// Enhanced Styled Components
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 `;
 
-const ModalContent = styled.div`
-  background: white;
-  border-radius: 8px;
-  padding: 24px;
+const ModalContent = styled(Card)`
   min-width: 500px;
   max-width: 90vw;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease-out;
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    min-width: 90vw;
+    margin: ${spacing.md};
+  }
 `;
 
-const FormHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e5e5e5;
-  padding-bottom: 16px;
+const FormHeader = styled(Flex)`
+  border-bottom: 1px solid ${colors.neutral[200]};
+  padding-bottom: ${spacing.md};
+  margin-bottom: ${spacing.lg};
 `;
 
-const FormTitle = styled.h2`
-  margin: 0;
-  color: #333;
-  font-size: 20px;
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: ${colors.text.muted};
+  cursor: pointer;
+  padding: ${spacing.xs};
+  border-radius: ${borderRadius.sm};
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: ${colors.neutral[100]};
+    color: ${colors.text.primary};
+  }
 `;
 
 const DraftStatus = styled.div<{ isDraft: boolean }>`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: ${spacing.xs} ${spacing.sm};
+  border-radius: ${borderRadius.sm};
+  font-size: ${typography.fontSize.xs};
+  font-weight: ${typography.fontWeight.medium};
   
   ${props => props.isDraft ? `
-    background-color: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeaa7;
+    background-color: ${colors.warning}20;
+    color: ${colors.warning};
+    border: 1px solid ${colors.warning}40;
   ` : `
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background-color: ${colors.success}20;
+    color: ${colors.success};
+    border: 1px solid ${colors.success}40;
   `}
 `;
 
 const FormRow = styled.div`
-  margin-bottom: 16px;
-`;
-
-const Label = styled.label`
-  display: block;
-  margin-bottom: 4px;
-  font-weight: 500;
-  color: #555;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  
-  &:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-  }
+  margin-bottom: ${spacing.md};
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  background: white;
+  padding: ${spacing.sm} ${spacing.md};
+  border: 1px solid ${colors.neutral[300]};
+  border-radius: ${borderRadius.md};
+  font-family: ${typography.fontFamily.sans};
+  font-size: ${typography.fontSize.base};
+  background: ${colors.background};
+  transition: border-color 0.2s ease-in-out;
   
   &:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    border-color: ${colors.primary[500]};
+    box-shadow: 0 0 0 3px ${colors.primary[200]};
   }
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: ${spacing.sm} ${spacing.md};
+  border: 1px solid ${colors.neutral[300]};
+  border-radius: ${borderRadius.md};
+  font-family: ${typography.fontFamily.sans};
+  font-size: ${typography.fontSize.base};
   min-height: 80px;
   resize: vertical;
+  transition: border-color 0.2s ease-in-out;
   
   &:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    border-color: ${colors.primary[500]};
+    box-shadow: 0 0 0 3px ${colors.primary[200]};
+  }
+  
+  &::placeholder {
+    color: ${colors.text.muted};
   }
 `;
 
 const FileInput = styled.input`
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  background: white;
+  padding: ${spacing.sm} ${spacing.md};
+  border: 1px solid ${colors.neutral[300]};
+  border-radius: ${borderRadius.md};
+  font-family: ${typography.fontFamily.sans};
+  font-size: ${typography.fontSize.base};
+  background: ${colors.background};
+  transition: border-color 0.2s ease-in-out;
   
   &:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    border-color: ${colors.primary[500]};
+    box-shadow: 0 0 0 3px ${colors.primary[200]};
   }
   
   &::file-selector-button {
-    background-color: #007bff;
-    color: white;
+    background-color: ${colors.primary[600]};
+    color: ${colors.text.inverse};
     border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    margin-right: 8px;
+    padding: ${spacing.xs} ${spacing.sm};
+    border-radius: ${borderRadius.sm};
+    margin-right: ${spacing.sm};
     cursor: pointer;
-    font-size: 12px;
+    font-size: ${typography.fontSize.sm};
+    transition: background-color 0.2s ease;
     
     &:hover {
-      background-color: #0056b3;
+      background-color: ${colors.primary[700]};
     }
   }
 `;
 
-const FormActions = styled.div`
-  display: flex;
-  gap: 12px;
+const FormActions = styled(Flex)`
+  margin-top: ${spacing.xl};
+  padding-top: ${spacing.md};
+  border-top: 1px solid ${colors.neutral[200]};
   justify-content: flex-end;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #e5e5e5;
-`;
-
-const Button = styled.button<{ variant: 'primary' | 'secondary' | 'danger' }>`
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  min-width: 80px;
+  gap: ${spacing.md};
   
-  ${props => {
-    switch (props.variant) {
-      case 'primary':
-        return `
-          background-color: #007bff;
-          color: white;
-          &:hover { background-color: #0056b3; }
-          &:disabled { background-color: #6c757d; cursor: not-allowed; }
-        `;
-      case 'danger':
-        return `
-          background-color: #dc3545;
-          color: white;
-          &:hover { background-color: #c82333; }
-        `;
-      default:
-        return `
-          background-color: #f8f9fa;
-          color: #333;
-          border: 1px solid #dee2e6;
-          &:hover { background-color: #e9ecef; }
-        `;
-    }
-  }}
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 // Form field interface
@@ -352,29 +350,49 @@ const EntityForm: React.FC<EntityFormProps> = ({
 
   if (!isOpen) return null;
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay 
+      role="dialog" 
+      aria-modal="true" 
+      onClick={onClose}
+    >
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        <FormHeader>
-          <FormTitle>{title}</FormTitle>
-          <DraftStatus isDraft={isDraft}>
-            {isDraft ? '💾 Draft Saved' : hasChanges ? '✏️ Editing' : '✅ Ready'}
-          </DraftStatus>
+        <FormHeader justify="between" align="center">
+          <div>
+            <Heading level={2}>{title}</Heading>
+            <DraftStatus isDraft={isDraft}>
+              {isDraft ? '💾 Draft Saved' : hasChanges ? '✏️ Editing' : '✅ Ready'}
+            </DraftStatus>
+          </div>
+          <CloseButton onClick={onClose} aria-label="Close form">
+            ×
+          </CloseButton>
         </FormHeader>
 
         <form onSubmit={handleSubmit}>
           {fields.map(field => (
             <FormRow key={field.key}>
-              <Label>
+              <Label required={field.required}>
                 {field.label}
-                {field.required && <span style={{ color: '#dc3545' }}>*</span>}
               </Label>
               {renderField(field)}
             </FormRow>
           ))}
 
           <FormActions>
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Close
             </Button>
             {onSaveDraft && (
@@ -392,7 +410,7 @@ const EntityForm: React.FC<EntityFormProps> = ({
               variant="primary"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Create'}
+              {isSubmitting ? 'Saving...' : 'Save'}
             </Button>
           </FormActions>
         </form>
