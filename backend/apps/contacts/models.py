@@ -7,15 +7,16 @@ Original description: "Contact information management"
 PowerApps Entity Name: pro_ContactInfo
 Django Model Name: ContactInfo
 """
-from django.db import models
 from django.core.validators import EmailValidator
+from django.db import models
+
 from apps.core.models import OwnedModel, StatusModel
 
 
 class ContactInfo(OwnedModel, StatusModel):
     """
     Contact Information entity migrated from PowerApps pro_contactinfo.
-    
+
     PowerApps Field Mappings:
     - pro_name -> name (Primary field, required)
     - pro_email -> email
@@ -26,88 +27,91 @@ class ContactInfo(OwnedModel, StatusModel):
     - pro_cr7c4_supplier -> supplier (foreign key)
     + Standard PowerApps audit fields via OwnedModel base class
     """
-    
+
     # Primary field - equivalent to pro_name (PrimaryName field in PowerApps)
     name = models.CharField(
         max_length=850,  # Standard length for PowerApps name fields
-        help_text="Equivalent to PowerApps pro_name field (Primary Name)"
+        help_text="Equivalent to PowerApps pro_name field (Primary Name)",
     )
-    
+
     # Contact details - equivalent to pro_email, pro_phone, pro_position
     email = models.EmailField(
         max_length=100,
         blank=True,
         null=True,
         validators=[EmailValidator()],
-        help_text="Equivalent to PowerApps pro_email field"
+        help_text="Equivalent to PowerApps pro_email field",
     )
-    
+
     phone = models.CharField(
         max_length=100,
         blank=True,
         null=True,
-        help_text="Equivalent to PowerApps pro_phone field"
+        help_text="Equivalent to PowerApps pro_phone field",
     )
-    
+
     position = models.CharField(
         max_length=200,
         blank=True,
         null=True,
-        help_text="Equivalent to PowerApps pro_position field"
+        help_text="Equivalent to PowerApps pro_position field",
     )
-    
+
     contact_type = models.CharField(
         max_length=100,
         blank=True,
         null=True,
-        help_text="Equivalent to PowerApps pro_contacttype field"
+        help_text="Equivalent to PowerApps pro_contacttype field",
     )
-    
+
     # Foreign key relationships - equivalent to pro_customer_lookup and pro_cr7c4_supplier
     customer = models.ForeignKey(
-        'customers.Customer',
+        "customers.Customer",
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name='contacts',
-        help_text="Equivalent to PowerApps pro_customer_lookup field"
+        related_name="contacts",
+        help_text="Equivalent to PowerApps pro_customer_lookup field",
     )
-    
+
     supplier = models.ForeignKey(
-        'suppliers.Supplier',
+        "suppliers.Supplier",
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name='contacts',
-        help_text="Equivalent to PowerApps pro_cr7c4_supplier field"
+        related_name="contacts",
+        help_text="Equivalent to PowerApps pro_cr7c4_supplier field",
     )
-    
+
     class Meta:
         verbose_name = "Contact Info"
         verbose_name_plural = "Contact Infos"
         db_table = "contact_infos"
-        ordering = ['name']
-        
+        ordering = ["name"]
+
     def __str__(self):
         """String representation using the primary name field."""
         return self.name
-    
+
     def clean(self):
         """Model validation - ensure name is provided."""
         from django.core.exceptions import ValidationError
+
         if not self.name or not self.name.strip():
-            raise ValidationError({'name': 'Name is required and cannot be empty.'})
-    
+            raise ValidationError(
+                {"name": "Name is required and cannot be empty."}
+            )
+
     @property
     def has_contact_details(self):
         """Helper property to check if contact details are available."""
         return bool(self.email or self.phone)
-    
+
     @property
     def has_relationships(self):
         """Helper property to check if linked to customer or supplier."""
         return bool(self.customer or self.supplier)
-    
+
     @classmethod
     def get_powerapps_entity_name(cls):
         """Returns the original PowerApps entity name for reference."""

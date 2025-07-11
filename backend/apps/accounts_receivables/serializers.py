@@ -5,7 +5,13 @@ Handles serialization/deserialization between Django models and JSON API respons
 Migrated from PowerApps cr7c4_accountsreceivables entity.
 """
 from rest_framework import serializers
-from apps.core.serializers import BaseListSerializer, BaseDetailSerializer, BaseCreateSerializer
+
+from apps.core.serializers import (
+    BaseCreateSerializer,
+    BaseDetailSerializer,
+    BaseListSerializer,
+)
+
 from .models import AccountsReceivable
 
 
@@ -14,21 +20,22 @@ class AccountsReceivableListSerializer(BaseListSerializer):
     Lightweight serializer for list views and minimal data representation.
     Includes only essential fields for performance.
     """
+
     has_contact_info = serializers.BooleanField(read_only=True)
-    
+
     class Meta:
         model = AccountsReceivable
         fields = [
-            'id',
-            'name',
-            'email',
-            'phone',
-            'status',
-            'has_contact_info',
-            'created_on',
-            'modified_on',
+            "id",
+            "name",
+            "email",
+            "phone",
+            "status",
+            "has_contact_info",
+            "created_on",
+            "modified_on",
         ]
-        read_only_fields = ['has_contact_info']
+        read_only_fields = ["has_contact_info"]
 
 
 class AccountsReceivableDetailSerializer(BaseDetailSerializer):
@@ -36,48 +43,51 @@ class AccountsReceivableDetailSerializer(BaseDetailSerializer):
     Complete serializer for detail views with all PowerApps migrated fields.
     Includes relationship fields and metadata.
     """
+
     has_contact_info = serializers.BooleanField(read_only=True)
-    
+
     class Meta:
         model = AccountsReceivable
         fields = [
-            'id',
-            'name',
-            'email',
-            'phone',
-            'terms',
-            'status',
-            'has_contact_info',
-            'powerapps_entity_name',
-            'created_on',
-            'modified_on',
-            'created_by',
-            'modified_by',
-            'owner',
-            'created_by_username',
-            'modified_by_username',
-            'owner_username',
+            "id",
+            "name",
+            "email",
+            "phone",
+            "terms",
+            "status",
+            "has_contact_info",
+            "powerapps_entity_name",
+            "created_on",
+            "modified_on",
+            "created_by",
+            "modified_by",
+            "owner",
+            "created_by_username",
+            "modified_by_username",
+            "owner_username",
         ]
-        read_only_fields = ['has_contact_info']
-    
+        read_only_fields = ["has_contact_info"]
+
     def validate_name(self, value):
         """Ensure name is provided and not empty (PowerApps required field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError("Name is required and cannot be empty.")
+            raise serializers.ValidationError(
+                "Name is required and cannot be empty."
+            )
         return value.strip()
-    
+
     def validate_email(self, value):
         """Validate email format if provided."""
         if value and not value.strip():
             return None  # Convert empty string to None
         return value
-    
+
     def validate_phone(self, value):
         """Validate phone format if provided."""
         if value and not value.strip():
             return None  # Convert empty string to None
         return value
-    
+
     def validate_terms(self, value):
         """Validate terms if provided."""
         if value and not value.strip():
@@ -90,28 +100,30 @@ class AccountsReceivableCreateSerializer(BaseCreateSerializer):
     Serializer for creating new Accounts Receivable records.
     Minimal fields required for creation, following PowerApps patterns.
     """
-    
+
     class Meta:
         model = AccountsReceivable
         fields = [
-            'name',
-            'email', 
-            'phone',
-            'terms',
-            'status',
+            "name",
+            "email",
+            "phone",
+            "terms",
+            "status",
         ]
-    
+
     def validate_name(self, value):
         """Name is required (PowerApps primary field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError("Name is required and cannot be empty.")
+            raise serializers.ValidationError(
+                "Name is required and cannot be empty."
+            )
         return value.strip()
-    
+
     def create(self, validated_data):
         """
         Create new AccountsReceivable with automatic owner assignment.
-        
-        Note: In production, you'd set the owner/created_by from the 
+
+        Note: In production, you'd set the owner/created_by from the
         authenticated user in the view.
         """
         # For now, we'll leave ownership fields for the view to handle

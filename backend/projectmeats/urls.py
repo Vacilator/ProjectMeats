@@ -4,32 +4,46 @@ URL configuration for ProjectMeats.
 Main URL routing for the Django REST API backend.
 Provides versioned API endpoints and documentation.
 """
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from django.contrib import admin
+from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 urlpatterns = [
     # Admin interface
-    path('admin/', admin.site.urls),
-    
+    path("admin/", admin.site.urls),
     # API v1 endpoints
-    path('api/v1/', include('apps.accounts_receivables.urls')),
-    path('api/v1/', include('apps.suppliers.urls')),
-    path('api/v1/', include('apps.customers.urls')),
-    path('api/v1/', include('apps.contacts.urls')),
-    path('api/v1/', include('apps.purchase_orders.urls')),
-    path('api/v1/', include('apps.plants.urls')),
-    path('api/v1/', include('apps.carriers.urls')),
-    
+    path("api/v1/", include("apps.accounts_receivables.urls")),
+    path("api/v1/", include("apps.suppliers.urls")),
+    path("api/v1/", include("apps.customers.urls")),
+    path("api/v1/", include("apps.contacts.urls")),
+    path("api/v1/", include("apps.purchase_orders.urls")),
+    path("api/v1/", include("apps.plants.urls")),
+    path("api/v1/", include("apps.carriers.urls")),
     # API Documentation
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path(
+        "api/redoc/",
+        SpectacularRedocView.as_view(url_name="schema"),
+        name="redoc",
+    ),
 ]
 
 # Serve media files in development
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(
+        settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
+    )
+    urlpatterns += static(
+        settings.STATIC_URL, document_root=settings.STATIC_ROOT
+    )
