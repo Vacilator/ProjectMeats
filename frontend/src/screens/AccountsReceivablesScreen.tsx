@@ -467,6 +467,7 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
       <EntityForm
         title="Create New Accounts Receivable"
         fields={formFields}
+        initialData={{}}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSubmit={handleCreateAccount}

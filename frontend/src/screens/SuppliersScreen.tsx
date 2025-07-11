@@ -520,6 +520,7 @@ const SuppliersScreen: React.FC = () => {
       <EntityForm
         title="Create New Supplier"
         fields={formFields}
+        initialData={{}}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onSubmit={handleCreateSupplier}
@@ -549,6 +550,7 @@ const SuppliersScreen: React.FC = () => {
       <EntityForm
         title="Add Contact to Supplier"
         fields={contactFormFields}
+        initialData={{}}
         isOpen={showContactForm}
         onClose={() => {
           setShowContactForm(false);
