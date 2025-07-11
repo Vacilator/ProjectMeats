@@ -1,0 +1,47 @@
+# Bandit configuration for ProjectMeats backend security scanning
+# Bandit is a tool designed to find common security issues in Python code
+
+[bandit]
+# Exclude migration files and test files from security scanning
+exclude_dirs = ["*/migrations", "*/tests", "*/test_*", "venv", "env"]
+
+# Tests to skip (comma-separated list of test IDs)
+# B101: assert_used - Allow asserts in development/test code
+# B601: paramiko_calls - We're not using paramiko
+# B602: subprocess_popen_with_shell_equals_true - Covered by other security measures
+skips = ["B101"]
+
+# Confidence levels: LOW, MEDIUM, HIGH
+# Only report medium and high confidence issues
+confidence = ["MEDIUM", "HIGH"]
+
+# Test severities: LOW, MEDIUM, HIGH
+# Report all severities for comprehensive security coverage
+severity = ["LOW", "MEDIUM", "HIGH"]
+
+# Format for output
+format = "txt"
+
+# Include test IDs in output for easier debugging
+show_lineno = true
+show_issue_line = true
+
+# Specific tests to run (leave empty to run all applicable tests)
+tests = []
+
+# Specific tests to skip for certain files
+[bandit.skip_tests]
+# Skip hardcoded password detection in settings files (we use environment variables)
+"*/settings.py" = ["B105", "B106"]
+# Skip SQL injection warnings for Django ORM usage
+"*/models.py" = ["B608"]
+"*/views.py" = ["B608"]
+
+# Custom patterns for additional security checks
+[bandit.blacklist_calls]
+# Add any function calls that should be flagged
+bad_name_sets = []
+
+[bandit.blacklist_imports]
+# Add any imports that should be flagged
+bad_import_sets = []
