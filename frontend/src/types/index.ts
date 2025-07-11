@@ -148,6 +148,25 @@ export interface Plant extends OwnedEntity, StatusEntity {
   powerapps_entity_name?: string;
 }
 
+// User Profile types (new feature)
+export interface UserProfile extends TimestampedEntity {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  display_name: string;
+  phone?: string;
+  department?: string;
+  job_title?: string;
+  profile_image?: string;
+  profile_image_url?: string;
+  timezone: string;
+  email_notifications: boolean;
+  bio?: string;
+  has_complete_profile: boolean;
+}
+
 // Supplier Location types (migrated from pro_supplier_locations)
 export interface SupplierLocation extends OwnedEntity, StatusEntity {
   id: number;
