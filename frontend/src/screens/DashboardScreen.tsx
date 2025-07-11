@@ -219,7 +219,7 @@ const Dashboard: React.FC = () => {
           const orderDate = new Date(order.fulfillment_date);
           return orderDate.getMonth() === currentMonth && 
                  orderDate.getFullYear() === currentYear &&
-                 order.status === 'active';
+                 order.status === 'completed';
         }
         return false;
       }).length;
