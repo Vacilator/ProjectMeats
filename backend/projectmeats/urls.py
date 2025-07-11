@@ -10,9 +10,25 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
+# Import health check views
+from apps.core.health_views import (
+    health_check_basic,
+    health_check_detailed,
+    readiness_check,
+    liveness_check,
+    api_info
+)
+
 urlpatterns = [
     # Admin interface
     path('admin/', admin.site.urls),
+    
+    # Health and monitoring endpoints
+    path('health/', health_check_basic, name='health-basic'),
+    path('health/detailed/', health_check_detailed, name='health-detailed'),
+    path('health/ready/', readiness_check, name='readiness'),
+    path('health/live/', liveness_check, name='liveness'),
+    path('api/info/', api_info, name='api-info'),
     
     # API v1 endpoints
     path('api/v1/', include('apps.accounts_receivables.urls')),
