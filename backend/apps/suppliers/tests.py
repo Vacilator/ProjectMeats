@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import Supplier, SupplierPlantMapping
+from .models import Supplier, SupplierPlantMapping, SupplierLocation
 from apps.accounts_receivables.models import AccountsReceivable
 from apps.customers.models import Customer
 from apps.contacts.models import ContactInfo
@@ -446,3 +446,320 @@ class SupplierPlantMappingAPITest(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
+
+
+class SupplierLocationModelTest(TestCase):
+    """Test the SupplierLocation model."""
+    
+    def setUp(self):
+        """Set up test dependencies."""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.supplier = Supplier.objects.create(
+            name='Test Supplier',
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+    
+    def test_supplier_location_creation(self):
+        """Test creating a supplier location with required fields."""
+        location = SupplierLocation.objects.create(
+            name='Test Location',
+            supplier=self.supplier,
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+        
+        self.assertEqual(location.name, 'Test Location')
+        self.assertEqual(location.supplier, self.supplier)
+        self.assertEqual(location.status, 'active')  # Default status
+        self.assertEqual(str(location), f"{self.supplier.name} - Test Location")
+        self.assertEqual(location.get_powerapps_entity_name(), 'pro_supplier_locations')
+    
+    def test_supplier_location_with_full_address(self):
+        """Test supplier location with complete address information."""
+        location = SupplierLocation.objects.create(
+            name='Headquarters',
+            address='123 Main St',
+            city='New York',
+            state='NY',
+            postal_code='10001',
+            country='USA',
+            location_type='headquarters',
+            supplier=self.supplier,
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+        
+        self.assertTrue(location.has_address)
+        self.assertEqual(location.full_address, '123 Main St, New York, NY, 10001, USA')
+        self.assertEqual(location.location_type, 'headquarters')
+    
+    def test_supplier_location_with_contact_info(self):
+        """Test supplier location with contact information."""
+        location = SupplierLocation.objects.create(
+            name='Sales Office',
+            contact_name='John Doe',
+            contact_phone='555-1234',
+            contact_email='john@example.com',
+            supplier=self.supplier,
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+        
+        self.assertTrue(location.has_contact_info)
+        self.assertEqual(location.contact_name, 'John Doe')
+        self.assertEqual(location.contact_phone, '555-1234')
+        self.assertEqual(location.contact_email, 'john@example.com')
+    
+    def test_supplier_location_properties(self):
+        """Test supplier location computed properties."""
+        # Location without address
+        location_no_address = SupplierLocation.objects.create(
+            name='Minimal Location',
+            supplier=self.supplier,
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+        
+        self.assertFalse(location_no_address.has_address)
+        self.assertFalse(location_no_address.has_contact_info)
+        self.assertEqual(location_no_address.full_address, '')
+        
+        # Location with partial address
+        location_partial = SupplierLocation.objects.create(
+            name='Partial Location',
+            city='Boston',
+            state='MA',
+            supplier=self.supplier,
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+        
+        self.assertFalse(location_partial.has_address)  # No street address
+        self.assertEqual(location_partial.full_address, 'Boston, MA')
+    
+    def test_supplier_location_validation(self):
+        """Test model validation for required fields."""
+        from django.core.exceptions import ValidationError
+        
+        # Test empty name validation
+        location = SupplierLocation(
+            name='',
+            supplier=self.supplier,
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+        
+        with self.assertRaises(ValidationError):
+            location.clean()
+
+
+class SupplierLocationAPITest(APITestCase):
+    """Test the SupplierLocation API endpoints."""
+    
+    def setUp(self):
+        """Set up test dependencies."""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+        
+        # Create test supplier
+        self.supplier = Supplier.objects.create(
+            name='Test Supplier',
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+        
+        # Create test supplier location
+        self.location = SupplierLocation.objects.create(
+            name='Main Office',
+            address='100 Business Ave',
+            city='Chicago',
+            state='IL',
+            postal_code='60601',
+            location_type='headquarters',
+            contact_name='Jane Smith',
+            contact_phone='555-9876',
+            contact_email='jane@supplier.com',
+            supplier=self.supplier,
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+    
+    def test_list_supplier_locations(self):
+        """Test retrieving list of supplier locations."""
+        url = reverse('supplier-location-list')
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'Main Office')
+        self.assertTrue(response.data['results'][0]['has_address'])
+        self.assertTrue(response.data['results'][0]['has_contact_info'])
+    
+    def test_retrieve_supplier_location(self):
+        """Test retrieving a specific supplier location."""
+        url = reverse('supplier-location-detail', kwargs={'pk': self.location.pk})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Main Office')
+        self.assertEqual(response.data['supplier'], self.supplier.id)
+        self.assertEqual(response.data['supplier_name'], 'Test Supplier')
+        self.assertEqual(response.data['location_type'], 'headquarters')
+        self.assertEqual(response.data['contact_name'], 'Jane Smith')
+        self.assertEqual(response.data['powerapps_entity_name'], 'pro_supplier_locations')
+    
+    def test_create_supplier_location(self):
+        """Test creating a new supplier location."""
+        url = reverse('supplier-location-list')
+        data = {
+            'name': 'New Warehouse',
+            'address': '200 Storage Rd',
+            'city': 'Dallas',
+            'state': 'TX',
+            'postal_code': '75001',
+            'location_type': 'warehouse',
+            'supplier': self.supplier.id,
+            'status': 'active'
+        }
+        
+        response = self.client.post(url, data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], 'New Warehouse')
+        self.assertEqual(response.data['location_type'], 'warehouse')
+        
+        # Verify it was actually created
+        location = SupplierLocation.objects.get(name='New Warehouse')
+        self.assertEqual(location.supplier, self.supplier)
+        self.assertEqual(location.city, 'Dallas')
+    
+    def test_create_supplier_location_validation(self):
+        """Test supplier location creation validation."""
+        url = reverse('supplier-location-list')
+        data = {
+            'name': '',  # Empty name should fail
+            'supplier': self.supplier.id
+        }
+        
+        response = self.client.post(url, data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('name', response.data)
+    
+    def test_update_supplier_location(self):
+        """Test updating a supplier location."""
+        url = reverse('supplier-location-detail', kwargs={'pk': self.location.pk})
+        data = {
+            'name': 'Updated Office Name',
+            'location_type': 'office'
+        }
+        
+        response = self.client.patch(url, data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Updated Office Name')
+        self.assertEqual(response.data['location_type'], 'office')
+        
+        # Verify it was actually updated
+        self.location.refresh_from_db()
+        self.assertEqual(self.location.name, 'Updated Office Name')
+        self.assertEqual(self.location.location_type, 'office')
+    
+    def test_delete_supplier_location_soft_delete(self):
+        """Test soft delete of supplier location (sets status to inactive)."""
+        url = reverse('supplier-location-detail', kwargs={'pk': self.location.pk})
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.location.refresh_from_db()
+        self.assertEqual(self.location.status, 'inactive')
+    
+    def test_filtering(self):
+        """Test API filtering capabilities."""
+        # Create another location with different attributes
+        SupplierLocation.objects.create(
+            name='Inactive Warehouse',
+            location_type='warehouse',
+            city='Houston',
+            state='TX',
+            supplier=self.supplier,
+            status='inactive',
+            created_by=self.user,
+            modified_by=self.user,
+            owner=self.user
+        )
+        
+        url = reverse('supplier-location-list')
+        
+        # Test filtering by status
+        response = self.client.get(url, {'status': 'active'})
+        self.assertEqual(len(response.data['results']), 1)
+        
+        # Test filtering by location_type
+        response = self.client.get(url, {'location_type': 'headquarters'})
+        self.assertEqual(len(response.data['results']), 1)
+        
+        # Test filtering by city
+        response = self.client.get(url, {'city': 'Chicago'})
+        self.assertEqual(len(response.data['results']), 1)
+        
+        # Test filtering by supplier
+        response = self.client.get(url, {'supplier': self.supplier.id})
+        self.assertEqual(len(response.data['results']), 2)
+    
+    def test_search(self):
+        """Test API search functionality."""
+        url = reverse('supplier-location-list')
+        
+        # Search by name
+        response = self.client.get(url, {'search': 'Main'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        
+        # Search by address
+        response = self.client.get(url, {'search': 'Business Ave'})
+        self.assertEqual(len(response.data['results']), 1)
+        
+        # Search by contact name
+        response = self.client.get(url, {'search': 'Jane'})
+        self.assertEqual(len(response.data['results']), 1)
+        
+        # Search by supplier name
+        response = self.client.get(url, {'search': 'Test Supplier'})
+        self.assertEqual(len(response.data['results']), 1)
+    
+    def test_migration_info_endpoint(self):
+        """Test the PowerApps migration info endpoint."""
+        url = reverse('supplier-location-migration-info')
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['powerapps_entity_name'], 'pro_supplier_locations')
+        self.assertEqual(response.data['django_model_name'], 'SupplierLocation')
+        self.assertEqual(response.data['total_records'], 1)
+        self.assertEqual(response.data['active_records'], 1)
+        self.assertIn('field_mappings', response.data)
+        
+        # Check specific field mappings
+        field_mappings = response.data['field_mappings']
+        self.assertEqual(field_mappings['pro_supplier_locationsid'], 'id')
+        self.assertEqual(field_mappings['name'], 'name')
+        self.assertEqual(field_mappings['pro_supplier_lookup'], 'supplier')
