@@ -11,7 +11,7 @@
  * - PowerApps migration information display
  * - Responsive design for mobile and desktop
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { CarrierInfo, FilterOptions, MigrationInfo } from '../types';
 import { CarrierInfoService } from '../services/api';
@@ -155,15 +155,7 @@ const CarrierInfoScreen: React.FC<CarrierInfoScreenProps> = () => {
   const [showMigrationInfo, setShowMigrationInfo] = useState(false);
 
   // Load data on component mount and when filters change
-  useEffect(() => {
-    loadCarriers();
-  }, [currentPage, searchTerm, statusFilter]);
-
-  useEffect(() => {
-    loadMigrationInfo();
-  }, []);
-
-  const loadCarriers = async () => {
+  const loadCarriers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -183,7 +175,15 @@ const CarrierInfoScreen: React.FC<CarrierInfoScreenProps> = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    loadCarriers();
+  }, [loadCarriers]);
+
+  useEffect(() => {
+    loadMigrationInfo();
+  }, []);
 
   const loadMigrationInfo = async () => {
     try {

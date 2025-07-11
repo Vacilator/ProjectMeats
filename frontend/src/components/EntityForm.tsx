@@ -342,19 +342,21 @@ const EntityForm: React.FC<EntityFormProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <ModalOverlay 

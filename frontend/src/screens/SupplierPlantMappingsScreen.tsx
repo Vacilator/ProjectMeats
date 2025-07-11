@@ -11,7 +11,7 @@
  * - PowerApps migration information display
  * - Responsive design for mobile and desktop
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { SupplierPlantMapping, FilterOptions } from '../types';
 import type { MigrationInfo } from '../types';
@@ -147,15 +147,7 @@ const SupplierPlantMappingsScreen: React.FC<SupplierPlantMappingsScreenProps> = 
   const [showMigrationInfo, setShowMigrationInfo] = useState(false);
 
   // Load data on component mount and when filters change
-  useEffect(() => {
-    loadMappings();
-  }, [currentPage, searchTerm, statusFilter]);
-
-  useEffect(() => {
-    loadMigrationInfo();
-  }, []);
-
-  const loadMappings = async () => {
+  const loadMappings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -175,7 +167,15 @@ const SupplierPlantMappingsScreen: React.FC<SupplierPlantMappingsScreenProps> = 
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    loadMappings();
+  }, [loadMappings]);
+
+  useEffect(() => {
+    loadMigrationInfo();
+  }, []);
 
   const loadMigrationInfo = async () => {
     try {

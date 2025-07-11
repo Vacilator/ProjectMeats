@@ -6,6 +6,7 @@
  * financial summaries, and operational efficiency.
  */
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { 
   Container, 
@@ -172,6 +173,7 @@ const QuickActionIcon = styled.div`
 `;
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,7 +213,7 @@ const Dashboard: React.FC = () => {
       
       const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
       
-      // Get current month orders
+      // Get current month orders that are fulfilled (completed)
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
       const completedOrdersThisMonth = orders.filter(order => {
@@ -219,7 +221,7 @@ const Dashboard: React.FC = () => {
           const orderDate = new Date(order.fulfillment_date);
           return orderDate.getMonth() === currentMonth && 
                  orderDate.getFullYear() === currentYear &&
-                 order.status === 'completed';
+                 order.is_fulfilled === true;
         }
         return false;
       }).length;

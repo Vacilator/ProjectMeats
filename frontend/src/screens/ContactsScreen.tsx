@@ -11,9 +11,9 @@
  * - Customer and supplier relationship management
  * - Contact details tracking
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { ContactInfo, FilterOptions } from '../types';
+import { ContactInfo } from '../types';
 import type { MigrationInfo } from '../types';
 import { ContactsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
@@ -159,10 +159,33 @@ const ContactsScreen: React.FC = () => {
   const [deletingContactId, setDeletingContactId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const loadContacts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await ContactsService.getList(1, { search: searchTerm });
+      setContacts(response.results);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load contact information. Please try again.');
+      console.error('Error loading contacts:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm]);
+
   useEffect(() => {
     loadContacts();
     loadMigrationInfo();
-  }, []);
+  }, [loadContacts]);
+
+  const loadMigrationInfo = async () => {
+    try {
+      const info = await ContactsService.getMigrationInfo();
+      setMigrationInfo(info);
+    } catch (err) {
+      console.error('Error loading migration info:', err);
+    }
+  };
 
   // Form field definitions for ContactInfo
   const formFields: FormField[] = [
@@ -208,29 +231,6 @@ const ContactsScreen: React.FC = () => {
       ]
     }
   ];
-
-  const loadContacts = async () => {
-    try {
-      setLoading(true);
-      const response = await ContactsService.getList(1, { search: searchTerm });
-      setContacts(response.results);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load contact information. Please try again.');
-      console.error('Error loading contacts:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMigrationInfo = async () => {
-    try {
-      const info = await ContactsService.getMigrationInfo();
-      setMigrationInfo(info);
-    } catch (err) {
-      console.error('Error loading migration info:', err);
-    }
-  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
