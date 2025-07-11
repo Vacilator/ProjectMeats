@@ -84,19 +84,20 @@ class PurchaseOrder(OwnedModel, StatusModel):
         help_text="Equivalent to PowerApps pro_supplier_lookup field"
     )
     
-    # Document references - equivalent to pro_customerdocuments and pro_supplierdocuments
-    customer_documents = models.CharField(
-        max_length=500,
+    # Document uploads - equivalent to pro_customerdocuments and pro_supplierdocuments
+    # Changed from CharField to FileField to support actual file uploads
+    customer_documents = models.FileField(
+        upload_to='purchase_orders/customer_documents/',
         blank=True,
         null=True,
-        help_text="Equivalent to PowerApps pro_customerdocuments field (Customer document references)"
+        help_text="Equivalent to PowerApps pro_customerdocuments field (Customer document uploads)"
     )
     
-    supplier_documents = models.CharField(
-        max_length=500,
+    supplier_documents = models.FileField(
+        upload_to='purchase_orders/supplier_documents/',
         blank=True,
         null=True,
-        help_text="Equivalent to PowerApps pro_supplierdocuments field (Supplier document references)"
+        help_text="Equivalent to PowerApps pro_supplierdocuments field (Supplier document uploads)"
     )
     
     class Meta:
@@ -149,8 +150,11 @@ class PurchaseOrder(OwnedModel, StatusModel):
     
     @property
     def has_documents(self):
-        """Helper property to check if any documents are referenced."""
-        return bool(self.customer_documents or self.supplier_documents)
+        """Helper property to check if any documents are uploaded."""
+        return bool(
+            (self.customer_documents and self.customer_documents.name) or 
+            (self.supplier_documents and self.supplier_documents.name)
+        )
     
     @classmethod
     def get_powerapps_entity_name(cls):

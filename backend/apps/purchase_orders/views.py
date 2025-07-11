@@ -6,15 +6,16 @@ migrated from PowerApps pro_purchaseorder.
 
 Endpoints:
 - GET /api/v1/purchase-orders/ - List purchase orders
-- POST /api/v1/purchase-orders/ - Create new purchase order
+- POST /api/v1/purchase-orders/ - Create new purchase order (supports file uploads)
 - GET /api/v1/purchase-orders/{id}/ - Get specific purchase order
-- PUT /api/v1/purchase-orders/{id}/ - Update purchase order
+- PUT /api/v1/purchase-orders/{id}/ - Update purchase order (supports file uploads)
 - DELETE /api/v1/purchase-orders/{id}/ - Delete purchase order
 - GET /api/v1/purchase-orders/migration_info/ - PowerApps migration info
 """
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.contrib.auth.models import User
@@ -69,14 +70,17 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     - Search across po_number, item, customer name, supplier name
     - Ordering by any field
     - Pagination (20 items per page by default)
+    - File upload support for customer and supplier documents
     
     PowerApps Migration Notes:
     - Preserves all original pro_purchaseorder fields
     - Maps PowerApps ownership model to Django User model
     - Maintains PowerApps status (Active/Inactive) pattern
     - Maps PowerApps money fields to Django DecimalField
+    - Enhanced document fields to support actual file uploads
     """
     queryset = PurchaseOrder.objects.all()
+    parser_classes = [MultiPartParser, FormParser, JSONParser]  # Support file uploads
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'customer', 'supplier', 'purchase_date', 'fulfillment_date']
     search_fields = ['po_number', 'item', 'customer__name', 'supplier__name']
@@ -123,13 +127,16 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 fulfillment_date__date__gt=timezone.now().date()
             )
         
-        # Filter by records with documents
+        # Filter by records with documents (updated for FileField)
         if self.request.query_params.get('has_documents') == 'true':
             queryset = queryset.exclude(
                 customer_documents__isnull=True, 
                 customer_documents='',
                 supplier_documents__isnull=True,
                 supplier_documents=''
+            ).exclude(
+                customer_documents__name='',
+                supplier_documents__name=''
             )
         
         # Filter by amount range

@@ -87,7 +87,9 @@ export interface PurchaseOrder extends OwnedEntity, StatusEntity {
   supplier: number;
   supplier_name?: string;
   customer_documents?: string;
+  customer_documents_url?: string;
   supplier_documents?: string;
+  supplier_documents_url?: string;
   is_fulfilled: boolean;
   has_documents: boolean;
   powerapps_entity_name?: string;
@@ -246,8 +248,8 @@ export interface PurchaseOrderFormData {
   fulfillment_date?: string;
   customer: number;
   supplier: number;
-  customer_documents?: string;
-  supplier_documents?: string;
+  customer_documents?: string | File;
+  supplier_documents?: string | File;
   status: 'active' | 'inactive';
 }
 

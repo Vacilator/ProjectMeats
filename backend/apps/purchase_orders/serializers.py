@@ -55,12 +55,16 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
 class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     """
     Complete serializer for detail views with all PowerApps migrated fields.
-    Includes relationship fields and metadata.
+    Includes relationship fields, metadata, and file URL handling.
     """
     total_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     is_fulfilled = serializers.BooleanField(read_only=True)
     has_documents = serializers.BooleanField(read_only=True)
     powerapps_entity_name = serializers.SerializerMethodField()
+    
+    # File URL fields for download links
+    customer_documents_url = serializers.SerializerMethodField()
+    supplier_documents_url = serializers.SerializerMethodField()
     
     # Owner information (read-only for API consumers)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
@@ -87,7 +91,9 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
             'supplier',
             'supplier_name',
             'customer_documents',
+            'customer_documents_url',
             'supplier_documents',
+            'supplier_documents_url',
             'status',
             'is_fulfilled',
             'has_documents',
@@ -113,12 +119,32 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
             'modified_by_username', 
             'owner_username',
             'customer_name',
-            'supplier_name'
+            'supplier_name',
+            'customer_documents_url',
+            'supplier_documents_url'
         ]
     
     def get_powerapps_entity_name(self, obj):
         """Return the original PowerApps entity name for reference."""
         return obj.get_powerapps_entity_name()
+    
+    def get_customer_documents_url(self, obj):
+        """Return URL for customer documents download."""
+        if obj.customer_documents and obj.customer_documents.name:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.customer_documents.url)
+            return obj.customer_documents.url
+        return None
+    
+    def get_supplier_documents_url(self, obj):
+        """Return URL for supplier documents download."""
+        if obj.supplier_documents and obj.supplier_documents.name:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.supplier_documents.url)
+            return obj.supplier_documents.url
+        return None
     
     def validate_po_number(self, value):
         """Ensure PO number is provided and not empty (PowerApps required field)."""

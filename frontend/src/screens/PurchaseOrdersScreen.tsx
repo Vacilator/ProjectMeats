@@ -502,7 +502,30 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
               <Td>
                 <strong>{order.po_number}</strong>
                 {order.has_documents && (
-                  <div style={{ fontSize: '12px', color: '#666' }}>📎 Has Documents</div>
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                    📎 
+                    {order.customer_documents_url && (
+                      <a 
+                        href={order.customer_documents_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ marginLeft: '4px', color: '#007bff' }}
+                      >
+                        Customer Doc
+                      </a>
+                    )}
+                    {order.customer_documents_url && order.supplier_documents_url && ' | '}
+                    {order.supplier_documents_url && (
+                      <a 
+                        href={order.supplier_documents_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ marginLeft: '4px', color: '#007bff' }}
+                      >
+                        Supplier Doc
+                      </a>
+                    )}
+                  </div>
                 )}
               </Td>
               <Td>

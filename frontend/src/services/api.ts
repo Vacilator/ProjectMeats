@@ -298,13 +298,55 @@ export class PurchaseOrdersService {
   }
 
   static async create(data: PurchaseOrderFormData): Promise<PurchaseOrder> {
-    const response: AxiosResponse<PurchaseOrder> = await apiClient.post(`${this.baseEndpoint}/`, data);
-    return response.data;
+    // Check if we have file uploads and use FormData if so
+    const hasFiles = data.customer_documents instanceof File || data.supplier_documents instanceof File;
+    
+    if (hasFiles) {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, value.toString());
+          }
+        }
+      });
+      
+      const response: AxiosResponse<PurchaseOrder> = await apiClient.post(`${this.baseEndpoint}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } else {
+      const response: AxiosResponse<PurchaseOrder> = await apiClient.post(`${this.baseEndpoint}/`, data);
+      return response.data;
+    }
   }
 
   static async update(id: number, data: Partial<PurchaseOrderFormData>): Promise<PurchaseOrder> {
-    const response: AxiosResponse<PurchaseOrder> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
-    return response.data;
+    // Check if we have file uploads and use FormData if so
+    const hasFiles = data.customer_documents instanceof File || data.supplier_documents instanceof File;
+    
+    if (hasFiles) {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, value.toString());
+          }
+        }
+      });
+      
+      const response: AxiosResponse<PurchaseOrder> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } else {
+      const response: AxiosResponse<PurchaseOrder> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
+      return response.data;
+    }
   }
 
   static async delete(id: number): Promise<void> {
