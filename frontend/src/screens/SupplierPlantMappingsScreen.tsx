@@ -11,7 +11,7 @@
  * - PowerApps migration information display
  * - Responsive design for mobile and desktop
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { SupplierPlantMapping, FilterOptions } from '../types';
 import type { MigrationInfo } from '../types';
@@ -146,16 +146,7 @@ const SupplierPlantMappingsScreen: React.FC<SupplierPlantMappingsScreenProps> = 
   const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showMigrationInfo, setShowMigrationInfo] = useState(false);
 
-  // Load data on component mount and when filters change
-  useEffect(() => {
-    loadMappings();
-  }, [currentPage, searchTerm, statusFilter]);
-
-  useEffect(() => {
-    loadMigrationInfo();
-  }, []);
-
-  const loadMappings = async () => {
+  const loadMappings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -175,16 +166,25 @@ const SupplierPlantMappingsScreen: React.FC<SupplierPlantMappingsScreenProps> = 
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, statusFilter]);
 
-  const loadMigrationInfo = async () => {
+  const loadMigrationInfo = useCallback(async () => {
     try {
       const info = await SupplierPlantMappingsService.getMigrationInfo();
       setMigrationInfo(info);
     } catch (err) {
       console.error('Error loading migration info:', err);
     }
-  };
+  }, []);
+
+  // Load data on component mount and when filters change
+  useEffect(() => {
+    loadMappings();
+  }, [loadMappings]);
+
+  useEffect(() => {
+    loadMigrationInfo();
+  }, [loadMigrationInfo]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
