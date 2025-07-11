@@ -668,7 +668,7 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
           fulfillment_date: editingPurchaseOrder.fulfillment_date || '',
           customer: editingPurchaseOrder.customer,
           supplier: editingPurchaseOrder.supplier,
-          origin_location: editingPurchaseOrder.origin_location || '',
+          origin_location: editingPurchaseOrder.origin_location || undefined,
           end_location: editingPurchaseOrder.end_location || undefined,
           customer_documents: editingPurchaseOrder.customer_documents || '',
           supplier_documents: editingPurchaseOrder.supplier_documents || '',
