@@ -33,6 +33,8 @@ env/
 .venv/
 .env/
 backend/venv/
+backend/test_env/
+backend/venv_temp/
 
 # IDE
 .vscode/
