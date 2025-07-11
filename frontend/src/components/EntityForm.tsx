@@ -348,8 +348,6 @@ const EntityForm: React.FC<EntityFormProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -361,6 +359,8 @@ const EntityForm: React.FC<EntityFormProps> = ({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <ModalOverlay 
