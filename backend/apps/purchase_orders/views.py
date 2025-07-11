@@ -78,7 +78,9 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     - Maps PowerApps money fields to Django DecimalField
     """
 
-    queryset = PurchaseOrder.objects.all()
+    queryset = PurchaseOrder.objects.select_related(
+        'customer', 'supplier', 'created_by', 'modified_by', 'owner'
+    ).all()
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,

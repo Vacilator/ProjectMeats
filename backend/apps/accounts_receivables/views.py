@@ -74,7 +74,9 @@ class AccountsReceivableViewSet(viewsets.ModelViewSet):
     - Maintains PowerApps status (Active/Inactive) pattern
     """
 
-    queryset = AccountsReceivable.objects.all()
+    queryset = AccountsReceivable.objects.select_related(
+        'created_by', 'modified_by', 'owner'
+    ).all()
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,

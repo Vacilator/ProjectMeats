@@ -88,6 +88,15 @@ class ContactInfo(OwnedModel, StatusModel):
         verbose_name_plural = "Contact Infos"
         db_table = "contact_infos"
         ordering = ["name"]
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["contact_type"]),
+            models.Index(fields=["customer"]),
+            models.Index(fields=["supplier"]),
+            models.Index(fields=["email"]),
+            models.Index(fields=["status", "contact_type"]),  # Composite for filtering
+        ]
 
     def __str__(self):
         """String representation using the primary name field."""

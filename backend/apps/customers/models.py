@@ -38,6 +38,11 @@ class Customer(OwnedModel, StatusModel):
         verbose_name_plural = "Customers"
         db_table = "customers"
         ordering = ["name"]
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["status", "name"]),  # Composite index for filtered lists
+        ]
 
     def __str__(self):
         """String representation using the primary name field."""

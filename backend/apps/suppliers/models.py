@@ -62,6 +62,14 @@ class Supplier(OwnedModel, StatusModel):
         verbose_name_plural = "Suppliers"
         db_table = "suppliers"
         ordering = ["name"]
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["delivery_type_profile"]),
+            models.Index(fields=["accounts_receivable"]),
+            models.Index(fields=["credit_application_date"]),
+            models.Index(fields=["status", "name"]),  # Composite index for filtered lists
+        ]
 
     def __str__(self):
         """String representation using the primary name field."""
@@ -162,6 +170,14 @@ class SupplierPlantMapping(OwnedModel, StatusModel):
         verbose_name_plural = "Supplier Plant Mappings"
         db_table = "supplier_plant_mappings"
         ordering = ["name"]
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["supplier"]),
+            models.Index(fields=["plant"]),
+            models.Index(fields=["customer"]),
+            models.Index(fields=["supplier", "plant"]),  # Composite for relationships
+        ]
 
     def __str__(self):
         """String representation using the primary name field."""

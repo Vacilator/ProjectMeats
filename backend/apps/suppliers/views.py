@@ -80,7 +80,9 @@ class SupplierViewSet(viewsets.ModelViewSet):
     - Maintains PowerApps status (Active/Inactive) pattern
     """
 
-    queryset = Supplier.objects.all()
+    queryset = Supplier.objects.select_related(
+        'accounts_receivable', 'created_by', 'modified_by', 'owner'
+    ).all()
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,

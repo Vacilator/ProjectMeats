@@ -74,7 +74,9 @@ class CustomerViewSet(PowerAppsModelViewSet):
     - Maintains PowerApps status (Active/Inactive) pattern
     """
 
-    queryset = Customer.objects.all()
+    queryset = Customer.objects.select_related(
+        'created_by', 'modified_by', 'owner'
+    ).all()
     filterset_fields = ["status"]
     search_fields = ["name"]
     ordering_fields = ["name", "created_on", "modified_on", "status"]
