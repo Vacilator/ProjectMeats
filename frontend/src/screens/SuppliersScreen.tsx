@@ -164,7 +164,7 @@ const ContactItem = styled.div`
 
 const ContactHeader = styled.div`
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: center;
   font-weight: 600;
   margin-bottom: 8px;
