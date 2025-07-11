@@ -47,6 +47,30 @@ This guide helps you set up the Django REST Framework backend for ProjectMeats, 
    python manage.py runserver
    ```
 
+## Performance Optimization Notes
+
+### Database Performance
+The backend has been optimized for production performance:
+
+- **Strategic indexes**: 18 database indexes added for common query patterns
+- **Query optimization**: All ViewSets use `select_related()` to prevent N+1 queries
+- **Efficient pagination**: Default 20 items per page with count optimization
+
+### Code Quality
+- **Linting**: All code formatted with `black` and `isort`
+- **Type hints**: Comprehensive type hints throughout the codebase
+- **Documentation**: Extensive inline documentation for PowerApps migration mapping
+
+### Testing
+Run the test suite to verify everything works:
+```bash
+python manage.py test
+# or using Make
+make test-backend
+```
+
+All 76 tests should pass consistently.
+
 ## Development Workflow
 
 ### Adding New Entities (PowerApps Migration)
