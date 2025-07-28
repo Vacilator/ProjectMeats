@@ -24,6 +24,8 @@ import {
   PlantFormData,
   SupplierLocation,
   SupplierLocationFormData,
+  UserProfile,
+  UserProfileFormData,
   ApiResponse, 
   MigrationInfo,
   FilterOptions 
@@ -528,6 +530,79 @@ export class SupplierLocationsService {
   static async getMigrationInfo(): Promise<MigrationInfo> {
     const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
     return response.data;
+  }
+}
+
+/**
+ * User Profiles API service
+ */
+export class UserProfilesService {
+  private static baseEndpoint = '/user-profiles';
+
+  /**
+   * Get paginated list of user profiles
+   */
+  static async getList(page: number = 1, filters: FilterOptions = {}): Promise<ApiResponse<UserProfile>> {
+    const params = new URLSearchParams({ page: page.toString() });
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<UserProfile>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Get detailed information for a specific user profile
+   */
+  static async getDetail(id: number): Promise<UserProfile> {
+    const response: AxiosResponse<UserProfile> = await apiClient.get(`${this.baseEndpoint}/${id}/`);
+    return response.data;
+  }
+
+  /**
+   * Get current user's profile
+   */
+  static async getCurrentUserProfile(): Promise<UserProfile> {
+    const response: AxiosResponse<UserProfile> = await apiClient.get(`${this.baseEndpoint}/me/`);
+    return response.data;
+  }
+
+  /**
+   * Update current user's profile
+   */
+  static async updateCurrentUserProfile(data: Partial<UserProfileFormData>): Promise<UserProfile> {
+    const response: AxiosResponse<UserProfile> = await apiClient.patch(`${this.baseEndpoint}/me/`, data);
+    return response.data;
+  }
+
+  /**
+   * Update user profile with file upload support
+   */
+  static async update(id: number, data: Partial<UserProfileFormData>): Promise<UserProfile> {
+    // Check if we have file uploads and use FormData if so
+    const hasFiles = data.profile_image instanceof File;
+    
+    if (hasFiles) {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      
+      const response: AxiosResponse<UserProfile> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } else {
+      const response: AxiosResponse<UserProfile> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
+      return response.data;
+    }
   }
 }
 

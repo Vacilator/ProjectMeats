@@ -60,6 +60,30 @@ The backend has been optimized for production performance:
 - **Linting**: All code formatted with `black` and `isort`
 - **Type hints**: Comprehensive type hints throughout the codebase
 - **Documentation**: Extensive inline documentation for PowerApps migration mapping
+- **User Profiles**: Complete authentication and profile management system integrated
+
+### User Profile System
+ProjectMeats includes a comprehensive user profile management system:
+
+- **Authentication Integration**: Extends Django's built-in User model
+- **Profile Management**: User details, job titles, departments, and bio
+- **Image Uploads**: Profile picture support with validation and serving
+- **API Endpoints**: RESTful `/api/v1/user-profiles/` endpoints
+- **Security**: Proper authentication and authorization controls
+
+#### User Profile API Usage
+```python
+# Backend model access
+from apps.user_profiles.models import UserProfile
+
+# Get current user's profile
+profile = request.user.profile
+
+# Update profile
+profile.job_title = "Senior Manager"
+profile.department = "Operations"
+profile.save()
+```
 
 ### Testing
 Run the test suite to verify everything works:

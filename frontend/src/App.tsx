@@ -9,6 +9,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
 import { colors, typography, spacing, borderRadius, shadows } from './components/DesignSystem';
+import UserProfile from './components/UserProfile';
 import DashboardScreen from './screens/DashboardScreen';
 import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
 import SuppliersScreen from './screens/SuppliersScreen';
@@ -83,6 +84,17 @@ const HeaderContent = styled.div`
     padding: 0 ${spacing.md};
     height: 60px;
   }
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${spacing.lg};
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
 `;
 
 const Logo = styled.div`
@@ -245,14 +257,19 @@ const App: React.FC = () => {
       <AppContainer>
         <Header>
           <HeaderContent>
-            <Logo>
-              <LogoIcon>🥩</LogoIcon>
-              <LogoText>
-                <LogoTitle>ProjectMeats</LogoTitle>
-                <LogoSubtitle>Sales Management</LogoSubtitle>
-              </LogoText>
-            </Logo>
-            <NavigationWithLocation />
+            <HeaderLeft>
+              <Logo>
+                <LogoIcon>🥩</LogoIcon>
+                <LogoText>
+                  <LogoTitle>ProjectMeats</LogoTitle>
+                  <LogoSubtitle>Sales Management</LogoSubtitle>
+                </LogoText>
+              </Logo>
+              <NavigationWithLocation />
+            </HeaderLeft>
+            <HeaderRight>
+              <UserProfile />
+            </HeaderRight>
           </HeaderContent>
         </Header>
         

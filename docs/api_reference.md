@@ -364,6 +364,169 @@ CORS_ALLOWED_ORIGINS = [
 ]
 ```
 
+## User Profiles API
+
+### Overview
+Manages user profile information including personal details, preferences, and profile images. This system enables user account management and authentication within ProjectMeats.
+
+### Endpoints
+
+#### List User Profiles
+```http
+GET /api/v1/user-profiles/
+```
+
+**Query Parameters:**
+- `page` (integer): Page number for pagination
+- `search` (string): Search in username, first_name, last_name, email fields
+
+**Response:**
+```json
+{
+  "count": 25,
+  "next": "http://localhost:8000/api/v1/user-profiles/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "username": "admin",
+      "first_name": "Admin",
+      "last_name": "User",
+      "email": "admin@projectmeats.com",
+      "display_name": "Admin User",
+      "phone": "+1-555-0123",
+      "department": "Administration",
+      "job_title": "System Administrator",
+      "profile_image_url": "http://localhost:8000/media/profiles/admin.jpg",
+      "timezone": "America/New_York",
+      "email_notifications": true,
+      "bio": "System administrator for ProjectMeats",
+      "has_complete_profile": true,
+      "created_on": "2024-01-15T10:30:00Z",
+      "modified_on": "2024-01-20T14:45:00Z"
+    }
+  ]
+}
+```
+
+#### Get User Profile Details
+```http
+GET /api/v1/user-profiles/{id}/
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "username": "admin",
+  "first_name": "Admin",
+  "last_name": "User",
+  "email": "admin@projectmeats.com",
+  "display_name": "Admin User",
+  "phone": "+1-555-0123",
+  "department": "Administration",
+  "job_title": "System Administrator",
+  "profile_image": "profiles/admin.jpg",
+  "profile_image_url": "http://localhost:8000/media/profiles/admin.jpg",
+  "timezone": "America/New_York",
+  "email_notifications": true,
+  "bio": "System administrator for ProjectMeats",
+  "has_complete_profile": true,
+  "created_on": "2024-01-15T10:30:00Z",
+  "modified_on": "2024-01-20T14:45:00Z"
+}
+```
+
+#### Get Current User Profile
+```http
+GET /api/v1/user-profiles/me/
+```
+
+Returns the profile of the currently authenticated user. Same response format as individual user profile.
+
+#### Update Current User Profile
+```http
+PATCH /api/v1/user-profiles/me/
+Content-Type: application/json
+
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "phone": "+1-555-0789",
+  "department": "Sales",
+  "job_title": "Sales Manager",
+  "bio": "Experienced sales professional in the meat industry",
+  "timezone": "America/Chicago",
+  "email_notifications": false
+}
+```
+
+#### Update User Profile with Image
+```http
+PATCH /api/v1/user-profiles/{id}/
+Content-Type: multipart/form-data
+
+{
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "profile_image": [FILE_UPLOAD]
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": 2,
+  "username": "jsmith",
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "email": "jane.smith@projectmeats.com",
+  "display_name": "Jane Smith",
+  "profile_image_url": "http://localhost:8000/media/profiles/jane_smith.jpg",
+  "has_complete_profile": true,
+  "created_on": "2024-01-21T09:15:00Z",
+  "modified_on": "2024-01-21T16:30:00Z"
+}
+```
+
+### User Profile Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | string | Read-only | Django username (unique) |
+| `first_name` | string | No | User's first name |
+| `last_name` | string | No | User's last name |
+| `email` | string | Yes | Email address (unique) |
+| `display_name` | string | Read-only | Computed display name |
+| `phone` | string | No | Phone number |
+| `department` | string | No | Department/division |
+| `job_title` | string | No | Job title/position |
+| `profile_image` | file | No | Profile image upload |
+| `profile_image_url` | string | Read-only | Full URL to profile image |
+| `timezone` | string | No | User's timezone |
+| `email_notifications` | boolean | No | Email notification preference |
+| `bio` | text | No | User biography/description |
+| `has_complete_profile` | boolean | Read-only | Profile completion status |
+
+### Authentication Integration
+
+The User Profiles API integrates with Django's authentication system:
+
+```javascript
+// Frontend authentication check
+import { UserProfilesService } from '../services/api';
+
+const checkAuth = async () => {
+  try {
+    const profile = await UserProfilesService.getCurrentUserProfile();
+    return profile;
+  } catch (error) {
+    // User not authenticated
+    throw error;
+  }
+};
+```
+
 ## Future Entities
 
 As more PowerApps entities are migrated, they will follow the same API patterns:
@@ -404,6 +567,26 @@ const api = axios.create({
 });
 
 const accounts = await api.get('/accounts-receivables/');
+
+// User profile examples
+const currentUser = await api.get('/user-profiles/me/');
+
+// Update user profile
+const updatedProfile = await api.patch('/user-profiles/me/', {
+  job_title: 'Senior Manager',
+  department: 'Operations'
+});
+
+// Upload profile image
+const formData = new FormData();
+formData.append('profile_image', fileInput.files[0]);
+formData.append('first_name', 'Updated Name');
+
+const profileWithImage = await api.patch('/user-profiles/me/', formData, {
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+});
 ```
 
 ### Python
@@ -443,6 +626,24 @@ curl -X POST http://localhost:8000/api/v1/accounts-receivables/ \
 curl -X PATCH http://localhost:8000/api/v1/accounts-receivables/1/ \
   -H "Content-Type: application/json" \
   -d '{"terms": "Net 60"}'
+
+# User profile examples
+# Get current user profile
+curl -X GET http://localhost:8000/api/v1/user-profiles/me/
+
+# Update user profile
+curl -X PATCH http://localhost:8000/api/v1/user-profiles/me/ \
+  -H "Content-Type: application/json" \
+  -d '{"job_title": "Senior Manager", "department": "Operations"}'
+
+# Upload profile image
+curl -X PATCH http://localhost:8000/api/v1/user-profiles/me/ \
+  -H "Content-Type: multipart/form-data" \
+  -F "profile_image=@profile.jpg" \
+  -F "first_name=Updated Name"
+
+# List all user profiles (admin only)
+curl -X GET http://localhost:8000/api/v1/user-profiles/
 ```
 
 ## Development and Testing
