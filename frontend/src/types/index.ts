@@ -189,6 +189,20 @@ export interface UserProfile extends TimestampedEntity {
   has_complete_profile: boolean;
 }
 
+// Form data types for user profile updates
+export interface UserProfileFormData {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  department?: string;
+  job_title?: string;
+  profile_image?: File | string;
+  timezone?: string;
+  email_notifications?: boolean;
+  bio?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   count: number;
