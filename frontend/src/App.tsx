@@ -11,6 +11,7 @@ import styled, { createGlobalStyle } from 'styled-components';
 import { colors, typography, spacing, borderRadius, shadows } from './components/DesignSystem';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import UserProfile from './components/UserProfile';
+import BugReportButton from './components/BugReportButton';
 import DashboardScreen from './screens/DashboardScreen';
 import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
 import SuppliersScreen from './screens/SuppliersScreen';
@@ -99,6 +100,7 @@ const HeaderLeft = styled.div`
 const HeaderRight = styled.div`
   display: flex;
   align-items: center;
+  gap: ${spacing.sm};
 `;
 
 const Logo = styled.div`
@@ -303,6 +305,7 @@ const AppContent: React.FC = () => {
     <>
       <GlobalStyle />
       <AppContainer>
+
         {isAuthenticated && (
           <Header>
             <HeaderContent>
@@ -317,11 +320,17 @@ const AppContent: React.FC = () => {
                 <NavigationWithLocation />
               </HeaderLeft>
               <HeaderRight>
+                <BugReportButton 
+                position="header" 
+                size="small" 
+                showText={true}
+                />
                 <UserProfile />
               </HeaderRight>
             </HeaderContent>
           </Header>
         )}
+
         
         <Main style={{ minHeight: isAuthenticated ? 'calc(100vh - 70px - 60px)' : '100vh' }}>
           <Routes>
@@ -393,6 +402,7 @@ const AppContent: React.FC = () => {
           </Routes>
         </Main>
         
+
         {isAuthenticated && (
           <Footer>
             <FooterContent>
@@ -406,7 +416,11 @@ const AppContent: React.FC = () => {
               </FooterLinks>
             </FooterContent>
           </Footer>
+                    
+        {/* Floating Bug Report Button */}
+        <BugReportButton position="bottom-right" size="medium" />
         )}
+
       </AppContainer>
     </>
   );
