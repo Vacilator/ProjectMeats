@@ -22,6 +22,7 @@ import ContactsScreen from './screens/ContactsScreen';
 import SupplierPlantMappingsScreen from './screens/SupplierPlantMappingsScreen';
 import CarrierInfoScreen from './screens/CarrierInfoScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
+import AIAssistantScreen from './screens/AIAssistantScreen';
 
 // Enhanced global styles with design system
 const GlobalStyle = createGlobalStyle`
@@ -242,6 +243,7 @@ const NavigationWithLocation: React.FC = () => {
   return (
     <Navigation>
       <NavItem to="/dashboard" icon="📊">Dashboard</NavItem>
+      <NavItem to="/ai-assistant" icon="🤖">AI Assistant</NavItem>
       <NavItem to="/accounts-receivables" icon="📋">Accounts</NavItem>
       <NavItem to="/suppliers" icon="🏢">Suppliers</NavItem>
       <NavItem to="/customers" icon="👥">Customers</NavItem>
@@ -278,6 +280,7 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardScreen />} />
+            <Route path="/ai-assistant" element={<AIAssistantScreen />} />
             <Route path="/accounts-receivables" element={<AccountsReceivablesScreen />} />
             <Route path="/suppliers" element={<SuppliersScreen />} />
             <Route path="/customers" element={<CustomersScreen />} />
