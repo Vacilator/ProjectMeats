@@ -42,34 +42,55 @@ ProjectMeats/
 
 ## 🚀 Quick Start
 
+**⚡ New: Cross-Platform Setup Script** - Works on Windows, macOS, and Linux!
+
+### Recommended Setup (All Platforms)
+```bash
+# Full setup (backend + frontend) - Works everywhere!
+python setup.py
+
+# Backend only
+python setup.py --backend
+
+# Frontend only  
+python setup.py --frontend
+
+# Show help and options
+python setup.py --help
+```
+
+### Alternative Setup Methods
+
+#### For Windows Users
+```powershell
+# Enhanced PowerShell script
+.\setup.ps1
+
+# With options
+.\setup.ps1 -Backend
+.\setup.ps1 -Frontend
+.\setup.ps1 -Help
+```
+
+#### For macOS/Linux Users
+```bash
+# Make commands (Unix/Linux/macOS)
+make setup           # Complete setup
+make setup-python    # Use Python script (recommended)
+make setup-backend   # Backend only
+make setup-frontend  # Frontend only
+```
+
+### 💡 Quick Troubleshooting
+- **Windows users experiencing "true is not recognized"**: Use `python setup.py` instead of make commands
+- **"python: command not found"**: Try `python3 setup.py` or install Python from python.org
+- **"node: command not found"**: Install Node.js from nodejs.org
+- **Setup errors**: See [Cross-Platform Setup Guide](docs/cross_platform_setup.md) for detailed troubleshooting
+
 ### Prerequisites
-- Python 3.9+
-- Node.js 16+
-- PostgreSQL 12+ (recommended) or SQLite for development
-
-### 1. Backend Setup
-```bash
-cd backend
-cp .env.example .env
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
-
-### 2. Frontend Setup
-```bash
-cd frontend
-npm install
-npm start
-```
-
-### 3. Using Make Commands (Recommended)
-```bash
-make setup      # Complete environment setup
-make dev        # Start both backend and frontend
-make test       # Run all tests
-make docs       # Generate API documentation
-```
+- **Python 3.9+** - [Download from python.org](https://python.org)
+- **Node.js 16+** - [Download from nodejs.org](https://nodejs.org)
+- **PostgreSQL 12+** (recommended) or SQLite for development
 
 ## 📋 Migration Status
 
@@ -126,6 +147,7 @@ make docs       # Generate API documentation
 ## 📚 Documentation
 
 - **[Setup Overview](SETUP_OVERVIEW.md)** - **Start here! Complete setup guide and documentation index**
+- **[Cross-Platform Setup Guide](docs/cross_platform_setup.md)** - **Comprehensive setup instructions with troubleshooting**
 - **[Agent Quick Start Guide](docs/agent_quick_start.md)** - **Required reading for all agents**
 - **[Agent Activity Log](docs/agent_activity_log.md)** - **Required logging for all work**
 - **[Backend Setup Guide](docs/backend_setup.md)** - Detailed backend development setup
