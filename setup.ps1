@@ -47,7 +47,7 @@ function Show-Help {
     Write-Host "Alternative (recommended):"
     Write-Host "  python setup.py                # Cross-platform Python script"
     Write-Host ""
-    Write-Host "For more information, see SETUP_OVERVIEW.md"
+    Write-Host "For more information, see docs/setup_guide.md"
 }
 
 function Test-Command {
@@ -267,7 +267,7 @@ function Show-NextSteps {
     
     Write-Host "`nDocumentation:" -ForegroundColor Yellow
     Write-Host "   README.md           - Project overview" -ForegroundColor Cyan
-    Write-Host "   SETUP_OVERVIEW.md   - Detailed setup guide" -ForegroundColor Cyan
+    Write-Host "   docs/setup_guide.md  - Comprehensive setup guide" -ForegroundColor Cyan
     Write-Host "   docs/               - Complete documentation" -ForegroundColor Cyan
 }
 

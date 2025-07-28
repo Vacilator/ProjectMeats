@@ -1,6 +1,8 @@
 # ProjectMeats
 
-A comprehensive business management application migrated from PowerApps/Dataverse to Django REST Framework (backend) and React (frontend). This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
+A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities with enterprise-grade security and scalability.
+
+## 📖 Documentation Navigation
 
 **🚀 New to ProjectMeats?** Start with the **[Setup Overview](SETUP_OVERVIEW.md)** for a comprehensive setup guide and links to all documentation.
 
@@ -8,41 +10,103 @@ A comprehensive business management application migrated from PowerApps/Datavers
 
 **Windows users with Python 3.13+**: If setup fails with PostgreSQL adapter errors, see **[Python 3.13+ Setup Guide](PYTHON_3_13_SETUP.md)** for solutions.
 
+
+## 🏗️ System Architecture
+
+**Technology Stack:**
+- **Backend**: Django 4.2.7 + Django REST Framework + PostgreSQL
+- **Frontend**: React 18.2.0 + TypeScript + Styled Components  
+- **Authentication**: Django User system with profile management
+- **API**: RESTful endpoints with OpenAPI documentation
+- **Testing**: 76+ comprehensive backend tests
+
+**Project Structure:**
+
 ## 🏗️ Architecture Overview
+
 
 ```
 ProjectMeats/
 ├── backend/                    # Django REST Framework API
-│   ├── projectmeats/          # Django project
-│   ├── apps/                  # Django applications
-│   │   ├── accounts_receivables/  # First migrated entity
-│   │   ├── suppliers/
-│   │   ├── customers/
-│   │   ├── user_profiles/     # User authentication & profiles
-│   │   └── core/              # Shared utilities
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── manage.py
-├── frontend/                   # React application
+│   ├── apps/                  # Business entities (9 complete)
+│   │   ├── accounts_receivables/  # Customer payments
+│   │   ├── suppliers/            # Supplier management
+│   │   ├── customers/            # Customer relationships
+│   │   ├── user_profiles/        # User authentication & profiles
+│   │   ├── purchase_orders/      # Order processing
+│   │   ├── plants/              # Processing facilities
+│   │   ├── contacts/            # Contact management
+│   │   └── core/                # Shared utilities
+│   └── requirements.txt
+├── frontend/                   # React TypeScript application
 │   ├── src/
-│   │   ├── components/        # Reusable components
-│   │   │   ├── UserProfile.tsx   # User profile dropdown
-│   │   │   └── DesignSystem.tsx  # Design system
-│   │   ├── screens/          # Main application screens
-│   │   │   └── AccountsReceivablesScreen.js
+│   │   ├── components/         # Reusable UI components
+│   │   ├── screens/           # Main application screens
 │   │   ├── services/         # API communication
 │   │   └── utils/
-│   ├── package.json
-│   └── public/
+│   └── package.json
 ├── docs/                      # Documentation
-│   ├── backend_setup.md       # Backend development guide
-│   ├── frontend_setup.md      # Frontend development guide
+│   ├── setup_guide.md         # Complete setup guide
+│   ├── production_deployment.md # Enterprise deployment
 │   ├── api_reference.md       # API documentation
 │   └── migration_mapping.md   # PowerApps → Django mapping
 ├── powerapps_export/          # Original PowerApps solution
 ├── Makefile                   # Development commands
 └── README.md                  # This file
 ```
+
+## 🚀 Quick Setup
+
+**⚡ Cross-Platform Setup Script** - Works on Windows, macOS, and Linux!
+
+### Recommended Setup (All Platforms)
+```bash
+# Full setup (backend + frontend) - Works everywhere!
+python setup.py
+
+# Backend only
+python setup.py --backend
+
+# Frontend only  
+python setup.py --frontend
+
+# Show help and options
+python setup.py --help
+```
+
+### Alternative Platform-Specific Methods
+
+#### 🖥️ Windows
+```powershell
+python setup.py              # Recommended
+.\setup.ps1                   # PowerShell script
+setup.bat                     # Batch file (interactive)
+```
+
+#### 🐧 Linux/macOS
+```bash
+python setup.py              # Recommended
+make setup                    # Makefile
+./setup.sh                    # Shell script
+```
+
+## 🔧 Development Commands
+
+### Start Development Servers
+```bash
+# Start both servers (Linux/macOS)
+make dev
+
+# Windows users - use separate terminals:
+# Terminal 1: cd backend && python manage.py runserver
+# Terminal 2: cd frontend && npm start
+```
+
+### Access URLs
+- **Backend API**: http://localhost:8000
+- **Frontend**: http://localhost:3000  
+- **API Documentation**: http://localhost:8000/api/docs/
+- **Admin Panel**: http://localhost:8000/admin/
 
 ## 🤖 AI-Enhanced Development
 

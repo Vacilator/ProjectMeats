@@ -2,6 +2,10 @@
 
 **👋 Start here for setup guidance!** This document provides a comprehensive overview of the ProjectMeats tech stack and setup process. For detailed instructions, consult the specific guides linked below.
 
+## ⚠️ Python 3.13+ Setup Issue
+
+**Windows users with Python 3.13+**: If setup fails with PostgreSQL adapter errors, see **[Python 3.13+ Setup Guide](PYTHON_3_13_SETUP.md)** for solutions.
+
 ## 🏗️ Tech Stack Summary
 
 **ProjectMeats** is a business management application migrated from PowerApps/Dataverse to a modern web stack:
@@ -256,8 +260,8 @@ See [Production Setup](#-production-setup) section above for production environm
 - **[Agent Activity Log](docs/agent_activity_log.md)** - **Required logging for all work performed**
 
 **Setup and Development:**
-- **[Backend Setup Guide](docs/backend_setup.md)** - Comprehensive Django REST Framework development setup
-- **[Frontend Setup Guide](docs/frontend_setup.md)** - Detailed React development environment configuration
+- **[Complete Setup Guide](docs/setup_guide.md)** - Comprehensive setup for all platforms and scenarios
+- **[Production Deployment Guide](docs/production_deployment.md)** - Enterprise production deployment
 
 **API and Integration:**
 - **[API Reference](docs/api_reference.md)** - Complete REST API documentation with examples (includes User Profiles)
@@ -268,13 +272,13 @@ See [Production Setup](#-production-setup) section above for production environm
 ### For New Contributors
 1. **Start here** with this overview document
 2. **Read** [Agent Quick Start Guide](docs/agent_quick_start.md) (**required**)
-3. **Set up** your environment using [Backend Setup](docs/backend_setup.md) and [Frontend Setup](docs/frontend_setup.md)
+3. **Set up** your environment using [Complete Setup Guide](docs/setup_guide.md)
 4. **Log your work** in [Agent Activity Log](docs/agent_activity_log.md) (**required for all agents**)
 
 ### For Entity Migration
 1. Review existing patterns in `accounts_receivables` implementation
 2. Consult [Migration Mapping](docs/migration_mapping.md) for PowerApps mappings
-3. Follow development standards in [Backend Setup](docs/backend_setup.md) and [Frontend Setup](docs/frontend_setup.md)
+3. Follow development standards in [Complete Setup Guide](docs/setup_guide.md)
 
 ### For API Development
 - Use [API Reference](docs/api_reference.md) for endpoint patterns and standards
