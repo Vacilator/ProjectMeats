@@ -4,13 +4,13 @@
  * Displays user avatar, name, and dropdown menu with profile options.
  */
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { colors, typography, spacing, borderRadius, shadows } from './DesignSystem';
-import { UserProfile as UserProfileType } from '../types';
-import { UserProfilesService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 // Default avatar when no profile image is available
-const DEFAULT_AVATAR = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiNFNUU3RUIiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNSIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyNmMwLTUuNTIzIDQuNDc3LTEwIDEwLTEwczEwIDQuNDc3IDEwIDEwdjFINnoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+";
+const DEFAULT_AVATAR = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiNFNUU3RUIiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNSIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyNmMwLTUuNTIzIDQuNDc3LTEwIDEwLTEwczEwIDQuNDc3IDEwIDEwdjFINloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+";
 
 interface UserProfileProps {
   className?: string;
@@ -160,54 +160,10 @@ const LoadingSpinner = styled.div`
 `;
 
 const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfileType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Fetch current user profile on component mount
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const profile = await UserProfilesService.getCurrentUserProfile();
-        setUserProfile(profile);
-      } catch (err) {
-        console.error('Failed to fetch user profile:', err);
-        setError('Failed to load user profile');
-        // Create a fallback user profile
-        setUserProfile({
-          id: 1,
-          username: 'admin',
-          first_name: 'Admin',
-          last_name: 'User',
-          email: 'admin@projectmeats.com',
-          display_name: 'Admin User',
-          phone: '',
-          department: 'Administration',
-          job_title: 'System Administrator',
-          profile_image: '',
-          profile_image_url: '',
-          timezone: 'UTC',
-          email_notifications: true,
-          bio: '',
-          has_complete_profile: true,
-          is_staff: true,
-          is_superuser: true,
-          is_active: true,
-          is_admin: true,
-          created_on: new Date().toISOString(),
-          modified_on: new Date().toISOString()
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -233,11 +189,22 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
+  // If not authenticated, show login button
+  if (!isAuthenticated) {
+    return (
+      <ProfileContainer className={className}>
+        <ProfileButton onClick={() => navigate('/login')}>
+          Sign In
+        </ProfileButton>
+      </ProfileContainer>
+    );
+  }
+
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
   };
 
-  const handleMenuAction = (action: string) => {
+  const handleMenuAction = async (action: string) => {
     console.log(`User selected: ${action}`);
     setIsOpen(false);
     
@@ -245,11 +212,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
     switch (action) {
       case 'profile':
         // Navigate to profile page
-        window.location.href = '/profile';
+        navigate('/profile');
         break;
       case 'settings':
         // Navigate to settings page - for now redirect to profile
-        window.location.href = '/profile';
+        navigate('/profile');
         break;
       case 'admin':
         // Open admin portal in new tab
@@ -261,11 +228,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
       case 'logout':
         // Handle logout
         if (window.confirm('Are you sure you want to sign out?')) {
-          // For now, redirect to home - in a real app this would:
-          // - Clear authentication tokens
-          // - Clear user session
-          // - Redirect to login page
-          window.location.href = '/';
+          await logout();
+          navigate('/login');
         }
         break;
       default:
@@ -273,7 +237,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <ProfileContainer className={className}>
         <LoadingSpinner />
@@ -281,17 +245,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
     );
   }
 
-  if (error || !userProfile) {
+  if (!user) {
     return (
       <ProfileContainer className={className}>
-        <Avatar src={DEFAULT_AVATAR} alt="Default Avatar" />
+        <ProfileButton onClick={() => navigate('/login')}>
+          Sign In
+        </ProfileButton>
       </ProfileContainer>
     );
   }
 
-  const avatarSrc = userProfile.profile_image_url || DEFAULT_AVATAR;
-  const displayName = userProfile.display_name || `${userProfile.first_name} ${userProfile.last_name}`.trim() || userProfile.username;
-  const jobTitle = userProfile.job_title || userProfile.department || 'User';
+  const avatarSrc = user.profile_image_url || DEFAULT_AVATAR;
+  const displayName = user.display_name || `${user.first_name} ${user.last_name}`.trim() || user.username;
+  const jobTitle = user.job_title || user.department || 'User';
 
   return (
     <ProfileContainer className={className} ref={dropdownRef}>
@@ -307,7 +273,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
       <DropdownMenu $isOpen={isOpen} role="menu">
         <DropdownHeader>
           <DropdownUserName>{displayName}</DropdownUserName>
-          <DropdownUserEmail>{userProfile.email}</DropdownUserEmail>
+          <DropdownUserEmail>{user.email}</DropdownUserEmail>
         </DropdownHeader>
 
         <DropdownItem onClick={() => handleMenuAction('profile')} role="menuitem">
@@ -318,7 +284,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
           ⚙️ Settings
         </DropdownItem>
         
-        {userProfile.is_admin && (
+        {user.is_admin && (
           <DropdownItem onClick={() => handleMenuAction('admin')} role="menuitem">
             🔧 Admin Portal
           </DropdownItem>
