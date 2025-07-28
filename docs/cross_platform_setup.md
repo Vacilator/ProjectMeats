@@ -120,10 +120,16 @@ cd ..
 #### All Platforms (Python script)
 ```bash
 # Backend (in one terminal)
-cd backend && python manage.py runserver
+cd backend
+python manage.py runserver
 
 # Frontend (in another terminal)  
-cd frontend && npm start
+cd frontend
+npm start
+
+# Windows PowerShell users can also use:
+# cd backend; python manage.py runserver
+# cd frontend; npm start
 ```
 
 #### Unix/Linux/macOS (Make commands)
@@ -138,11 +144,11 @@ make frontend   # Start React server
 
 #### Windows (PowerShell aliases - optional)
 ```powershell
-# Set up aliases for convenience
-Set-Alias pm-backend "cd backend && python manage.py runserver"
-Set-Alias pm-frontend "cd frontend && npm start"
+# Set up aliases for convenience (use semicolon for command chaining)
+function pm-backend { cd backend; python manage.py runserver }
+function pm-frontend { cd frontend; npm start }
 
-# Use the aliases
+# Use the functions
 pm-backend
 pm-frontend
 ```
@@ -164,27 +170,74 @@ make format         # Format code
 #### All Platforms (Direct commands)
 ```bash
 # Backend tests
-cd backend && python manage.py test
+cd backend
+python manage.py test
 
 # Frontend tests
-cd frontend && npm test
+cd frontend
+npm test
 
 # Database migrations
-cd backend && python manage.py migrate
+cd backend
+python manage.py migrate
 
 # Create migrations
-cd backend && python manage.py makemigrations
+cd backend
+python manage.py makemigrations
 
 # Django shell
-cd backend && python manage.py shell
+cd backend
+python manage.py shell
 
 # Generate API docs
-cd backend && python manage.py spectacular --file ../docs/api_schema.yml
+cd backend
+python manage.py spectacular --file ../docs/api_schema.yml
+
+# Windows PowerShell users can chain with semicolons:
+# cd backend; python manage.py test
+# cd frontend; npm test
 ```
 
 ## 🐛 Troubleshooting Common CLI Errors
 
 ### Windows-Specific Issues
+
+#### Error: "The token '&&' is not a valid statement separator in this version"
+**Problem**: Using Unix command chaining operator `&&` in PowerShell
+```
+PS C:\Users\brand\PM5\ProjectMeats> cd backend && python manage.py runserver
+At line:1 char:12
++ cd backend && python manage.py runserver
++            ~~
+The token '&&' is not a valid statement separator in this version.
+```
+
+**Solutions**:
+1. **Use semicolon (`;`) instead of `&&` in PowerShell**:
+   ```powershell
+   cd backend; python manage.py runserver
+   cd frontend; npm start
+   ```
+
+2. **Use separate commands**:
+   ```powershell
+   cd backend
+   python manage.py runserver
+   ```
+   ```powershell
+   cd frontend
+   npm start
+   ```
+
+3. **Use the Python setup script** (recommended):
+   ```powershell
+   python setup.py
+   ```
+
+4. **Use the PowerShell setup script**:
+   ```powershell
+   .\setup.ps1
+   ```
 
 #### Error: "'true' is not recognized as an internal or external command"
 **Problem**: Using Unix commands on Windows
@@ -349,9 +402,9 @@ If you're still having issues:
 | **Full Setup** | `python setup.py` or `setup.bat` or `.\setup.ps1` | `python setup.py` or `make setup` or `./setup.sh` |
 | **Backend Only** | `python setup.py --backend` or `.\setup.ps1 -Backend` | `python setup.py --backend` or `./setup.sh backend` |
 | **Frontend Only** | `python setup.py --frontend` or `.\setup.ps1 -Frontend` | `python setup.py --frontend` or `./setup.sh frontend` |
-| **Start Backend** | `cd backend && python manage.py runserver` | `make backend` |
-| **Start Frontend** | `cd frontend && npm start` | `make frontend` |
+| **Start Backend** | `cd backend; python manage.py runserver` | `make backend` |
+| **Start Frontend** | `cd frontend; npm start` | `make frontend` |
 | **Both Servers** | Manual (2 terminals) | `make dev` |
-| **Run Tests** | `cd backend && python manage.py test` | `make test` |
+| **Run Tests** | `cd backend; python manage.py test` | `make test` |
 
 **💡 Pro Tip**: For the best experience across all platforms, use `python setup.py` - it works everywhere!

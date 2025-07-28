@@ -286,13 +286,17 @@ class ProjectMeatsSetup:
         print(f"\n{Colors.BOLD}Next Steps:{Colors.END}")
         print(f"{Colors.GREEN}1.{Colors.END} Start the backend server:")
         if self.is_windows:
-            print(f"   {Colors.CYAN}cd backend && python manage.py runserver{Colors.END}")
+            print(f"   {Colors.CYAN}cd backend; python manage.py runserver{Colors.END}")
+            print(f"   {Colors.CYAN}# Or in two commands: cd backend{Colors.END}")
+            print(f"   {Colors.CYAN}#                     python manage.py runserver{Colors.END}")
         else:
             print(f"   {Colors.CYAN}make backend{Colors.END} or {Colors.CYAN}cd backend && python manage.py runserver{Colors.END}")
         
         print(f"\n{Colors.GREEN}2.{Colors.END} Start the frontend server:")
         if self.is_windows:
-            print(f"   {Colors.CYAN}cd frontend && npm start{Colors.END}")
+            print(f"   {Colors.CYAN}cd frontend; npm start{Colors.END}")
+            print(f"   {Colors.CYAN}# Or in two commands: cd frontend{Colors.END}")
+            print(f"   {Colors.CYAN}#                     npm start{Colors.END}")
         else:
             print(f"   {Colors.CYAN}make frontend{Colors.END} or {Colors.CYAN}cd frontend && npm start{Colors.END}")
         
