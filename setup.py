@@ -4,7 +4,7 @@ ProjectMeats Cross-Platform Setup Script
 ======================================
 
 This script provides a unified setup experience across Windows, macOS, and Linux.
-It handles environment setup, dependency installation, and initial configuration.
+It handles environment setup, dependency installation, initial configuration, and test data creation.
 
 Usage:
     python setup.py              # Full setup (backend + frontend)
@@ -18,6 +18,8 @@ Features:
 - Error handling and validation
 - Progress reporting
 - Dependency checking
+- Admin user creation (admin/WATERMELON1219)
+- Comprehensive test data creation
 """
 
 import os
@@ -211,6 +213,31 @@ class ProjectMeatsSetup:
             self.log(f"Error creating admin user: {e}", "WARNING")
             self.log("You can create it manually: python manage.py createsuperuser", "INFO")
     
+    def _create_test_data(self, python_cmd):
+        """Create comprehensive test data for the application"""
+        try:
+            self.log("Creating comprehensive test data for all entities...", "INFO")
+            
+            # Check if the test data script exists
+            test_data_script = self.backend_dir / "create_test_data.py"
+            if not test_data_script.exists():
+                self.log("Test data script not found, skipping test data creation", "WARNING")
+                return
+            
+            # Execute the test data creation script
+            create_data_cmd = f"{python_cmd} create_test_data.py"
+            if self.run_command(create_data_cmd, cwd=self.backend_dir):
+                self.log("✓ Test data created successfully", "SUCCESS")
+                self.log("  The application now has sample data for testing", "INFO")
+                self.log("  This includes suppliers, customers, purchase orders, and more", "INFO")
+            else:
+                self.log("Failed to create test data", "WARNING")
+                self.log("You can create it manually: cd backend && python create_test_data.py", "INFO")
+                    
+        except Exception as e:
+            self.log(f"Error creating test data: {e}", "WARNING")
+            self.log("You can create it manually: cd backend && python create_test_data.py", "INFO")
+    
     def copy_env_file(self, source, destination):
         """Copy environment file if it doesn't exist"""
         source_path = Path(source)
@@ -358,6 +385,10 @@ class ProjectMeatsSetup:
         # Create admin superuser
         self.log("👤 Creating admin superuser...", "INFO")
         self._create_admin_user(python_cmd)
+        
+        # Create test data
+        self.log("📊 Creating test data...", "INFO")
+        self._create_test_data(python_cmd)
         
         self.log("✅ Backend setup complete!", "SUCCESS")
         return True
