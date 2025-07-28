@@ -9,6 +9,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
 import { colors, typography, spacing, borderRadius, shadows } from './components/DesignSystem';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import UserProfile from './components/UserProfile';
 import DashboardScreen from './screens/DashboardScreen';
 import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
@@ -22,6 +23,8 @@ import ContactsScreen from './screens/ContactsScreen';
 import SupplierPlantMappingsScreen from './screens/SupplierPlantMappingsScreen';
 import CarrierInfoScreen from './screens/CarrierInfoScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
+import LoginScreen from './screens/LoginScreen';
+import SignupScreen from './screens/SignupScreen';
 
 // Enhanced global styles with design system
 const GlobalStyle = createGlobalStyle`
@@ -239,6 +242,13 @@ const FooterLink = styled.a`
 
 // Navigation component with location awareness
 const NavigationWithLocation: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  
+  // Don't show navigation if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+  
   return (
     <Navigation>
       <NavItem to="/dashboard" icon="📊">Dashboard</NavItem>
@@ -251,60 +261,154 @@ const NavigationWithLocation: React.FC = () => {
   );
 };
 
+// Protected route component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   return (
     <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
+  );
+};
+
+const AppContent: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  
+  return (
+    <>
       <GlobalStyle />
       <AppContainer>
-        <Header>
-          <HeaderContent>
-            <HeaderLeft>
-              <Logo>
-                <LogoIcon>🥩</LogoIcon>
-                <LogoText>
-                  <LogoTitle>ProjectMeats</LogoTitle>
-                  <LogoSubtitle>Sales Management</LogoSubtitle>
-                </LogoText>
-              </Logo>
-              <NavigationWithLocation />
-            </HeaderLeft>
-            <HeaderRight>
-              <UserProfile />
-            </HeaderRight>
-          </HeaderContent>
-        </Header>
+        {isAuthenticated && (
+          <Header>
+            <HeaderContent>
+              <HeaderLeft>
+                <Logo>
+                  <LogoIcon>🥩</LogoIcon>
+                  <LogoText>
+                    <LogoTitle>ProjectMeats</LogoTitle>
+                    <LogoSubtitle>Sales Management</LogoSubtitle>
+                  </LogoText>
+                </Logo>
+                <NavigationWithLocation />
+              </HeaderLeft>
+              <HeaderRight>
+                <UserProfile />
+              </HeaderRight>
+            </HeaderContent>
+          </Header>
+        )}
         
-        <Main>
+        <Main style={{ minHeight: isAuthenticated ? 'calc(100vh - 70px - 60px)' : '100vh' }}>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardScreen />} />
-            <Route path="/accounts-receivables" element={<AccountsReceivablesScreen />} />
-            <Route path="/suppliers" element={<SuppliersScreen />} />
-            <Route path="/customers" element={<CustomersScreen />} />
-            <Route path="/purchase-orders" element={<PurchaseOrdersScreen />} />
-            <Route path="/plants" element={<PlantsScreen />} />
-            <Route path="/supplier-locations" element={<SupplierLocationsScreen />} />
-            <Route path="/contacts" element={<ContactsScreen />} />
-            <Route path="/supplier-plant-mappings" element={<SupplierPlantMappingsScreen />} />
-            <Route path="/carriers" element={<CarrierInfoScreen />} />
-            <Route path="/profile" element={<UserProfileScreen />} />
+            {/* Public routes */}
+            <Route path="/login" element={<LoginScreen />} />
+            <Route path="/signup" element={<SignupScreen />} />
+            
+            {/* Protected routes */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Navigate to="/dashboard" replace />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/accounts-receivables" element={
+              <ProtectedRoute>
+                <AccountsReceivablesScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/suppliers" element={
+              <ProtectedRoute>
+                <SuppliersScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/customers" element={
+              <ProtectedRoute>
+                <CustomersScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/purchase-orders" element={
+              <ProtectedRoute>
+                <PurchaseOrdersScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/plants" element={
+              <ProtectedRoute>
+                <PlantsScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/supplier-locations" element={
+              <ProtectedRoute>
+                <SupplierLocationsScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/contacts" element={
+              <ProtectedRoute>
+                <ContactsScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/supplier-plant-mappings" element={
+              <ProtectedRoute>
+                <SupplierPlantMappingsScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/carriers" element={
+              <ProtectedRoute>
+                <CarrierInfoScreen />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <UserProfileScreen />
+              </ProtectedRoute>
+            } />
           </Routes>
         </Main>
         
-        <Footer>
-          <FooterContent>
-            <FooterText>
-              ProjectMeats © 2024 | Professional Meat Sales Management Platform
-            </FooterText>
-            <FooterLinks>
-              <FooterLink href="#support">Support</FooterLink>
-              <FooterLink href="#documentation">Documentation</FooterLink>
-              <FooterLink href="#api">API</FooterLink>
-            </FooterLinks>
-          </FooterContent>
-        </Footer>
+        {isAuthenticated && (
+          <Footer>
+            <FooterContent>
+              <FooterText>
+                ProjectMeats © 2024 | Professional Meat Sales Management Platform
+              </FooterText>
+              <FooterLinks>
+                <FooterLink href="#support">Support</FooterLink>
+                <FooterLink href="#documentation">Documentation</FooterLink>
+                <FooterLink href="#api">API</FooterLink>
+              </FooterLinks>
+            </FooterContent>
+          </Footer>
+        )}
       </AppContainer>
-    </Router>
+    </>
   );
 };
 

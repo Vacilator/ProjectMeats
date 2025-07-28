@@ -238,3 +238,33 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
         profile = UserProfile.objects.create(user=user, **validated_data)
 
         return profile
+
+
+class AuthLoginSerializer(serializers.Serializer):
+    """Serializer for user login."""
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(max_length=128, write_only=True)
+
+
+class AuthSignupSerializer(serializers.Serializer):
+    """Serializer for user signup."""
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+    password = serializers.CharField(max_length=128, write_only=True)
+    first_name = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    department = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    job_title = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+    def validate_username(self, value):
+        """Check that username is unique."""
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists.")
+        return value
+
+    def validate_email(self, value):
+        """Check that email is unique."""
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already exists.")
+        return value

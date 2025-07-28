@@ -4,16 +4,17 @@ Core views for ProjectMeats.
 Base view classes that provide common functionality for all entities
 migrated from PowerApps/Dataverse.
 """
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework import viewsets, status, permissions
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate, login, logout
+from django.contrib.auth.models import User
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import UserProfile
-from .serializers import UserProfileSerializer, UserProfileCreateSerializer
+from .serializers import UserProfileSerializer, UserProfileCreateSerializer, AuthLoginSerializer, AuthSignupSerializer
 
 
 class PowerAppsModelViewSet(viewsets.ModelViewSet):
@@ -259,11 +260,147 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def me(self, request):
         """Get current user's profile."""
-        # In a real app, you'd use request.user
-        # For now, return the first profile as demo
-        profile = UserProfile.objects.select_related("user").first()
-        if not profile:
-            return Response({"detail": "No user profile found"}, status=status.HTTP_404_NOT_FOUND)
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
+            profile = UserProfile.objects.select_related("user").get(user=request.user)
+        except UserProfile.DoesNotExist:
+            # Create profile if it doesn't exist
+            profile = UserProfile.objects.create(user=request.user)
 
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
+
+
+@extend_schema(
+    summary="User Login",
+    description="Authenticate user and create session",
+    tags=["Authentication"],
+    request=AuthLoginSerializer,
+    responses={200: {"description": "Login successful"}, 401: {"description": "Invalid credentials"}}
+)
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def login_view(request):
+    """User login endpoint."""
+    serializer = AuthLoginSerializer(data=request.data)
+    if serializer.is_valid():
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            
+            # Get or create user profile
+            try:
+                profile = UserProfile.objects.select_related("user").get(user=user)
+            except UserProfile.DoesNotExist:
+                profile = UserProfile.objects.create(user=user)
+            
+            profile_serializer = UserProfileSerializer(profile, context={'request': request})
+            
+            return Response({
+                'message': 'Login successful',
+                'user': profile_serializer.data
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'error': 'Invalid username or password'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    summary="User Logout",
+    description="Logout user and clear session",
+    tags=["Authentication"],
+    responses={200: {"description": "Logout successful"}}
+)
+@api_view(['POST'])
+def logout_view(request):
+    """User logout endpoint."""
+    logout(request)
+    return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    summary="User Signup",
+    description="Create new user account and profile",
+    tags=["Authentication"],
+    request=AuthSignupSerializer,
+    responses={201: {"description": "User created successfully"}, 400: {"description": "Invalid data"}}
+)
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def signup_view(request):
+    """User signup endpoint."""
+    serializer = AuthSignupSerializer(data=request.data)
+    if serializer.is_valid():
+        # Create user
+        user_data = {
+            'username': serializer.validated_data['username'],
+            'email': serializer.validated_data['email'],
+            'first_name': serializer.validated_data.get('first_name', ''),
+            'last_name': serializer.validated_data.get('last_name', ''),
+        }
+        
+        user = User.objects.create_user(
+            password=serializer.validated_data['password'],
+            **user_data
+        )
+        
+        # For dev environment, give admin access automatically
+        if request.META.get('HTTP_HOST', '').startswith('localhost') or 'development' in str(request.META.get('HTTP_HOST', '')):
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
+        
+        # Create user profile
+        profile_data = {
+            'phone': serializer.validated_data.get('phone', ''),
+            'department': serializer.validated_data.get('department', ''),
+            'job_title': serializer.validated_data.get('job_title', ''),
+        }
+        profile = UserProfile.objects.create(user=user, **profile_data)
+        
+        # Auto-login the user
+        login(request, user)
+        
+        profile_serializer = UserProfileSerializer(profile, context={'request': request})
+        
+        return Response({
+            'message': 'User created successfully',
+            'user': profile_serializer.data
+        }, status=status.HTTP_201_CREATED)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    summary="Current User Status",
+    description="Get current user authentication status",
+    tags=["Authentication"],
+    responses={200: {"description": "User status"}}
+)
+@api_view(['GET'])
+def auth_status_view(request):
+    """Get current user authentication status."""
+    if request.user.is_authenticated:
+        try:
+            profile = UserProfile.objects.select_related("user").get(user=request.user)
+        except UserProfile.DoesNotExist:
+            profile = UserProfile.objects.create(user=request.user)
+        
+        profile_serializer = UserProfileSerializer(profile, context={'request': request})
+        return Response({
+            'authenticated': True,
+            'user': profile_serializer.data
+        })
+    else:
+        return Response({
+            'authenticated': False,
+            'user': None
+        })
