@@ -5,7 +5,7 @@ Provides API endpoints for user profiles and core functionality.
 """
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import UserProfileViewSet
+from .views import UserProfileViewSet, login_view, logout_view, signup_view, auth_status_view
 
 # Create router and register viewsets
 router = DefaultRouter()
@@ -13,4 +13,9 @@ router.register(r'user-profiles', UserProfileViewSet, basename='userprofile')
 
 urlpatterns = [
     path('', include(router.urls)),
+    # Authentication endpoints
+    path('auth/login/', login_view, name='auth-login'),
+    path('auth/logout/', logout_view, name='auth-logout'),
+    path('auth/signup/', signup_view, name='auth-signup'),
+    path('auth/status/', auth_status_view, name='auth-status'),
 ]
