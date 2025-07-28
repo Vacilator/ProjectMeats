@@ -172,6 +172,45 @@ class ProjectMeatsSetup:
             self.log(f"Failed to install without PostgreSQL adapter: {e}", "ERROR")
             return False
     
+    def _create_admin_user(self, python_cmd):
+        """Create admin superuser with specified credentials"""
+        try:
+            self.log("Creating admin superuser (admin/WATERMELON1219)...", "INFO")
+            
+            # Use Django's createsuperuser command with environment variables
+            create_user_cmd = (
+                f"echo \"from django.contrib.auth import get_user_model; "
+                f"User = get_user_model(); "
+                f"User.objects.filter(username='admin').exists() or "
+                f"User.objects.create_superuser('admin', 'admin@projectmeats.com', 'WATERMELON1219')\" | "
+                f"{python_cmd} manage.py shell"
+            )
+            
+            if self.run_command(create_user_cmd, cwd=self.backend_dir, shell=True):
+                self.log("✓ Admin superuser created successfully", "SUCCESS")
+                self.log("  Username: admin", "INFO")
+                self.log("  Password: WATERMELON1219", "INFO")
+                self.log("  Email: admin@projectmeats.com", "INFO")
+            else:
+                self.log("Failed to create admin user, trying alternative method...", "WARNING")
+                # Alternative method using manage.py directly
+                alt_cmd = (
+                    f"{python_cmd} manage.py shell -c \""
+                    f"from django.contrib.auth import get_user_model; "
+                    f"User = get_user_model(); "
+                    f"User.objects.filter(username='admin').exists() or "
+                    f"User.objects.create_superuser('admin', 'admin@projectmeats.com', 'WATERMELON1219')\""
+                )
+                if self.run_command(alt_cmd, cwd=self.backend_dir):
+                    self.log("✓ Admin superuser created with alternative method", "SUCCESS")
+                else:
+                    self.log("Failed to create admin user", "WARNING")
+                    self.log("You can create it manually: python manage.py createsuperuser", "INFO")
+                    
+        except Exception as e:
+            self.log(f"Error creating admin user: {e}", "WARNING")
+            self.log("You can create it manually: python manage.py createsuperuser", "INFO")
+    
     def copy_env_file(self, source, destination):
         """Copy environment file if it doesn't exist"""
         source_path = Path(source)
@@ -315,6 +354,10 @@ class ProjectMeatsSetup:
         if not self.run_command(migrate_cmd, cwd=self.backend_dir):
             self.log("Failed to run migrations", "ERROR")
             return False
+        
+        # Create admin superuser
+        self.log("👤 Creating admin superuser...", "INFO")
+        self._create_admin_user(python_cmd)
         
         self.log("✅ Backend setup complete!", "SUCCESS")
         return True

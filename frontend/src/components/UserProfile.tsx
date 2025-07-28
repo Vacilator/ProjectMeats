@@ -237,16 +237,25 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
     console.log(`User selected: ${action}`);
     setIsOpen(false);
     
-    // TODO: Implement actual navigation/actions
+    // Implement actual navigation/actions
     switch (action) {
       case 'profile':
-        // Navigate to profile page
+        // Navigate to profile page - for now show alert
+        alert('Profile page navigation would be implemented here. This would typically navigate to /profile or open a profile modal.');
         break;
       case 'settings':
-        // Navigate to settings page
+        // Navigate to settings page - for now show alert
+        alert('Settings page navigation would be implemented here. This would typically navigate to /settings.');
         break;
       case 'logout':
-        // Handle logout
+        // Handle logout - for now show confirmation
+        if (window.confirm('Are you sure you want to sign out?')) {
+          alert('Logout functionality would be implemented here. This would typically:\n- Clear authentication tokens\n- Clear user session\n- Redirect to login page');
+          // In a real app:
+          // - Clear authentication state
+          // - Navigate to login page
+          // - Clear any cached user data
+        }
         break;
       default:
         break;
