@@ -48,10 +48,22 @@ export const colors = {
     900: '#111827',
   },
   // Status Colors
-  success: '#22c55e',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  info: '#3b82f6',
+  success: {
+    100: '#dcfce7',
+    700: '#15803d'
+  },
+  warning: {
+    100: '#fef3c7',
+    700: '#a16207'
+  },
+  error: {
+    100: '#fee2e2',
+    700: '#b91c1c'
+  },
+  info: {
+    100: '#dbeafe',
+    700: '#1d4ed8'
+  },
   
   // Background
   background: '#ffffff',

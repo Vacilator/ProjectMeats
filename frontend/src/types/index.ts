@@ -187,6 +187,10 @@ export interface UserProfile extends TimestampedEntity {
   email_notifications: boolean;
   bio?: string;
   has_complete_profile: boolean;
+  is_staff: boolean;
+  is_superuser: boolean;
+  is_active: boolean;
+  is_admin: boolean;
 }
 
 // Form data types for user profile updates

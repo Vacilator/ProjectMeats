@@ -108,10 +108,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email")
     username = serializers.CharField(source="user.username", read_only=True)
 
+    # User permissions (read-only)
+    is_staff = serializers.BooleanField(source="user.is_staff", read_only=True)
+    is_superuser = serializers.BooleanField(source="user.is_superuser", read_only=True)
+    is_active = serializers.BooleanField(source="user.is_active", read_only=True)
+
     # Computed fields
     display_name = serializers.CharField(read_only=True)
     has_complete_profile = serializers.BooleanField(read_only=True)
     profile_image_url = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
@@ -131,6 +137,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "email_notifications",
             "bio",
             "has_complete_profile",
+            "is_staff",
+            "is_superuser",
+            "is_active",
+            "is_admin",
             "created_on",
             "modified_on",
         ]
@@ -140,6 +150,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "display_name",
             "has_complete_profile",
             "profile_image_url",
+            "is_staff",
+            "is_superuser",
+            "is_active",
+            "is_admin",
             "created_on",
             "modified_on",
         ]
@@ -152,6 +166,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.profile_image.url)
             return obj.profile_image.url
         return None
+
+    def get_is_admin(self, obj):
+        """Return True if user is an administrator (staff or superuser)."""
+        return obj.user.is_staff or obj.user.is_superuser
 
     def update(self, instance, validated_data):
         """Handle nested user data updates."""
