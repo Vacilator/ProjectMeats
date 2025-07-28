@@ -153,6 +153,11 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 MEDIA_ROOT=/home/projectmeats/uploads
 STATIC_ROOT=/home/projectmeats/app/backend/staticfiles
 
+# User Profile Settings
+MAX_UPLOAD_SIZE=5242880  # 5MB for profile images
+ALLOWED_IMAGE_EXTENSIONS=jpg,jpeg,png,gif
+DEFAULT_USER_TIMEZONE=UTC
+
 # Email Configuration (optional)
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 EMAIL_HOST=smtp.your-provider.com
@@ -176,6 +181,15 @@ python manage.py migrate
 
 # Create superuser
 python manage.py createsuperuser
+
+# Create user profiles for existing users (if any)
+python manage.py shell -c "
+from django.contrib.auth.models import User
+from apps.user_profiles.models import UserProfile
+for user in User.objects.filter(profile__isnull=True):
+    UserProfile.objects.create(user=user)
+    print(f'Created profile for {user.username}')
+"
 
 # Collect static files
 python manage.py collectstatic --noinput

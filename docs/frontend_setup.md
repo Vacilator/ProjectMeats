@@ -328,6 +328,33 @@ npm test -- --watch
 
 # Run tests with coverage
 npm test -- --coverage --watchAll=false
+
+# Run specific test file
+npm test UserProfile.test.tsx
+
+# Run integration tests
+npm test -- --testNamePattern="integration"
+```
+
+### Testing Dependencies
+Install additional testing utilities for comprehensive testing:
+
+```bash
+# Install testing libraries
+npm install --save-dev @testing-library/jest-dom @testing-library/user-event msw
+
+# For API mocking in tests
+npm install --save-dev jest-fetch-mock
+
+# Test setup file (src/setupTests.ts)
+import '@testing-library/jest-dom';
+import { setupServer } from 'msw/node';
+import { rest } from 'msw';
+
+// Global test setup
+beforeAll(() => {
+  // Setup global mocks
+});
 ```
 
 ### Writing Tests
@@ -343,6 +370,176 @@ test('renders accounts receivables list', async () => {
   
   await waitFor(() => {
     expect(screen.getByText('Accounts Receivables')).toBeInTheDocument();
+  });
+});
+
+// __tests__/UserProfile.test.tsx
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import UserProfile from '../components/UserProfile';
+import { UserProfilesService } from '../services/api';
+
+// Mock the API service
+jest.mock('../services/api', () => ({
+  UserProfilesService: {
+    getCurrentUserProfile: jest.fn()
+  }
+}));
+
+const mockUserProfile = {
+  id: 1,
+  username: 'testuser',
+  first_name: 'Test',
+  last_name: 'User',
+  email: 'test@example.com',
+  display_name: 'Test User',
+  job_title: 'Developer',
+  department: 'Engineering',
+  profile_image_url: '',
+  created_on: '2024-01-01T00:00:00Z',
+  modified_on: '2024-01-01T00:00:00Z'
+};
+
+describe('UserProfile Component', () => {
+  beforeEach(() => {
+    (UserProfilesService.getCurrentUserProfile as jest.Mock).mockResolvedValue(mockUserProfile);
+  });
+
+  test('renders user profile button', async () => {
+    render(<UserProfile />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument();
+      expect(screen.getByText('Developer')).toBeInTheDocument();
+    });
+  });
+
+  test('opens dropdown on click', async () => {
+    render(<UserProfile />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Test User')).toBeInTheDocument();
+    });
+
+    const profileButton = screen.getByRole('button');
+    fireEvent.click(profileButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('👤 View Profile')).toBeInTheDocument();
+      expect(screen.getByText('⚙️ Settings')).toBeInTheDocument();
+      expect(screen.getByText('🚪 Sign Out')).toBeInTheDocument();
+    });
+  });
+
+  test('handles API error gracefully', async () => {
+    (UserProfilesService.getCurrentUserProfile as jest.Mock).mockRejectedValue(new Error('API Error'));
+    
+    render(<UserProfile />);
+    
+    // Should render default avatar when API fails
+    await waitFor(() => {
+      expect(screen.getByAltText('Default Avatar')).toBeInTheDocument();
+    });
+  });
+});
+```
+
+### API Service Testing
+Test API services with proper mocking:
+
+```typescript
+// __tests__/api.test.ts
+import { UserProfilesService } from '../services/api';
+import axios from 'axios';
+
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+describe('UserProfilesService', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('getCurrentUserProfile returns user data', async () => {
+    const mockProfile = {
+      id: 1,
+      username: 'testuser',
+      email: 'test@example.com'
+    };
+
+    mockedAxios.get.mockResolvedValue({ data: mockProfile });
+
+    const result = await UserProfilesService.getCurrentUserProfile();
+    
+    expect(mockedAxios.get).toHaveBeenCalledWith('/user-profiles/me/');
+    expect(result).toEqual(mockProfile);
+  });
+
+  test('updateCurrentUserProfile sends correct data', async () => {
+    const updateData = { job_title: 'Senior Developer' };
+    const mockResponse = { data: { ...mockProfile, ...updateData } };
+
+    mockedAxios.patch.mockResolvedValue(mockResponse);
+
+    const result = await UserProfilesService.updateCurrentUserProfile(updateData);
+    
+    expect(mockedAxios.patch).toHaveBeenCalledWith('/user-profiles/me/', updateData);
+    expect(result.job_title).toBe('Senior Developer');
+  });
+});
+```
+
+### Integration Testing
+Test component integration with API services:
+
+```typescript
+// __tests__/integration/UserProfileIntegration.test.tsx
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
+import UserProfile from '../components/UserProfile';
+
+// Mock server for API calls
+const server = setupServer(
+  rest.get('/api/v1/user-profiles/me/', (req, res, ctx) => {
+    return res(ctx.json({
+      id: 1,
+      username: 'integrationtest',
+      first_name: 'Integration',
+      last_name: 'Test',
+      email: 'integration@test.com',
+      display_name: 'Integration Test',
+      job_title: 'QA Engineer'
+    }));
+  }),
+
+  rest.patch('/api/v1/user-profiles/me/', (req, res, ctx) => {
+    return res(ctx.json({
+      id: 1,
+      username: 'integrationtest',
+      job_title: 'Senior QA Engineer'
+    }));
+  })
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+test('full user profile workflow', async () => {
+  render(<UserProfile />);
+  
+  // Wait for profile to load
+  await waitFor(() => {
+    expect(screen.getByText('Integration Test')).toBeInTheDocument();
+    expect(screen.getByText('QA Engineer')).toBeInTheDocument();
+  });
+
+  // Test dropdown interaction
+  const profileButton = screen.getByRole('button');
+  fireEvent.click(profileButton);
+
+  await waitFor(() => {
+    expect(screen.getByText('👤 View Profile')).toBeInTheDocument();
   });
 });
 ```

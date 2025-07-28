@@ -171,7 +171,7 @@ See [Production Setup](#-production-setup) section above for production environm
 - **[Frontend Setup Guide](docs/frontend_setup.md)** - Detailed React development environment configuration
 
 **API and Integration:**
-- **[API Reference](docs/api_reference.md)** - Complete REST API documentation with examples
+- **[API Reference](docs/api_reference.md)** - Complete REST API documentation with examples (includes User Profiles)
 - **[Migration Mapping](docs/migration_mapping.md)** - PowerApps to Django entity and field mappings
 
 ## 📋 Development Workflow
