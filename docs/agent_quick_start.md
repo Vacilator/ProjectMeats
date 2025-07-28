@@ -70,8 +70,8 @@ make docs
 - **[Agent Activity Log](./agent_activity_log.md)** - **REQUIRED** logging for all agents
 - **[Migration Mapping](./migration_mapping.md)** - Entity migration status and technical details
 - **[API Reference](./api_reference.md)** - API documentation
-- **[Backend Setup](./backend_setup.md)** - Django development setup
-- **[Frontend Setup](./frontend_setup.md)** - React development setup
+- **[Complete Setup Guide](./setup_guide.md)** - Comprehensive setup for all platforms and scenarios
+- **[Production Deployment](./production_deployment.md)** - Enterprise production deployment guide
 
 ## 🎯 Common Tasks
 
