@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-07-28T20:21:04.051531",
+  "overall": {
+    "total_tasks": 7,
+    "completion_percentage": 0.0,
+    "total_estimated_hours": 54,
+    "completed_hours": 0,
+    "active_agents": 0
+  },
+  "task_breakdown": {
+    "available": 7
+  },
+  "priorities": {
+    "high_priority_available": 4,
+    "in_progress": 0,
+    "blocked": 0
+  },
+  "agent_summary": {
+    "total_agents": 0,
+    "agents": {}
+  }
+}
