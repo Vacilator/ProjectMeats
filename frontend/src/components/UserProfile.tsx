@@ -4,13 +4,13 @@
  * Displays user avatar, name, and dropdown menu with profile options.
  */
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { colors, typography, spacing, borderRadius, shadows } from './DesignSystem';
-import { UserProfile as UserProfileType } from '../types';
-import { UserProfilesService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 // Default avatar when no profile image is available
-const DEFAULT_AVATAR = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiNFNUU3RUIiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNSIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyNmMwLTUuNTIzIDQuNDc3LTEwIDEwLTEwczEwIDQuNDc3IDEwIDEwdjFINnoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+";
+const DEFAULT_AVATAR = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiNFNUU3RUIiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNSIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyNmMwLTUuNTIzIDQuNDc3LTEwIDEwLTEwczEwIDQuNDc3IDEwIDEwdjFINloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+";
 
 interface UserProfileProps {
   className?: string;
@@ -165,17 +165,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // If not authenticated, show login button
-  if (!isAuthenticated) {
-    return (
-      <ProfileContainer className={className}>
-        <ProfileButton onClick={() => navigate('/login')}>
-          Sign In
-        </ProfileButton>
-      </ProfileContainer>
-    );
-  }
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -199,6 +188,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
+
+  // If not authenticated, show login button
+  if (!isAuthenticated) {
+    return (
+      <ProfileContainer className={className}>
+        <ProfileButton onClick={() => navigate('/login')}>
+          Sign In
+        </ProfileButton>
+      </ProfileContainer>
+    );
+  }
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);

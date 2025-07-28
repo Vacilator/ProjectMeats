@@ -3,7 +3,7 @@
  * 
  * Allows users to view and edit their profile information.
  */
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 import { colors, typography, spacing, borderRadius, shadows } from '../components/DesignSystem';
 import { useAuth } from '../contexts/AuthContext';
