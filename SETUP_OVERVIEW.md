@@ -68,8 +68,13 @@ python setup.py
 # Option 2: PowerShell script
 .\setup.ps1
 
-# Option 3: Individual commands
-cd backend && copy .env.example .env && pip install -r requirements.txt && python manage.py migrate
+# Option 3: Individual commands (PowerShell)
+cd backend; copy .env.example .env; pip install -r requirements.txt; python manage.py migrate
+# Or step by step:
+# cd backend
+# copy .env.example .env
+# pip install -r requirements.txt
+# python manage.py migrate
 ```
 
 #### macOS/Linux
@@ -93,8 +98,8 @@ cd backend && cp .env.example .env && pip install -r requirements.txt && python 
 | **Full Setup** | `python setup.py` | `python setup.py` or `make setup` |
 | **Backend Only** | `python setup.py --backend` | `python setup.py --backend` |
 | **Frontend Only** | `python setup.py --frontend` | `python setup.py --frontend` |
-| **Start Backend** | `cd backend && python manage.py runserver` | `make backend` |
-| **Start Frontend** | `cd frontend && npm start` | `make frontend` |
+| **Start Backend** | `cd backend; python manage.py runserver` | `make backend` |
+| **Start Frontend** | `cd frontend; npm start` | `make frontend` |
 | **Both Servers** | Use 2 terminals | `make dev` |
 
 ### 🔧 Access URLs

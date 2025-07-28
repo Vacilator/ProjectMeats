@@ -176,13 +176,19 @@ make setup-frontend  # Frontend only
 
 ```bash
 # Backend tests
-cd backend && python manage.py test
+cd backend
+python manage.py test
 
 # Frontend tests  
-cd frontend && npm test
+cd frontend
+npm test
 
-# Full test suite
+# Full test suite (Unix/Linux/macOS)
 make test
+
+# Windows PowerShell users can use:
+# cd backend; python manage.py test
+# cd frontend; npm test
 ```
 
 **Test Status**: ✅ 76 backend tests passing consistently
