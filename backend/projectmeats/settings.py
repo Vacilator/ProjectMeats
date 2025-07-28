@@ -48,6 +48,7 @@ LOCAL_APPS = [
     "apps.purchase_orders",
     "apps.plants",
     "apps.carriers",
+    "apps.bug_reports",
     "apps.ai_assistant",
 ]
 

@@ -447,3 +447,50 @@ export interface DocumentUploadFormData {
   file: File;
   original_filename?: string;
 }
+
+// Bug Report types
+export interface BugReport extends TimestampedEntity {
+  id: number;
+  title: string;
+  description: string;
+  steps_to_reproduce?: string;
+  expected_behavior?: string;
+  actual_behavior?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  priority_display: string;
+  current_url?: string;
+  page_title?: string;
+  browser_info: Record<string, any>;
+  user_agent?: string;
+  application_state: Record<string, any>;
+  screenshot?: string;
+  additional_files?: string;
+  status: 'pending' | 'submitted' | 'in_progress' | 'resolved' | 'failed';
+  status_display: string;
+  github_issue_number?: number;
+  github_issue_url?: string;
+  error_message?: string;
+  assigned_to_copilot: boolean;
+  labels: string[];
+  reporter: number;
+  reporter_username: string;
+  reporter_full_name: string;
+  reporter_email: string;
+  created_on_formatted: string;
+}
+
+export interface BugReportFormData {
+  title: string;
+  description: string;
+  steps_to_reproduce?: string;
+  expected_behavior?: string;
+  actual_behavior?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  current_url?: string;
+  page_title?: string;
+  browser_info?: Record<string, any>;
+  user_agent?: string;
+  application_state?: Record<string, any>;
+  screenshot?: File;
+  reporter_email?: string;
+}
