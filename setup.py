@@ -116,7 +116,13 @@ class ProjectMeatsSetup:
     def check_dependency(self, command, version_flag="--version", min_version=None):
         """Check if a dependency is installed"""
         try:
-            result = subprocess.run([command, version_flag], 
+            # Use shutil.which to properly resolve command path (handles .cmd/.bat on Windows)
+            command_path = shutil.which(command)
+            if command_path is None:
+                self.log(f"✗ {command} not found", "ERROR")
+                return False
+            
+            result = subprocess.run([command_path, version_flag], 
                                   capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
                 version_output = result.stdout.strip()
