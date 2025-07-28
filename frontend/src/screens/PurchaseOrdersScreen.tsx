@@ -13,9 +13,9 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { PurchaseOrder, Customer, Supplier } from '../types';
+import { PurchaseOrder, Customer, Supplier, Plant } from '../types';
 import type { MigrationInfo } from '../types';
-import { PurchaseOrdersService, CustomersService, SuppliersService } from '../services/api';
+import { PurchaseOrdersService, CustomersService, SuppliersService, PlantsService } from '../services/api';
 import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';

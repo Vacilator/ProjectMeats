@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -97,6 +98,43 @@ class PurchaseOrderAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(PurchaseOrder.objects.count(), 2)
         self.assertEqual(response.data["po_number"], "PO-002")
+
+    def test_create_purchase_order_with_file_uploads(self):
+        """Test creating a purchase order with file uploads."""
+        url = reverse("purchaseorder-list")
+
+        # Create test files
+        customer_file = SimpleUploadedFile(
+            "customer_doc.pdf", b"fake customer document content", content_type="application/pdf"
+        )
+        supplier_file = SimpleUploadedFile(
+            "supplier_doc.pdf", b"fake supplier document content", content_type="application/pdf"
+        )
+
+        data = {
+            "po_number": "PO-003",
+            "item": "File Upload Test Item",
+            "quantity": 3,
+            "price_per_unit": "20.00",
+            "purchase_date": timezone.now().isoformat(),
+            "fulfillment_date": (timezone.now() + timedelta(days=10)).isoformat(),
+            "customer": self.customer.id,
+            "supplier": self.supplier.id,
+            "customer_documents": customer_file,
+            "supplier_documents": supplier_file,
+            "status": "active",
+        }
+
+        response = self.client.post(url, data, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(PurchaseOrder.objects.count(), 2)
+
+        # Verify file was saved
+        created_po = PurchaseOrder.objects.get(po_number="PO-003")
+        self.assertTrue(created_po.has_documents)
+        self.assertTrue(created_po.customer_documents.name)
+        self.assertTrue(created_po.supplier_documents.name)
 
     def test_migration_info_endpoint(self):
         """Test the PowerApps migration info endpoint."""

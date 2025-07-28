@@ -28,6 +28,8 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
     supplier_name = serializers.CharField(
         source="supplier.name", read_only=True
     )
+    origin_location_name = serializers.CharField(source="origin_location.name", read_only=True)
+    end_location_name = serializers.CharField(source="end_location.name", read_only=True)
 
     class Meta:
         model = PurchaseOrder
@@ -42,6 +44,10 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
             "fulfillment_date",
             "customer_name",
             "supplier_name",
+            "origin_location",
+            "origin_location_name",
+            "end_location",
+            "end_location_name",
             "status",
             "is_fulfilled",
             "has_documents",
@@ -57,13 +63,15 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
             "has_documents",
             "customer_name",
             "supplier_name",
+            "origin_location_name",
+            "end_location_name",
         ]
 
 
 class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     """
     Complete serializer for detail views with all PowerApps migrated fields.
-    Includes relationship fields and metadata.
+    Includes relationship fields, metadata, and file URL handling.
     """
 
     total_amount = serializers.DecimalField(
@@ -72,6 +80,10 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     is_fulfilled = serializers.BooleanField(read_only=True)
     has_documents = serializers.BooleanField(read_only=True)
     powerapps_entity_name = serializers.SerializerMethodField()
+
+    # File URL fields for download links
+    customer_documents_url = serializers.SerializerMethodField()
+    supplier_documents_url = serializers.SerializerMethodField()
 
     # Owner information (read-only for API consumers)
     created_by_username = serializers.CharField(
@@ -91,6 +103,8 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     supplier_name = serializers.CharField(
         source="supplier.name", read_only=True
     )
+    origin_location_name = serializers.CharField(source="origin_location.name", read_only=True)
+    end_location_name = serializers.CharField(source="end_location.name", read_only=True)
 
     class Meta:
         model = PurchaseOrder
@@ -107,8 +121,14 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
             "customer_name",
             "supplier",
             "supplier_name",
+            "origin_location",
+            "origin_location_name",
+            "end_location",
+            "end_location_name",
             "customer_documents",
+            "customer_documents_url",
             "supplier_documents",
+            "supplier_documents_url",
             "status",
             "is_fulfilled",
             "has_documents",
@@ -135,11 +155,33 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
             "owner_username",
             "customer_name",
             "supplier_name",
+            "origin_location_name",
+            "end_location_name",
+            "customer_documents_url",
+            "supplier_documents_url",
         ]
 
     def get_powerapps_entity_name(self, obj):
         """Return the original PowerApps entity name for reference."""
         return obj.get_powerapps_entity_name()
+
+    def get_customer_documents_url(self, obj):
+        """Return URL for customer documents download."""
+        if obj.customer_documents and obj.customer_documents.name:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(obj.customer_documents.url)
+            return obj.customer_documents.url
+        return None
+
+    def get_supplier_documents_url(self, obj):
+        """Return URL for supplier documents download."""
+        if obj.supplier_documents and obj.supplier_documents.name:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(obj.supplier_documents.url)
+            return obj.supplier_documents.url
+        return None
 
     def validate_po_number(self, value):
         """Ensure PO number is provided and not empty (PowerApps required field)."""
@@ -189,6 +231,8 @@ class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
             "fulfillment_date",
             "customer",
             "supplier",
+            "origin_location",
+            "end_location",
             "customer_documents",
             "supplier_documents",
             "status",

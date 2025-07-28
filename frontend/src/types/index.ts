@@ -86,8 +86,14 @@ export interface PurchaseOrder extends OwnedEntity, StatusEntity {
   customer_name?: string;
   supplier: number;
   supplier_name?: string;
+  origin_location?: number;
+  origin_location_name?: string;
+  end_location?: number;
+  end_location_name?: string;
   customer_documents?: string;
+  customer_documents_url?: string;
   supplier_documents?: string;
+  supplier_documents_url?: string;
   is_fulfilled: boolean;
   has_documents: boolean;
   powerapps_entity_name?: string;
@@ -162,6 +168,25 @@ export interface SupplierLocation extends OwnedEntity, StatusEntity {
   has_contact_info: boolean;
   full_address?: string;
   powerapps_entity_name?: string;
+}
+
+// User Profile types (new feature)
+export interface UserProfile extends TimestampedEntity {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  display_name: string;
+  phone?: string;
+  department?: string;
+  job_title?: string;
+  profile_image?: string;
+  profile_image_url?: string;
+  timezone: string;
+  email_notifications: boolean;
+  bio?: string;
+  has_complete_profile: boolean;
 }
 
 // API Response types
@@ -246,8 +271,10 @@ export interface PurchaseOrderFormData {
   fulfillment_date?: string;
   customer: number;
   supplier: number;
-  customer_documents?: string;
-  supplier_documents?: string;
+  origin_location?: number;
+  end_location?: number;
+  customer_documents?: string | File;
+  supplier_documents?: string | File;
   status: 'active' | 'inactive';
 }
 

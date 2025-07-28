@@ -86,19 +86,39 @@ class PurchaseOrder(OwnedModel, StatusModel):
         help_text="Equivalent to PowerApps pro_supplier_lookup field",
     )
 
-    # Document references - equivalent to pro_customerdocuments and pro_supplierdocuments
-    customer_documents = models.CharField(
-        max_length=500,
+    # Location fields for plant-to-plant shipping
+    origin_location = models.ForeignKey(
+        "plants.Plant",
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        help_text="Equivalent to PowerApps pro_customerdocuments field (Customer document references)",
+        related_name="outbound_purchase_orders",
+        help_text="Origin plant location (typically from supplier's plants)",
     )
 
-    supplier_documents = models.CharField(
-        max_length=500,
+    end_location = models.ForeignKey(
+        "plants.Plant",
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        help_text="Equivalent to PowerApps pro_supplierdocuments field (Supplier document references)",
+        related_name="inbound_purchase_orders",
+        help_text="Destination plant location",
+    )
+
+    # Document uploads - equivalent to pro_customerdocuments and pro_supplierdocuments
+    # Changed from CharField to FileField to support actual file uploads
+    customer_documents = models.FileField(
+        upload_to="purchase_orders/customer_documents/",
+        blank=True,
+        null=True,
+        help_text="Equivalent to PowerApps pro_customerdocuments field (Customer document uploads)",
+    )
+
+    supplier_documents = models.FileField(
+        upload_to="purchase_orders/supplier_documents/",
+        blank=True,
+        null=True,
+        help_text="Equivalent to PowerApps pro_supplierdocuments field (Supplier document uploads)",
     )
 
     class Meta:
@@ -112,6 +132,8 @@ class PurchaseOrder(OwnedModel, StatusModel):
             models.Index(fields=["status"]),
             models.Index(fields=["customer"]),
             models.Index(fields=["supplier"]),
+            models.Index(fields=["origin_location"]),
+            models.Index(fields=["end_location"]),
         ]
 
     def __str__(self):
@@ -157,8 +179,11 @@ class PurchaseOrder(OwnedModel, StatusModel):
 
     @property
     def has_documents(self):
-        """Helper property to check if any documents are referenced."""
-        return bool(self.customer_documents or self.supplier_documents)
+        """Helper property to check if any documents are uploaded."""
+        return bool(
+            (self.customer_documents and self.customer_documents.name)
+            or (self.supplier_documents and self.supplier_documents.name)
+        )
 
     @classmethod
     def get_powerapps_entity_name(cls):
