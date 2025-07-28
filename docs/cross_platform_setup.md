@@ -59,7 +59,12 @@ python setup.py
 .\setup.ps1
 ```
 
-#### Option 3: Manual Setup
+#### Option 3: Batch File (Interactive)
+```cmd
+setup.bat
+```
+
+#### Option 4: Manual Setup
 ```powershell
 # Backend
 cd backend
@@ -88,7 +93,12 @@ make setup
 make setup-python
 ```
 
-#### Option 3: Manual Setup
+#### Option 3: Shell Script
+```bash
+./setup.sh
+```
+
+#### Option 4: Manual Setup
 ```bash
 # Backend
 cd backend
@@ -336,12 +346,12 @@ If you're still having issues:
 
 | Task | Windows | macOS/Linux |
 |------|---------|-------------|
-| Full Setup | `python setup.py` | `python setup.py` or `make setup` |
-| Backend Only | `python setup.py --backend` | `python setup.py --backend` or `make setup-backend` |
-| Frontend Only | `python setup.py --frontend` | `python setup.py --frontend` or `make setup-frontend` |
-| Start Backend | `cd backend && python manage.py runserver` | `make backend` |
-| Start Frontend | `cd frontend && npm start` | `make frontend` |
-| Both Servers | Manual (2 terminals) | `make dev` |
-| Run Tests | `cd backend && python manage.py test` | `make test` |
+| **Full Setup** | `python setup.py` or `setup.bat` or `.\setup.ps1` | `python setup.py` or `make setup` or `./setup.sh` |
+| **Backend Only** | `python setup.py --backend` or `.\setup.ps1 -Backend` | `python setup.py --backend` or `./setup.sh backend` |
+| **Frontend Only** | `python setup.py --frontend` or `.\setup.ps1 -Frontend` | `python setup.py --frontend` or `./setup.sh frontend` |
+| **Start Backend** | `cd backend && python manage.py runserver` | `make backend` |
+| **Start Frontend** | `cd frontend && npm start` | `make frontend` |
+| **Both Servers** | Manual (2 terminals) | `make dev` |
+| **Run Tests** | `cd backend && python manage.py test` | `make test` |
 
-Remember: When in doubt, use `python setup.py` - it works everywhere!
+**💡 Pro Tip**: For the best experience across all platforms, use `python setup.py` - it works everywhere!

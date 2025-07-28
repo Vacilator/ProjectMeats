@@ -59,6 +59,21 @@ python setup.py --frontend
 python setup.py --help
 ```
 
+### All Available Setup Methods
+
+#### 🌍 Universal (All Platforms)
+- `python setup.py` - **Recommended!** Cross-platform with error handling
+
+#### 🖥️ Windows Options
+- `python setup.py` - **Recommended**
+- `.\setup.ps1` - PowerShell script with parameters  
+- `setup.bat` - Interactive batch file
+
+#### 🐧 Linux/macOS Options
+- `python setup.py` - **Recommended**
+- `make setup` - Traditional Makefile
+- `./setup.sh` - Bash script with colored output
+
 ### Alternative Setup Methods
 
 #### For Windows Users
