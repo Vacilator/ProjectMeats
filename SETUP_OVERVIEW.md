@@ -23,22 +23,85 @@
 - **Node.js 16+** - Frontend development  
 - **PostgreSQL 12+** - Production database (optional for development)
 
-## 🚀 Local Development Setup
+## 🚀 Setup Options Overview
 
-### Quick Start (Recommended)
-Use the provided Makefile for streamlined setup:
+ProjectMeats now provides **multiple setup methods** to accommodate different platforms and preferences:
 
+### 🌍 Universal (All Platforms)
 ```bash
-# Complete environment setup
+python setup.py              # Recommended - works everywhere!
+```
+
+### 🖥️ Windows Options
+```powershell
+python setup.py              # Recommended
+.\setup.ps1                   # PowerShell script
+setup.bat                     # Batch file (interactive)
+```
+
+### 🐧 Linux/macOS Options  
+```bash
+python setup.py              # Recommended
+make setup                    # Makefile
+./setup.sh                    # Shell script
+```
+
+### 📋 Quick Comparison
+
+| Method | Windows | macOS | Linux | Features |
+|--------|---------|-------|-------|----------|
+| `python setup.py` | ✅ | ✅ | ✅ | Cross-platform, colored output, error handling |
+| `setup.ps1` | ✅ | ❌ | ❌ | PowerShell with parameters and error checking |
+| `setup.bat` | ✅ | ❌ | ❌ | Interactive batch file with menu |
+| `make setup` | ⚠️* | ✅ | ✅ | Traditional Unix tool |
+| `setup.sh` | ⚠️* | ✅ | ✅ | Bash script with colored output |
+
+*⚠️ Requires additional tools on Windows (WSL, Git Bash, or make installation)
+
+### Platform-Specific Quick Start
+
+#### Windows
+```powershell
+# Option 1: Python script (recommended)
+python setup.py
+
+# Option 2: PowerShell script
+.\setup.ps1
+
+# Option 3: Individual commands
+cd backend && copy .env.example .env && pip install -r requirements.txt && python manage.py migrate
+```
+
+#### macOS/Linux
+```bash
+# Option 1: Python script (recommended)
+python setup.py
+
+# Option 2: Make commands
 make setup
 
-# Start both backend and frontend servers
-make dev
-
-# Backend: http://localhost:8000
-# Frontend: http://localhost:3000
-# API Docs: http://localhost:8000/api/docs/
+# Option 3: Individual commands
+cd backend && cp .env.example .env && pip install -r requirements.txt && python manage.py migrate
 ```
+
+**For detailed troubleshooting and Windows-specific issues, see [Cross-Platform Setup Guide](docs/cross_platform_setup.md)**
+
+### 📋 Quick Reference
+
+| Task | Windows | macOS/Linux |
+|------|---------|-------------|
+| **Full Setup** | `python setup.py` | `python setup.py` or `make setup` |
+| **Backend Only** | `python setup.py --backend` | `python setup.py --backend` |
+| **Frontend Only** | `python setup.py --frontend` | `python setup.py --frontend` |
+| **Start Backend** | `cd backend && python manage.py runserver` | `make backend` |
+| **Start Frontend** | `cd frontend && npm start` | `make frontend` |
+| **Both Servers** | Use 2 terminals | `make dev` |
+
+### 🔧 Access URLs
+- **Backend API**: http://localhost:8000
+- **Frontend**: http://localhost:3000  
+- **API Documentation**: http://localhost:8000/api/docs/
+- **Admin Panel**: http://localhost:8000/admin/
 
 ### Manual Setup
 If you prefer step-by-step setup:

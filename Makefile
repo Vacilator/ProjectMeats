@@ -9,8 +9,14 @@ help:
 	@echo ""
 	@echo "Setup Commands:"
 	@echo "  make setup     - Complete project setup (backend + frontend)"
-	@echo "  make setup-backend  - Setup Django backend only"
-	@echo "  make setup-frontend - Setup React frontend only"
+	@echo "  make setup-python    - Cross-platform setup using Python script (recommended)"
+	@echo "  make setup-backend   - Setup Django backend only"
+	@echo "  make setup-frontend  - Setup React frontend only"
+	@echo ""
+	@echo "Cross-Platform Setup (Recommended):"
+	@echo "  python setup.py         - Full cross-platform setup"
+	@echo "  python setup.py --backend   - Backend only"
+	@echo "  python setup.py --frontend  - Frontend only"
 	@echo ""
 	@echo "Development Commands:"
 	@echo "  make dev       - Start both backend and frontend servers"
@@ -37,12 +43,44 @@ help:
 	@echo "  make agent-status   - View agent activity summary"
 
 # Setup commands
-setup: setup-backend setup-frontend
+setup: check-os setup-backend setup-frontend
 	@echo "✅ Complete setup finished! Run 'make dev' to start development."
+
+# Cross-platform setup using Python script (recommended)
+setup-python:
+	@echo "🚀 Running cross-platform setup script..."
+	python setup.py
+
+setup-python-backend:
+	@echo "🚀 Running cross-platform backend setup..."
+	python setup.py --backend
+
+setup-python-frontend:
+	@echo "🚀 Running cross-platform frontend setup..."
+	python setup.py --frontend
+
+# OS detection and warning
+check-os:
+	@echo "🔍 Detecting operating system..."
+ifeq ($(OS),Windows_NT)
+	@echo "⚠️  Windows detected. For best experience, use:"
+	@echo "   python setup.py         (recommended)"
+	@echo "   or setup.ps1            (PowerShell script)"
+	@echo ""
+	@echo "⚠️  Make commands may not work properly on Windows."
+	@echo "   Continuing with Unix-style commands..."
+else
+	@echo "✅ Unix-like system detected. Make commands should work properly."
+endif
 
 setup-backend:
 	@echo "🔧 Setting up Django backend..."
+ifeq ($(OS),Windows_NT)
+	@echo "⚠️  Windows detected. Consider using: python setup.py --backend"
+	cd backend && (copy .env.example .env 2>nul || echo .env file handling...)
+else
 	cd backend && cp -n .env.example .env 2>/dev/null || true
+endif
 	cd backend && pip install -r requirements.txt
 	cd backend && python manage.py migrate
 	@echo "✅ Backend setup complete!"
