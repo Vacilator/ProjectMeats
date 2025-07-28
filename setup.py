@@ -223,10 +223,16 @@ class ProjectMeatsSetup:
             self.log(f"Requirements file not found: {requirements_file}", "ERROR")
             return False
         
-        install_cmd = f"{pip_cmd} install -r requirements.txt"
+        # Try to install with timeout and retry
+        install_cmd = f"{pip_cmd} install --timeout 30 -r requirements.txt"
         if not self.run_command(install_cmd, cwd=self.backend_dir):
-            self.log("Failed to install Python dependencies", "ERROR")
-            return False
+            self.log("First attempt failed, trying with increased timeout...", "WARNING")
+            # Retry with longer timeout for slow networks
+            install_cmd_retry = f"{pip_cmd} install --timeout 60 --retries 2 -r requirements.txt"
+            if not self.run_command(install_cmd_retry, cwd=self.backend_dir):
+                self.log("Failed to install Python dependencies", "ERROR")
+                self.log("This may be due to network issues. Try running 'pip install -r backend/requirements.txt' manually.", "ERROR")
+                return False
         
         # Run migrations
         self.log("🗃️  Running database migrations...", "INFO")
@@ -256,8 +262,12 @@ class ProjectMeatsSetup:
         self.log("📦 Installing Node.js dependencies...", "INFO")
         
         if not self.run_command("npm install", cwd=self.frontend_dir):
-            self.log("Failed to install Node.js dependencies", "ERROR")
-            return False
+            self.log("First attempt failed, trying npm install with cache clean...", "WARNING")
+            # Retry with cache clear for reliability
+            if not self.run_command("npm cache clean --force && npm install", cwd=self.frontend_dir, shell=True):
+                self.log("Failed to install Node.js dependencies", "ERROR") 
+                self.log("This may be due to network issues. Try running 'npm install' in the frontend directory manually.", "ERROR")
+                return False
         
         # Copy environment file if it exists
         env_source = self.frontend_dir / ".env.example"
