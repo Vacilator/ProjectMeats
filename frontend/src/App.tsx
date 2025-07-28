@@ -21,6 +21,7 @@ import SupplierLocationsScreen from './screens/SupplierLocationsScreen';
 import ContactsScreen from './screens/ContactsScreen';
 import SupplierPlantMappingsScreen from './screens/SupplierPlantMappingsScreen';
 import CarrierInfoScreen from './screens/CarrierInfoScreen';
+import UserProfileScreen from './screens/UserProfileScreen';
 
 // Enhanced global styles with design system
 const GlobalStyle = createGlobalStyle`
@@ -286,6 +287,7 @@ const App: React.FC = () => {
             <Route path="/contacts" element={<ContactsScreen />} />
             <Route path="/supplier-plant-mappings" element={<SupplierPlantMappingsScreen />} />
             <Route path="/carriers" element={<CarrierInfoScreen />} />
+            <Route path="/profile" element={<UserProfileScreen />} />
           </Routes>
         </Main>
         

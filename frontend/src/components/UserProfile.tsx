@@ -194,6 +194,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
           email_notifications: true,
           bio: '',
           has_complete_profile: true,
+          is_staff: true,
+          is_superuser: true,
+          is_active: true,
+          is_admin: true,
           created_on: new Date().toISOString(),
           modified_on: new Date().toISOString()
         });
@@ -240,21 +244,28 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
     // Implement actual navigation/actions
     switch (action) {
       case 'profile':
-        // Navigate to profile page - for now show alert
-        alert('Profile page navigation would be implemented here. This would typically navigate to /profile or open a profile modal.');
+        // Navigate to profile page
+        window.location.href = '/profile';
         break;
       case 'settings':
-        // Navigate to settings page - for now show alert
-        alert('Settings page navigation would be implemented here. This would typically navigate to /settings.');
+        // Navigate to settings page - for now redirect to profile
+        window.location.href = '/profile';
+        break;
+      case 'admin':
+        // Open admin portal in new tab
+        const adminUrl = process.env.NODE_ENV === 'production' 
+          ? `${window.location.origin}/admin/`
+          : 'http://localhost:8000/admin/';
+        window.open(adminUrl, '_blank');
         break;
       case 'logout':
-        // Handle logout - for now show confirmation
+        // Handle logout
         if (window.confirm('Are you sure you want to sign out?')) {
-          alert('Logout functionality would be implemented here. This would typically:\n- Clear authentication tokens\n- Clear user session\n- Redirect to login page');
-          // In a real app:
-          // - Clear authentication state
-          // - Navigate to login page
-          // - Clear any cached user data
+          // For now, redirect to home - in a real app this would:
+          // - Clear authentication tokens
+          // - Clear user session
+          // - Redirect to login page
+          window.location.href = '/';
         }
         break;
       default:
@@ -306,6 +317,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ className }) => {
         <DropdownItem onClick={() => handleMenuAction('settings')} role="menuitem">
           ⚙️ Settings
         </DropdownItem>
+        
+        {userProfile.is_admin && (
+          <DropdownItem onClick={() => handleMenuAction('admin')} role="menuitem">
+            🔧 Admin Portal
+          </DropdownItem>
+        )}
         
         <DropdownDivider />
         
