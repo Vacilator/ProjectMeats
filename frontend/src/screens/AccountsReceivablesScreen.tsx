@@ -12,9 +12,9 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { AccountsReceivable, FilterOptions, MigrationInfo } from '../types';
+import { AccountsReceivable, FilterOptions } from '../types';
 import { AccountsReceivablesService } from '../services/api';
-import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage } from '../components/SharedComponents';
+import { Container, ErrorMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -146,8 +146,6 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
-  const [showMigrationInfo, setShowMigrationInfo] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<AccountsReceivable | null>(null);
@@ -162,7 +160,6 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
   }, [currentPage, searchTerm, statusFilter]);
 
   useEffect(() => {
-    loadMigrationInfo();
   }, []);
 
   // Form field definitions for Accounts Receivables
@@ -226,14 +223,6 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
     }
   };
 
-  const loadMigrationInfo = async () => {
-    try {
-      const info = await AccountsReceivablesService.getMigrationInfo();
-      setMigrationInfo(info);
-    } catch (err) {
-      console.error('Error loading migration info:', err);
-    }
-  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -371,24 +360,12 @@ const AccountsReceivablesScreen: React.FC<AccountsReceivablesScreenProps> = () =
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </FilterSelect>
-          <Button variant="secondary" onClick={() => setShowMigrationInfo(!showMigrationInfo)}>
-            {showMigrationInfo ? 'Hide' : 'Show'} Migration Info
-          </Button>
           <Button variant="primary" onClick={() => setShowCreateForm(true)}>Add New</Button>
         </Controls>
       </Header>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {showMigrationInfo && migrationInfo && (
-        <SharedMigrationInfo>
-          <strong>PowerApps Migration Information:</strong><br />
-          Original Entity: {migrationInfo.powerapps_entity_name}<br />
-          Django Model: {migrationInfo.django_model_name}<br />
-          Total Records: {migrationInfo.total_records} ({migrationInfo.active_records} active)<br />
-          API Endpoint: {migrationInfo.api_endpoints.list}
-        </SharedMigrationInfo>
-      )}
 
       <Table>
         <thead>

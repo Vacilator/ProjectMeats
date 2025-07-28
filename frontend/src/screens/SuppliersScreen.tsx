@@ -14,9 +14,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Supplier, ContactInfo } from '../types';
-import type { MigrationInfo } from '../types';
 import { SuppliersService, ContactsService } from '../services/api';
-import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
+import { Container, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -118,7 +117,7 @@ const SuppliersScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -131,7 +130,6 @@ const SuppliersScreen: React.FC = () => {
 
   useEffect(() => {
     loadSuppliers();
-    loadMigrationInfo();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -239,14 +237,7 @@ const SuppliersScreen: React.FC = () => {
     }
   };
 
-  const loadMigrationInfo = async () => {
-    try {
-      const info = await SuppliersService.getMigrationInfo();
-      setMigrationInfo(info);
-    } catch (err) {
-      console.error('Error loading migration info:', err);
-    }
-  };
+
 
   const loadSupplierContacts = async () => {
     try {
@@ -420,7 +411,6 @@ const SuppliersScreen: React.FC = () => {
           <Title>Suppliers</Title>
           <Subtitle>
             Manage supplier records migrated from PowerApps cr7c4_supplier
-            {migrationInfo && ` • ${migrationInfo.total_records} total records`}
           </Subtitle>
         </div>
         <Controls>
@@ -439,12 +429,7 @@ const SuppliersScreen: React.FC = () => {
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {migrationInfo && (
-        <SharedMigrationInfo>
-          📊 PowerApps Migration Status: {migrationInfo.active_records} active suppliers 
-          from {migrationInfo.powerapps_entity_name} entity
-        </SharedMigrationInfo>
-      )}
+
 
       <Table>
         <thead>
