@@ -29,7 +29,6 @@ import {
   BugReport,
   BugReportFormData,
   ApiResponse, 
-  MigrationInfo,
   FilterOptions 
 } from '../types';
 
@@ -138,15 +137,6 @@ export class AccountsReceivablesService {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
 
-  /**
-   * Get PowerApps migration information for this entity
-   */
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(
-      `${this.baseEndpoint}/migration_info/`
-    );
-    return response.data;
-  }
 }
 
 /**
@@ -184,11 +174,6 @@ export class SuppliersService {
 
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
-  }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
   }
 }
 
@@ -228,11 +213,6 @@ export class CustomersService {
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
-  }
 }
 
 /**
@@ -270,11 +250,6 @@ export class ContactsService {
 
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
-  }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
   }
 }
 
@@ -356,11 +331,6 @@ export class PurchaseOrdersService {
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
-  }
 }
 
 /**
@@ -398,11 +368,6 @@ export class SupplierPlantMappingsService {
 
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
-  }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
   }
 }
 
@@ -442,11 +407,6 @@ export class CarrierInfoService {
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
-  }
 }
 
 /**
@@ -485,11 +445,6 @@ export class PlantsService {
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
-  }
 }
 
 /**
@@ -527,11 +482,6 @@ export class SupplierLocationsService {
 
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
-  }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
   }
 }
 

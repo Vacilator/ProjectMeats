@@ -252,17 +252,6 @@ export interface ApiError {
   [field: string]: string | string[] | undefined;
 }
 
-// Migration info response
-export interface MigrationInfo {
-  powerapps_entity_name: string;
-  django_model_name: string;
-  django_app_name: string;
-  total_records: number;
-  active_records: number;
-  field_mappings: Record<string, string>;
-  api_endpoints: Record<string, string>;
-}
-
 // Component props
 export interface TableColumn<T> {
   key: keyof T;

@@ -526,10 +526,3 @@ export const Alert = styled.div<{ variant?: 'success' | 'warning' | 'error' | 'i
     }
   }}
 `;
-
-export const MigrationInfo = styled(Alert)`
-  background-color: #f0f9ff;
-  color: #0c4a6e;
-  border: 1px solid #7dd3fc;
-  margin-bottom: ${spacing.lg};
-`;
