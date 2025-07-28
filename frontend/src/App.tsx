@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } f
 import styled, { createGlobalStyle } from 'styled-components';
 import { colors, typography, spacing, borderRadius, shadows } from './components/DesignSystem';
 import UserProfile from './components/UserProfile';
+import BugReportButton from './components/BugReportButton';
 import DashboardScreen from './screens/DashboardScreen';
 import AccountsReceivablesScreen from './screens/AccountsReceivablesScreen';
 import SuppliersScreen from './screens/SuppliersScreen';
@@ -96,6 +97,7 @@ const HeaderLeft = styled.div`
 const HeaderRight = styled.div`
   display: flex;
   align-items: center;
+  gap: ${spacing.sm};
 `;
 
 const Logo = styled.div`
@@ -269,6 +271,11 @@ const App: React.FC = () => {
               <NavigationWithLocation />
             </HeaderLeft>
             <HeaderRight>
+              <BugReportButton 
+                position="header" 
+                size="small" 
+                showText={true}
+              />
               <UserProfile />
             </HeaderRight>
           </HeaderContent>
@@ -303,6 +310,9 @@ const App: React.FC = () => {
             </FooterLinks>
           </FooterContent>
         </Footer>
+        
+        {/* Floating Bug Report Button */}
+        <BugReportButton position="bottom-right" size="medium" />
       </AppContainer>
     </Router>
   );
