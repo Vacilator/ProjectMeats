@@ -136,6 +136,42 @@ class ProjectMeatsSetup:
             self.log(f"✗ {command} not found", "ERROR")
             return False
     
+    def _try_install_without_postgres(self, pip_cmd):
+        """Try to install requirements without PostgreSQL adapter as fallback"""
+        try:
+            self.log("Creating temporary requirements file without PostgreSQL adapter...", "INFO")
+            
+            # Read original requirements
+            requirements_file = self.backend_dir / "requirements.txt"
+            with open(requirements_file, 'r') as f:
+                lines = f.readlines()
+            
+            # Filter out PostgreSQL-related packages
+            filtered_lines = []
+            for line in lines:
+                line_lower = line.lower().strip()
+                if not any(pkg in line_lower for pkg in ['psycopg', 'postgres']):
+                    filtered_lines.append(line)
+            
+            # Create temporary requirements file
+            temp_requirements = self.backend_dir / "requirements_temp.txt"
+            with open(temp_requirements, 'w') as f:
+                f.writelines(filtered_lines)
+            
+            # Try installing without PostgreSQL adapter
+            install_cmd = f"{pip_cmd} install --timeout 60 -r requirements_temp.txt"
+            success = self.run_command(install_cmd, cwd=self.backend_dir)
+            
+            # Clean up temp file
+            if temp_requirements.exists():
+                temp_requirements.unlink()
+                
+            return success
+            
+        except Exception as e:
+            self.log(f"Failed to install without PostgreSQL adapter: {e}", "ERROR")
+            return False
+    
     def copy_env_file(self, source, destination):
         """Copy environment file if it doesn't exist"""
         source_path = Path(source)
@@ -217,22 +253,61 @@ class ProjectMeatsSetup:
         python_cmd = "python3" if shutil.which("python3") else "python"
         pip_cmd = "pip3" if shutil.which("pip3") else "pip"
         
-        # Install requirements
+        # Check if we should use development requirements for better compatibility
         requirements_file = self.backend_dir / "requirements.txt"
-        if not requirements_file.exists():
-            self.log(f"Requirements file not found: {requirements_file}", "ERROR")
+        requirements_dev_file = self.backend_dir / "requirements-dev.txt"
+        
+        # For Python 3.13+, prefer development requirements without PostgreSQL issues
+        use_dev_requirements = (
+            sys.version_info >= (3, 13) and 
+            requirements_dev_file.exists() and
+            self.is_windows
+        )
+        
+        if use_dev_requirements:
+            self.log("Python 3.13+ detected on Windows - using development requirements", "INFO")
+            target_requirements = "requirements-dev.txt"
+        else:
+            target_requirements = "requirements.txt"
+        
+        if not (self.backend_dir / target_requirements).exists():
+            self.log(f"Requirements file not found: {self.backend_dir / target_requirements}", "ERROR")
             return False
         
         # Try to install with timeout and retry
-        install_cmd = f"{pip_cmd} install --timeout 30 -r requirements.txt"
+        install_cmd = f"{pip_cmd} install --timeout 30 -r {target_requirements}"
         if not self.run_command(install_cmd, cwd=self.backend_dir):
             self.log("First attempt failed, trying with increased timeout...", "WARNING")
             # Retry with longer timeout for slow networks
-            install_cmd_retry = f"{pip_cmd} install --timeout 60 --retries 2 -r requirements.txt"
+            install_cmd_retry = f"{pip_cmd} install --timeout 60 --retries 2 -r {target_requirements}"
             if not self.run_command(install_cmd_retry, cwd=self.backend_dir):
                 self.log("Failed to install Python dependencies", "ERROR")
-                self.log("This may be due to network issues. Try running 'pip install -r backend/requirements.txt' manually.", "ERROR")
-                return False
+                self.log("This may be due to one of the following issues:", "ERROR")
+                
+                # Check for common Python 3.13+ psycopg issues
+                if sys.version_info >= (3, 13):
+                    self.log("• Python 3.13+ detected: PostgreSQL adapter compatibility issue", "ERROR")
+                    self.log("  Solution: Install Visual C++ Build Tools or use SQLite for development", "ERROR")
+                    self.log("  Download: https://visualstudio.microsoft.com/visual-cpp-build-tools/", "ERROR")
+                    self.log("  Alternative: The project uses SQLite by default, so PostgreSQL is optional", "ERROR")
+                
+                self.log("• Network issues or package index problems", "ERROR")
+                self.log("• Missing system dependencies (like build tools)", "ERROR")
+                self.log("", "ERROR")
+                self.log("Try these solutions:", "ERROR")
+                self.log("1. Run 'pip install -r backend/requirements.txt' manually for detailed error info", "ERROR")
+                self.log("2. For PostgreSQL issues: Install Visual C++ Build Tools (Windows)", "ERROR")
+                self.log("3. Skip PostgreSQL: Remove 'psycopg[binary]' line from requirements.txt", "ERROR")
+                self.log("4. Use development mode: The app works with SQLite (default database)", "ERROR")
+                
+                # Try to continue setup without PostgreSQL adapter
+                self.log("", "INFO")
+                self.log("Attempting to continue setup without PostgreSQL adapter...", "WARNING")
+                if self._try_install_without_postgres(pip_cmd):
+                    self.log("✓ Successfully installed other dependencies (PostgreSQL adapter skipped)", "SUCCESS")
+                    self.log("ℹ️  The application will use SQLite database (recommended for development)", "INFO")
+                else:
+                    return False
         
         # Run migrations
         self.log("🗃️  Running database migrations...", "INFO")

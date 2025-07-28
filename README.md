@@ -4,6 +4,10 @@ A comprehensive business management application migrated from PowerApps/Datavers
 
 **🚀 New to ProjectMeats?** Start with the **[Setup Overview](SETUP_OVERVIEW.md)** for a comprehensive setup guide and links to all documentation.
 
+## ⚠️ Python 3.13+ Setup Issue
+
+**Windows users with Python 3.13+**: If setup fails with PostgreSQL adapter errors, see **[Python 3.13+ Setup Guide](PYTHON_3_13_SETUP.md)** for solutions.
+
 ## 🏗️ Architecture Overview
 
 ```
