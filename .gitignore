@@ -37,10 +37,13 @@ backend/test_env/
 backend/venv_temp/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
+
+# VS Code - keep project-specific settings but exclude user settings
+.vscode/settings.json.user
+.vscode/launch.json.user
 
 # OS
 .DS_Store
