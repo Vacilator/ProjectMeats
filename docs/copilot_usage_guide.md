@@ -239,7 +239,7 @@ Ctrl+Shift+X -> Search "GitHub Copilot" -> Reinstall
 ## 📖 Additional Resources
 
 ### Project Documentation
-- [Setup Overview](../SETUP_OVERVIEW.md) - Complete project setup guide
+- [Complete Setup Guide](../docs/setup_guide.md) - Comprehensive setup guide for all platforms
 - [Migration Mapping](migration_mapping.md) - PowerApps to Django mappings
 - [API Reference](api_reference.md) - Complete API documentation
 - [Agent Quick Start](agent_quick_start.md) - Development workflow guide

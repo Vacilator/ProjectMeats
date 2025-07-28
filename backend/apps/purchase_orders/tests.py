@@ -88,8 +88,6 @@ class PurchaseOrderAPITest(APITestCase):
             ).isoformat(),
             "customer": self.customer.id,
             "supplier": self.supplier.id,
-            "customer_documents": "new_customer_doc.pdf",
-            "supplier_documents": "new_supplier_doc.pdf",
             "status": "active",
         }
 

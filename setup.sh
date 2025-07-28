@@ -200,7 +200,7 @@ show_help() {
     echo "  python setup.py           # Cross-platform Python script"
     echo "  make setup                # Using Makefile"
     echo ""
-    echo "For more information, see SETUP_OVERVIEW.md"
+    echo "For more information, see docs/setup_guide.md"
 }
 
 # Main function

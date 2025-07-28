@@ -473,7 +473,7 @@ class ProjectMeatsSetup:
         
         print(f"\n{Colors.BOLD}Documentation:{Colors.END}")
         print(f"   {Colors.CYAN}README.md{Colors.END}           - Project overview")
-        print(f"   {Colors.CYAN}SETUP_OVERVIEW.md{Colors.END}   - Detailed setup guide")
+        print(f"   {Colors.CYAN}docs/setup_guide.md{Colors.END} - Comprehensive setup guide")
         print(f"   {Colors.CYAN}docs/{Colors.END}               - Complete documentation")
     
     def main(self):
@@ -487,7 +487,7 @@ Examples:
   python setup.py --backend    # Backend only  
   python setup.py --frontend   # Frontend only
   
-For more information, see SETUP_OVERVIEW.md
+For more information, see docs/setup_guide.md
             """
         )
         
