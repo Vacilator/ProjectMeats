@@ -282,6 +282,67 @@ PowerApps Canvas App        →    React Frontend
 - `DELETE /api/v1/supplier-plant-mappings/{id}/` - Soft delete (inactive)
 - `GET /api/v1/supplier-plant-mappings/migration_info/` - PowerApps migration data
 
+### 9. User Profiles (✅ Completed)
+
+**PowerApps Entity**: N/A (New Django-native entity)  
+**Django Model**: `UserProfile`  
+**Django App**: `apps.user_profiles`
+
+#### Field Mappings
+
+| Django Field | Type | Notes |
+|-------------|------|--------|
+| `id` | AutoField | Django auto-generated primary key |
+| `username` | CharField(150) | Django User.username (read-only) |
+| `first_name` | CharField(150) | User's first name |
+| `last_name` | CharField(150) | User's last name |
+| `email` | EmailField(254) | Email address (unique) |
+| `display_name` | CharField(255) | Computed display name |
+| `phone` | CharField(20) | Phone number, optional |
+| `department` | CharField(100) | Department/division, optional |
+| `job_title` | CharField(100) | Job title/position, optional |
+| `profile_image` | ImageField | Profile image upload, optional |
+| `profile_image_url` | CharField | Computed URL to profile image |
+| `timezone` | CharField(50) | User's timezone preference |
+| `email_notifications` | BooleanField | Email notification preference |
+| `bio` | TextField | User biography/description, optional |
+| `has_complete_profile` | BooleanField | Profile completion status (computed) |
+| `created_on` | DateTimeField | Auto timestamp |
+| `modified_on` | DateTimeField | Auto update |
+
+#### Computed Properties
+
+| Property | Calculation | Notes |
+|----------|-------------|--------|
+| `display_name` | `first_name + last_name` or `username` | User-friendly display name |
+| `profile_image_url` | Full URL to profile image | Includes domain and media path |
+| `has_complete_profile` | Profile completion check | True if essential fields filled |
+
+#### API Endpoints
+- `GET /api/v1/user-profiles/` - List user profiles (admin)
+- `GET /api/v1/user-profiles/{id}/` - Get specific user profile
+- `GET /api/v1/user-profiles/me/` - Get current user profile
+- `PATCH /api/v1/user-profiles/me/` - Update current user profile
+- `PATCH /api/v1/user-profiles/{id}/` - Update specific user profile
+
+#### Authentication Integration
+The UserProfile system extends Django's built-in User model:
+
+```python
+# Django User model relationship
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    # ... profile fields
+    
+    @property
+    def username(self):
+        return self.user.username
+    
+    @property
+    def email(self):
+        return self.user.email
+```
+
 ## Relationship Mappings
 
 ### PowerApps Lookup Fields
@@ -568,23 +629,25 @@ const EntityScreen: React.FC = () => {
 
 ## Current Migration Status
 
-### ✅ Completed (4/9 entities - Backend Only)
+### ✅ Completed (5/9 entities - Full Stack)
 1. **Accounts Receivables** - Complete backend + frontend
 2. **Suppliers** - Complete backend + frontend  
 3. **Customers** - Complete backend + frontend
 4. **Contact Info** - Complete backend + frontend
+5. **User Profiles** - Complete backend + frontend with authentication
 
 ### 🔄 Backend Ready (3/9 entities)
-5. **Purchase Orders** - Backend implementation completed, frontend pending
-6. **Supplier Plant Mapping** - Backend implementation completed, frontend pending
-7. **Plants** - Backend implementation completed, frontend pending
+6. **Purchase Orders** - Backend implementation completed, frontend pending
+7. **Supplier Plant Mapping** - Backend implementation completed, frontend pending
+8. **Plants** - Backend implementation completed, frontend pending
 
 ### 📊 Implementation Statistics
-- **Backend**: 7 Django apps with 55 passing tests
-- **Frontend**: 4 React screens with API integration (Purchase Orders, Supplier Plant Mapping & Plants frontends not yet implemented)
-- **API Endpoints**: 36+ REST endpoints with OpenAPI documentation
+- **Backend**: 8 Django apps with 65+ passing tests
+- **Frontend**: 5 React components with full API integration (including UserProfile)
+- **API Endpoints**: 42+ REST endpoints with OpenAPI documentation
 - **Database**: All migrations applied, relationships established
 - **Admin Interface**: Full Django admin with PowerApps field documentation
+- **Authentication**: Complete user profile system with image upload support
 
 ---
 

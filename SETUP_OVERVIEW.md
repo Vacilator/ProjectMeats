@@ -10,11 +10,13 @@
 - **Django REST Framework** - Python-based REST API
 - **PostgreSQL** - Primary database (SQLite for development)
 - **Gunicorn** - WSGI HTTP server for production
+- **User Profiles** - Authentication and user management system
 
 ### Frontend  
 - **React** - Modern JavaScript UI framework
 - **TypeScript** - Type-safe JavaScript development
 - **Styled Components** - Component-based styling
+- **User Authentication** - Profile management with image uploads
 
 ### Prerequisites
 - **Python 3.9+** - Backend development
@@ -63,6 +65,34 @@ make test           # Run all tests
 make migrate        # Run database migrations
 make docs          # Generate API documentation
 make clean         # Clean build artifacts
+```
+
+## 👤 User Profile System
+
+ProjectMeats includes a comprehensive user profile management system:
+
+### Features
+- **User Authentication** - Login/logout with Django authentication
+- **Profile Management** - User details, job titles, departments
+- **Image Uploads** - Profile picture support with validation
+- **Responsive UI** - User dropdown in header with mobile support
+- **API Integration** - RESTful endpoints for profile management
+
+### Key Components
+- **Backend**: `/api/v1/user-profiles/` endpoints
+- **Frontend**: `UserProfile.tsx` component with dropdown menu
+- **Authentication**: Integration with Django User model
+- **File Handling**: Profile image upload and serving
+
+### Usage
+```bash
+# Access user profile API
+curl http://localhost:8000/api/v1/user-profiles/me/
+
+# Update profile via API
+curl -X PATCH http://localhost:8000/api/v1/user-profiles/me/ \
+  -H "Content-Type: application/json" \
+  -d '{"job_title": "Manager", "department": "Sales"}'
 ```
 
 ## 🌐 Production Setup

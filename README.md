@@ -14,6 +14,7 @@ ProjectMeats/
 │   │   ├── accounts_receivables/  # First migrated entity
 │   │   ├── suppliers/
 │   │   ├── customers/
+│   │   ├── user_profiles/     # User authentication & profiles
 │   │   └── core/              # Shared utilities
 │   ├── requirements.txt
 │   ├── .env.example
@@ -21,6 +22,8 @@ ProjectMeats/
 ├── frontend/                   # React application
 │   ├── src/
 │   │   ├── components/        # Reusable components
+│   │   │   ├── UserProfile.tsx   # User profile dropdown
+│   │   │   └── DesignSystem.tsx  # Design system
 │   │   ├── screens/          # Main application screens
 │   │   │   └── AccountsReceivablesScreen.js
 │   │   ├── services/         # API communication
@@ -75,6 +78,10 @@ make docs       # Generate API documentation
   - Django Model: `AccountsReceivable`
   - API Endpoints: `/api/v1/accounts-receivables/`
   - React Component: `AccountsReceivablesScreen`
+- **User Profiles** (Django-native)
+  - Django Model: `UserProfile`
+  - API Endpoints: `/api/v1/user-profiles/`
+  - React Component: `UserProfile` dropdown with authentication
 
 ### 🔄 In Progress
 - Infrastructure and documentation setup
@@ -94,6 +101,7 @@ make docs       # Generate API documentation
 | PowerApps Entity | Django Model | Key Fields | Status |
 |------------------|--------------|------------|---------|
 | `cr7c4_accountsreceivables` | `AccountsReceivable` | names, email, phone, terms | ✅ Complete |
+| N/A (Django-native) | `UserProfile` | username, email, profile_image | ✅ Complete |
 | `cr7c4_supplier` | `Supplier` | TBD | 📋 Planned |
 | `pro_customer` | `Customer` | TBD | 📋 Planned |
 

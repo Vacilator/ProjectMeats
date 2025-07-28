@@ -47,6 +47,9 @@ frontend/
 │   └── index.html            # HTML template
 ├── src/
 │   ├── components/           # Reusable React components
+│   │   ├── DesignSystem.tsx  # Design system and styling
+│   │   ├── UserProfile.tsx   # User profile dropdown component
+│   │   └── EntityForm.tsx    # Generic entity form component
 │   ├── screens/             # Main application screens
 │   │   └── AccountsReceivablesScreen.tsx
 │   ├── services/            # API communication layer
@@ -108,6 +111,50 @@ Create reusable components in `src/components/`:
 - `SearchInput.tsx` - Search with debouncing
 - `StatusBadge.tsx` - Status indicator
 - `LoadingSpinner.tsx` - Loading indicator
+- `UserProfile.tsx` - User profile dropdown with authentication
+- `DesignSystem.tsx` - Design system components and styling
+- `EntityForm.tsx` - Generic form component for entity management
+
+#### UserProfile Component
+The UserProfile component provides user authentication and profile management:
+
+```typescript
+// components/UserProfile.tsx
+import React from 'react';
+import UserProfile from '../components/UserProfile';
+
+// Usage in header/navigation
+const Header: React.FC = () => {
+  return (
+    <header>
+      <nav>
+        {/* Navigation items */}
+      </nav>
+      <UserProfile />
+    </header>
+  );
+};
+```
+
+**Features:**
+- **User Avatar**: Displays profile image with fallback
+- **User Information**: Shows display name and job title
+- **Dropdown Menu**: Profile, settings, and logout options
+- **API Integration**: Fetches user data from `/api/v1/user-profiles/me/`
+- **Responsive Design**: Adapts to mobile screens
+- **Accessibility**: Full keyboard navigation support
+
+**API Integration:**
+```typescript
+// Fetch current user profile
+const profile = await UserProfilesService.getCurrentUserProfile();
+
+// Update user profile
+const updated = await UserProfilesService.updateCurrentUserProfile({
+  job_title: 'Senior Manager',
+  department: 'Operations'
+});
+```
 
 ### API Integration
 
@@ -126,6 +173,33 @@ export class EntityService {
   }
   
   // ... other CRUD operations
+}
+
+export class UserProfilesService {
+  static async getCurrentUserProfile(): Promise<UserProfile> {
+    const response = await apiClient.get('/user-profiles/me/');
+    return response.data;
+  }
+  
+  static async updateCurrentUserProfile(data: Partial<UserProfileFormData>): Promise<UserProfile> {
+    const response = await apiClient.patch('/user-profiles/me/', data);
+    return response.data;
+  }
+  
+  static async updateWithImage(id: number, data: UserProfileFormData): Promise<UserProfile> {
+    const formData = new FormData();
+    
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value);
+      }
+    });
+    
+    const response = await apiClient.patch(`/user-profiles/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  }
 }
 ```
 
@@ -160,6 +234,37 @@ export interface AccountsReceivable extends OwnedEntity, StatusEntity {
   email?: string;
   phone?: string;
   terms?: string;
+}
+
+export interface UserProfile extends TimestampedEntity {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  display_name: string;
+  phone?: string;
+  department?: string;
+  job_title?: string;
+  profile_image?: string;
+  profile_image_url?: string;
+  timezone: string;
+  email_notifications: boolean;
+  bio?: string;
+  has_complete_profile: boolean;
+}
+
+export interface UserProfileFormData {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  department?: string;
+  job_title?: string;
+  profile_image?: File | string;
+  timezone?: string;
+  email_notifications?: boolean;
+  bio?: string;
 }
 ```
 
