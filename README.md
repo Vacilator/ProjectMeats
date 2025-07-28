@@ -9,6 +9,10 @@ A comprehensive business management application for meat sales brokers, migrated
 - **[Developer Setup](#-developer-setup)** - Complete development environment
 - **[Production Deployment](#-production-deployment)** - Deploy to production
 
+## ⚠️ Python 3.13+ Setup Issue
+
+**Windows users with Python 3.13+**: If setup fails with PostgreSQL adapter errors, see **[Python 3.13+ Setup Guide](PYTHON_3_13_SETUP.md)** for solutions.
+
 **📚 Complete Documentation:**
 - **[Complete Setup Guide](docs/setup_guide.md)** - Comprehensive setup for all platforms and scenarios
 - **[Production Deployment Guide](docs/production_deployment.md)** - Enterprise production deployment

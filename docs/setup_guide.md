@@ -15,7 +15,7 @@ This comprehensive guide covers all setup scenarios for ProjectMeats, from quick
 
 ### Prerequisites
 Before starting, ensure you have:
-- **Python 3.9+** - [Download from python.org](https://python.org)
+- **Python 3.9+** - [Download from python.org](https://python.org) (⚠️ **Python 3.13+ Windows users**: See [Python 3.13+ Setup Guide](../PYTHON_3_13_SETUP.md) for PostgreSQL compatibility issues)
 - **Node.js 16+** - [Download from nodejs.org](https://nodejs.org)
 - **Git** - For cloning the repository
 
@@ -428,6 +428,22 @@ sudo pacman -S python nodejs npm postgresql
 ## 🆘 Troubleshooting
 
 ### Common Issues and Solutions
+
+#### Python 3.13+ Setup Issues (Windows)
+```bash
+# Error: Microsoft Visual C++ 14.0 or greater is required
+# Solution 1: Use development requirements (recommended)
+cd backend
+pip install -r requirements-dev.txt
+
+# Solution 2: Install Visual C++ Build Tools
+# Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+# Solution 3: Use SQLite for development (no PostgreSQL)
+# Remove psycopg line from requirements.txt and run setup normally
+```
+
+See **[Python 3.13+ Setup Guide](../PYTHON_3_13_SETUP.md)** for detailed solutions.
 
 #### Python/pip Issues
 ```bash

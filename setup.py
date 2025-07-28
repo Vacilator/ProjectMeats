@@ -4,7 +4,7 @@ ProjectMeats Cross-Platform Setup Script
 ======================================
 
 This script provides a unified setup experience across Windows, macOS, and Linux.
-It handles environment setup, dependency installation, and initial configuration.
+It handles environment setup, dependency installation, initial configuration, and test data creation.
 
 Usage:
     python setup.py              # Full setup (backend + frontend)
@@ -18,6 +18,8 @@ Features:
 - Error handling and validation
 - Progress reporting
 - Dependency checking
+- Admin user creation (admin/WATERMELON1219)
+- Comprehensive test data creation
 """
 
 import os
@@ -196,6 +198,106 @@ class ProjectMeatsSetup:
         self.log("✅ Prerequisites check completed", "SUCCESS")
         return True
     
+    def _try_install_without_postgres(self, pip_cmd):
+        """Try to install requirements without PostgreSQL adapter as fallback"""
+        try:
+            self.log("Creating temporary requirements file without PostgreSQL adapter...", "INFO")
+            
+            # Read original requirements
+            requirements_file = self.backend_dir / "requirements.txt"
+            with open(requirements_file, 'r') as f:
+                lines = f.readlines()
+            
+            # Filter out PostgreSQL-related packages
+            filtered_lines = []
+            for line in lines:
+                line_lower = line.lower().strip()
+                if not any(pkg in line_lower for pkg in ['psycopg', 'postgres']):
+                    filtered_lines.append(line)
+            
+            # Create temporary requirements file
+            temp_requirements = self.backend_dir / "requirements_temp.txt"
+            with open(temp_requirements, 'w') as f:
+                f.writelines(filtered_lines)
+            
+            # Try installing without PostgreSQL adapter
+            install_cmd = f"{pip_cmd} install --timeout 60 -r requirements_temp.txt"
+            success = self.run_command(install_cmd, cwd=self.backend_dir)
+            
+            # Clean up temp file
+            if temp_requirements.exists():
+                temp_requirements.unlink()
+                
+            return success
+            
+        except Exception as e:
+            self.log(f"Failed to install without PostgreSQL adapter: {e}", "ERROR")
+            return False
+    
+    def _create_admin_user(self, python_cmd):
+        """Create admin superuser with specified credentials"""
+        try:
+            self.log("Creating admin superuser (admin/WATERMELON1219)...", "INFO")
+            
+            # Use Django's createsuperuser command with environment variables
+            create_user_cmd = (
+                f"echo \"from django.contrib.auth import get_user_model; "
+                f"User = get_user_model(); "
+                f"User.objects.filter(username='admin').exists() or "
+                f"User.objects.create_superuser('admin', 'admin@projectmeats.com', 'WATERMELON1219')\" | "
+                f"{python_cmd} manage.py shell"
+            )
+            
+            if self.run_command(create_user_cmd, cwd=self.backend_dir, shell=True):
+                self.log("✓ Admin superuser created successfully", "SUCCESS")
+                self.log("  Username: admin", "INFO")
+                self.log("  Password: WATERMELON1219", "INFO")
+                self.log("  Email: admin@projectmeats.com", "INFO")
+            else:
+                self.log("Failed to create admin user, trying alternative method...", "WARNING")
+                # Alternative method using manage.py directly
+                alt_cmd = (
+                    f"{python_cmd} manage.py shell -c \""
+                    f"from django.contrib.auth import get_user_model; "
+                    f"User = get_user_model(); "
+                    f"User.objects.filter(username='admin').exists() or "
+                    f"User.objects.create_superuser('admin', 'admin@projectmeats.com', 'WATERMELON1219')\""
+                )
+                if self.run_command(alt_cmd, cwd=self.backend_dir):
+                    self.log("✓ Admin superuser created with alternative method", "SUCCESS")
+                else:
+                    self.log("Failed to create admin user", "WARNING")
+                    self.log("You can create it manually: python manage.py createsuperuser", "INFO")
+                    
+        except Exception as e:
+            self.log(f"Error creating admin user: {e}", "WARNING")
+            self.log("You can create it manually: python manage.py createsuperuser", "INFO")
+    
+    def _create_test_data(self, python_cmd):
+        """Create comprehensive test data for the application"""
+        try:
+            self.log("Creating comprehensive test data for all entities...", "INFO")
+            
+            # Check if the test data script exists
+            test_data_script = self.backend_dir / "create_test_data.py"
+            if not test_data_script.exists():
+                self.log("Test data script not found, skipping test data creation", "WARNING")
+                return
+            
+            # Execute the test data creation script
+            create_data_cmd = f"{python_cmd} create_test_data.py"
+            if self.run_command(create_data_cmd, cwd=self.backend_dir):
+                self.log("✓ Test data created successfully", "SUCCESS")
+                self.log("  The application now has sample data for testing", "INFO")
+                self.log("  This includes suppliers, customers, purchase orders, and more", "INFO")
+            else:
+                self.log("Failed to create test data", "WARNING")
+                self.log("You can create it manually: cd backend && python create_test_data.py", "INFO")
+                    
+        except Exception as e:
+            self.log(f"Error creating test data: {e}", "WARNING")
+            self.log("You can create it manually: cd backend && python create_test_data.py", "INFO")
+    
     def setup_backend(self):
         """Setup Django backend"""
         self.log("🔧 Setting up Django backend...", "STEP")
@@ -217,22 +319,61 @@ class ProjectMeatsSetup:
         python_cmd = "python3" if shutil.which("python3") else "python"
         pip_cmd = "pip3" if shutil.which("pip3") else "pip"
         
-        # Install requirements
+        # Check if we should use development requirements for better compatibility
         requirements_file = self.backend_dir / "requirements.txt"
-        if not requirements_file.exists():
-            self.log(f"Requirements file not found: {requirements_file}", "ERROR")
+        requirements_dev_file = self.backend_dir / "requirements-dev.txt"
+        
+        # For Python 3.13+, prefer development requirements without PostgreSQL issues
+        use_dev_requirements = (
+            sys.version_info >= (3, 13) and 
+            requirements_dev_file.exists() and
+            self.is_windows
+        )
+        
+        if use_dev_requirements:
+            self.log("Python 3.13+ detected on Windows - using development requirements", "INFO")
+            target_requirements = "requirements-dev.txt"
+        else:
+            target_requirements = "requirements.txt"
+        
+        if not (self.backend_dir / target_requirements).exists():
+            self.log(f"Requirements file not found: {self.backend_dir / target_requirements}", "ERROR")
             return False
         
         # Try to install with timeout and retry
-        install_cmd = f"{pip_cmd} install --timeout 30 -r requirements.txt"
+        install_cmd = f"{pip_cmd} install --timeout 30 -r {target_requirements}"
         if not self.run_command(install_cmd, cwd=self.backend_dir):
             self.log("First attempt failed, trying with increased timeout...", "WARNING")
             # Retry with longer timeout for slow networks
-            install_cmd_retry = f"{pip_cmd} install --timeout 60 --retries 2 -r requirements.txt"
+            install_cmd_retry = f"{pip_cmd} install --timeout 60 --retries 2 -r {target_requirements}"
             if not self.run_command(install_cmd_retry, cwd=self.backend_dir):
                 self.log("Failed to install Python dependencies", "ERROR")
-                self.log("This may be due to network issues. Try running 'pip install -r backend/requirements.txt' manually.", "ERROR")
-                return False
+                self.log("This may be due to one of the following issues:", "ERROR")
+                
+                # Check for common Python 3.13+ psycopg issues
+                if sys.version_info >= (3, 13):
+                    self.log("• Python 3.13+ detected: PostgreSQL adapter compatibility issue", "ERROR")
+                    self.log("  Solution: Install Visual C++ Build Tools or use SQLite for development", "ERROR")
+                    self.log("  Download: https://visualstudio.microsoft.com/visual-cpp-build-tools/", "ERROR")
+                    self.log("  Alternative: The project uses SQLite by default, so PostgreSQL is optional", "ERROR")
+                
+                self.log("• Network issues or package index problems", "ERROR")
+                self.log("• Missing system dependencies (like build tools)", "ERROR")
+                self.log("", "ERROR")
+                self.log("Try these solutions:", "ERROR")
+                self.log("1. Run 'pip install -r backend/requirements.txt' manually for detailed error info", "ERROR")
+                self.log("2. For PostgreSQL issues: Install Visual C++ Build Tools (Windows)", "ERROR")
+                self.log("3. Skip PostgreSQL: Remove 'psycopg[binary]' line from requirements.txt", "ERROR")
+                self.log("4. Use development mode: The app works with SQLite (default database)", "ERROR")
+                
+                # Try to continue setup without PostgreSQL adapter
+                self.log("", "INFO")
+                self.log("Attempting to continue setup without PostgreSQL adapter...", "WARNING")
+                if self._try_install_without_postgres(pip_cmd):
+                    self.log("✓ Successfully installed other dependencies (PostgreSQL adapter skipped)", "SUCCESS")
+                    self.log("ℹ️  The application will use SQLite database (recommended for development)", "INFO")
+                else:
+                    return False
         
         # Run migrations
         self.log("🗃️  Running database migrations...", "INFO")
@@ -240,6 +381,14 @@ class ProjectMeatsSetup:
         if not self.run_command(migrate_cmd, cwd=self.backend_dir):
             self.log("Failed to run migrations", "ERROR")
             return False
+        
+        # Create admin superuser
+        self.log("👤 Creating admin superuser...", "INFO")
+        self._create_admin_user(python_cmd)
+        
+        # Create test data
+        self.log("📊 Creating test data...", "INFO")
+        self._create_test_data(python_cmd)
         
         self.log("✅ Backend setup complete!", "SUCCESS")
         return True
