@@ -1,0 +1,71 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Django: Debug Server",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/manage.py",
+      "args": ["runserver", "0.0.0.0:8000", "--noreload"],
+      "django": true,
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "projectmeats.settings",
+        "DEBUG": "True"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Django: Debug Tests",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/manage.py",
+      "args": ["test", "${workspaceFolder}/backend"],
+      "django": true,
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "projectmeats.settings"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Django: Debug Single Test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/manage.py",
+      "args": ["test", "${file}"],
+      "django": true,
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "projectmeats.settings"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "React: Debug in Chrome",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 3000,
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "sourceMaps": true
+    },
+    {
+      "name": "Current Python File",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend"
+      }
+    }
+  ]
+}

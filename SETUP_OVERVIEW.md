@@ -22,6 +22,27 @@
 - **Python 3.9+** - Backend development
 - **Node.js 16+** - Frontend development  
 - **PostgreSQL 12+** - Production database (optional for development)
+- **VS Code** with GitHub Copilot (recommended for AI-enhanced development)
+
+## 🤖 AI-Enhanced Development Setup
+
+**NEW: GitHub Copilot Integration** - ProjectMeats includes comprehensive AI development support:
+
+```bash
+# Verify AI development setup
+python verify_copilot_setup.py
+
+# Open with enhanced VS Code workspace  
+code ProjectMeats.code-workspace
+```
+
+**Features:**
+- Custom Copilot instructions for Django/React patterns
+- MCP (Model Context Protocol) server integration
+- Optimized VS Code configuration with debugging and tasks
+- PowerApps migration context for AI suggestions
+
+See [GitHub Copilot Usage Guide](docs/copilot_usage_guide.md) for details.
 
 ## 🚀 Setup Options Overview
 

@@ -1,0 +1,19 @@
+[
+  "ms-python.python",
+  "ms-python.black-formatter",
+  "ms-python.flake8", 
+  "ms-python.isort",
+  "ms-vscode.vscode-typescript-next",
+  "esbenp.prettier-vscode",
+  "dbaeumer.vscode-eslint",
+  "ms-vscode.vscode-json",
+  "yzhang.markdown-all-in-one",
+  "ms-vscode.vscode-django",
+  "batisteo.vscode-django",
+  "github.copilot",
+  "github.copilot-chat",
+  "ms-vscode.vscode-github-issue-notebooks",
+  "formulahendry.auto-rename-tag",
+  "christian-kohler.path-intellisense",
+  "ms-vscode.sublime-keybindings"
+]

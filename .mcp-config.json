@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/runner/work/ProjectMeats/ProjectMeats"],
+      "env": {}
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "/home/runner/work/ProjectMeats/ProjectMeats/backend/db.sqlite3"],
+      "env": {}
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "/home/runner/work/ProjectMeats/ProjectMeats"],
+      "env": {}
+    }
+  }
+}

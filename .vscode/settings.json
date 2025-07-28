@@ -1,0 +1,111 @@
+{
+  "python.defaultInterpreterPath": "./backend/venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.formatting.provider": "black",
+  "python.formatting.blackArgs": ["--line-length=88"],
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestPath": "./backend/venv/bin/pytest",
+  "python.testing.pytestArgs": ["./backend"],
+  
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  
+  "eslint.workingDirectories": ["frontend"],
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+  
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "editor.rulers": [88, 120],
+  
+  "files.associations": {
+    "*.md": "markdown"
+  },
+  
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/venv": true,
+    "**/__pycache__": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.git": true
+  },
+  
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true
+  },
+  
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.wordWrap": "on"
+  },
+  
+  "github.copilot.enable": {
+    "*": true,
+    "yaml": true,
+    "plaintext": false,
+    "markdown": true,
+    "javascript": true,
+    "typescript": true,
+    "python": true
+  },
+  
+  "github.copilot.advanced": {
+    "secret_key": "github.copilot",
+    "length": 500,
+    "temperature": 0.1,
+    "top_p": 1,
+    "stop": ["\n\n"]
+  },
+  
+  "terminal.integrated.env.osx": {
+    "DJANGO_SETTINGS_MODULE": "projectmeats.settings"
+  },
+  "terminal.integrated.env.linux": {
+    "DJANGO_SETTINGS_MODULE": "projectmeats.settings"
+  },
+  "terminal.integrated.env.windows": {
+    "DJANGO_SETTINGS_MODULE": "projectmeats.settings"
+  }
+}

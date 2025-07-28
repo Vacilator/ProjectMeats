@@ -40,6 +40,27 @@ ProjectMeats/
 └── README.md                  # This file
 ```
 
+## 🤖 AI-Enhanced Development
+
+**NEW: GitHub Copilot Integration** - ProjectMeats is fully configured for enhanced AI-assisted development!
+
+### Quick Copilot Setup
+```bash
+# Verify Copilot configuration
+python verify_copilot_setup.py
+
+# Open with optimized VS Code workspace
+code ProjectMeats.code-workspace
+```
+
+### Features
+- **Custom Instructions**: Context-aware code suggestions for Django/React patterns
+- **VS Code Integration**: Optimized settings, tasks, and debugging configurations  
+- **MCP Servers**: Enhanced AI context with filesystem, database, and git integration
+- **Smart Templates**: PowerApps migration patterns and architectural guidelines
+
+See [GitHub Copilot Usage Guide](docs/copilot_usage_guide.md) for complete setup and usage instructions.
+
 ## 🚀 Quick Start
 
 **⚡ New: Cross-Platform Setup Script** - Works on Windows, macOS, and Linux!
@@ -165,6 +186,8 @@ make setup-frontend  # Frontend only
 - **[Cross-Platform Setup Guide](docs/cross_platform_setup.md)** - **Comprehensive setup instructions with troubleshooting**
 - **[Agent Quick Start Guide](docs/agent_quick_start.md)** - **Required reading for all agents**
 - **[Agent Activity Log](docs/agent_activity_log.md)** - **Required logging for all work**
+- **[GitHub Copilot Usage Guide](docs/copilot_usage_guide.md)** - **Enhanced AI development with Copilot & MCP**
+- **[Copilot Developer Guidelines](docs/copilot_developer_guidelines.md)** - **Best practices for AI-assisted development**
 - **[Backend Setup Guide](docs/backend_setup.md)** - Detailed backend development setup
 - **[Frontend Setup Guide](docs/frontend_setup.md)** - React development environment
 - **[Production Deployment](docs/production_deployment.md)** - **Complete production deployment guide**
