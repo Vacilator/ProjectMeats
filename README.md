@@ -10,6 +10,7 @@ A comprehensive business management application for meat sales brokers, migrated
 
 **Windows users with Python 3.13+**: If setup fails with PostgreSQL adapter errors, see **[Python 3.13+ Setup Guide](PYTHON_3_13_SETUP.md)** for solutions.
 
+
 ## 🏗️ System Architecture
 
 **Technology Stack:**
@@ -20,6 +21,9 @@ A comprehensive business management application for meat sales brokers, migrated
 - **Testing**: 76+ comprehensive backend tests
 
 **Project Structure:**
+
+## 🏗️ Architecture Overview
+
 
 ```
 ProjectMeats/

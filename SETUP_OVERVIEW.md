@@ -23,7 +23,7 @@
 - **User Authentication** - Profile management with image uploads
 
 ### Prerequisites
-- **Python 3.9+** - Backend development
+- **Python 3.9+** - Backend development (⚠️ **Python 3.13+ Windows users**: See [Python 3.13+ Setup Guide](PYTHON_3_13_SETUP.md) for PostgreSQL compatibility issues)
 - **Node.js 16+** - Frontend development  
 - **PostgreSQL 12+** - Production database (optional for development)
 - **VS Code** with GitHub Copilot (recommended for AI-enhanced development)

@@ -138,6 +138,106 @@ class ProjectMeatsSetup:
             self.log(f"✗ {command} not found", "ERROR")
             return False
     
+    def _try_install_without_postgres(self, pip_cmd):
+        """Try to install requirements without PostgreSQL adapter as fallback"""
+        try:
+            self.log("Creating temporary requirements file without PostgreSQL adapter...", "INFO")
+            
+            # Read original requirements
+            requirements_file = self.backend_dir / "requirements.txt"
+            with open(requirements_file, 'r') as f:
+                lines = f.readlines()
+            
+            # Filter out PostgreSQL-related packages
+            filtered_lines = []
+            for line in lines:
+                line_lower = line.lower().strip()
+                if not any(pkg in line_lower for pkg in ['psycopg', 'postgres']):
+                    filtered_lines.append(line)
+            
+            # Create temporary requirements file
+            temp_requirements = self.backend_dir / "requirements_temp.txt"
+            with open(temp_requirements, 'w') as f:
+                f.writelines(filtered_lines)
+            
+            # Try installing without PostgreSQL adapter
+            install_cmd = f"{pip_cmd} install --timeout 60 -r requirements_temp.txt"
+            success = self.run_command(install_cmd, cwd=self.backend_dir)
+            
+            # Clean up temp file
+            if temp_requirements.exists():
+                temp_requirements.unlink()
+                
+            return success
+            
+        except Exception as e:
+            self.log(f"Failed to install without PostgreSQL adapter: {e}", "ERROR")
+            return False
+    
+    def _create_admin_user(self, python_cmd):
+        """Create admin superuser with specified credentials"""
+        try:
+            self.log("Creating admin superuser (admin/WATERMELON1219)...", "INFO")
+            
+            # Use Django's createsuperuser command with environment variables
+            create_user_cmd = (
+                f"echo \"from django.contrib.auth import get_user_model; "
+                f"User = get_user_model(); "
+                f"User.objects.filter(username='admin').exists() or "
+                f"User.objects.create_superuser('admin', 'admin@projectmeats.com', 'WATERMELON1219')\" | "
+                f"{python_cmd} manage.py shell"
+            )
+            
+            if self.run_command(create_user_cmd, cwd=self.backend_dir, shell=True):
+                self.log("✓ Admin superuser created successfully", "SUCCESS")
+                self.log("  Username: admin", "INFO")
+                self.log("  Password: WATERMELON1219", "INFO")
+                self.log("  Email: admin@projectmeats.com", "INFO")
+            else:
+                self.log("Failed to create admin user, trying alternative method...", "WARNING")
+                # Alternative method using manage.py directly
+                alt_cmd = (
+                    f"{python_cmd} manage.py shell -c \""
+                    f"from django.contrib.auth import get_user_model; "
+                    f"User = get_user_model(); "
+                    f"User.objects.filter(username='admin').exists() or "
+                    f"User.objects.create_superuser('admin', 'admin@projectmeats.com', 'WATERMELON1219')\""
+                )
+                if self.run_command(alt_cmd, cwd=self.backend_dir):
+                    self.log("✓ Admin superuser created with alternative method", "SUCCESS")
+                else:
+                    self.log("Failed to create admin user", "WARNING")
+                    self.log("You can create it manually: python manage.py createsuperuser", "INFO")
+                    
+        except Exception as e:
+            self.log(f"Error creating admin user: {e}", "WARNING")
+            self.log("You can create it manually: python manage.py createsuperuser", "INFO")
+    
+    def _create_test_data(self, python_cmd):
+        """Create comprehensive test data for the application"""
+        try:
+            self.log("Creating comprehensive test data for all entities...", "INFO")
+            
+            # Check if the test data script exists
+            test_data_script = self.backend_dir / "create_test_data.py"
+            if not test_data_script.exists():
+                self.log("Test data script not found, skipping test data creation", "WARNING")
+                return
+            
+            # Execute the test data creation script
+            create_data_cmd = f"{python_cmd} create_test_data.py"
+            if self.run_command(create_data_cmd, cwd=self.backend_dir):
+                self.log("✓ Test data created successfully", "SUCCESS")
+                self.log("  The application now has sample data for testing", "INFO")
+                self.log("  This includes suppliers, customers, purchase orders, and more", "INFO")
+            else:
+                self.log("Failed to create test data", "WARNING")
+                self.log("You can create it manually: cd backend && python create_test_data.py", "INFO")
+                    
+        except Exception as e:
+            self.log(f"Error creating test data: {e}", "WARNING")
+            self.log("You can create it manually: cd backend && python create_test_data.py", "INFO")
+    
     def copy_env_file(self, source, destination):
         """Copy environment file if it doesn't exist"""
         source_path = Path(source)
