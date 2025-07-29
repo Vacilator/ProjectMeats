@@ -44,6 +44,11 @@ help:
 	@echo "  make agent-status      - View agent activity and task status"
 	@echo "  make agent-assign      - Assign task to agent (requires TASK and AGENT)"
 	@echo "  make agent-update      - Update task progress (requires TASK, AGENT, STATUS)"
+	@echo ""
+	@echo "Enhanced GitHub Copilot:"
+	@echo "  make copilot-setup     - 🤖 Enhanced Copilot setup with MCP servers"
+	@echo "  make copilot-verify    - 🔍 Verify Copilot configuration"
+	@echo "  make copilot-quickstart - ⚡ Quick start Copilot workspace"
 
 # Setup commands
 setup: check-os setup-backend setup-frontend
@@ -312,4 +317,17 @@ scaffold-entity:
 	@echo "2. Add serializer and viewset"
 	@echo "3. Create React screen component"
 	@echo "4. Update API documentation"
+
+# Enhanced GitHub Copilot Commands
+copilot-setup:
+	@echo "🤖 Setting up enhanced GitHub Copilot with MCP servers..."
+	python setup_copilot_enhanced.py
+
+copilot-verify:
+	@echo "🔍 Verifying GitHub Copilot configuration..."
+	python verify_copilot_setup.py
+
+copilot-quickstart:
+	@echo "⚡ Starting Copilot quick-start guide..."
+	python copilot_quickstart.py
 	@echo "See existing accounts_receivables implementation for reference."

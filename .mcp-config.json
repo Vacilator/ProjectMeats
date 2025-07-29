@@ -2,18 +2,60 @@
   "mcpServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/runner/work/ProjectMeats/ProjectMeats"],
-      "env": {}
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/runner/work/ProjectMeats/ProjectMeats"
+      ],
+      "env": {
+        "FILESYSTEM_MAX_FILE_SIZE": "1048576",
+        "FILESYSTEM_ALLOWED_EXTENSIONS": ".py,.js,.ts,.tsx,.md,.json,.yml,.yaml,.sql"
+      }
     },
     "sqlite": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sqlite", "/home/runner/work/ProjectMeats/ProjectMeats/backend/db.sqlite3"],
-      "env": {}
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "/home/runner/work/ProjectMeats/ProjectMeats/backend/db.sqlite3"
+      ],
+      "env": {
+        "SQLITE_MAX_ROWS": "1000"
+      }
     },
     "git": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "/home/runner/work/ProjectMeats/ProjectMeats"],
-      "env": {}
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git",
+        "--repository",
+        "/home/runner/work/ProjectMeats/ProjectMeats"
+      ],
+      "env": {
+        "GIT_MAX_COMMITS": "100"
+      }
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_STORE_PATH": "/home/runner/work/ProjectMeats/ProjectMeats/.mcp-memory"
+      }
+    },
+    "documentation": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/runner/work/ProjectMeats/ProjectMeats/docs"
+      ],
+      "env": {
+        "FILESYSTEM_MAX_FILE_SIZE": "2097152",
+        "FILESYSTEM_ALLOWED_EXTENSIONS": ".md,.txt,.rst"
+      }
     }
   }
 }
