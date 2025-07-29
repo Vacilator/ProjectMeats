@@ -49,19 +49,29 @@ export const colors = {
   },
   // Status Colors
   success: {
+    50: '#f0fdf4',
     100: '#dcfce7',
+    200: '#bbf7d0',
     700: '#15803d'
   },
   warning: {
+    50: '#fffbeb',
     100: '#fef3c7',
+    200: '#fde68a',
     700: '#a16207'
   },
   error: {
+    50: '#fef2f2',
     100: '#fee2e2',
+    200: '#fecaca',
+    300: '#fca5a5',
+    500: '#ef4444',
     700: '#b91c1c'
   },
   info: {
+    50: '#eff6ff',
     100: '#dbeafe',
+    200: '#bfdbfe',
     700: '#1d4ed8'
   },
   
@@ -515,11 +525,4 @@ export const Alert = styled.div<{ variant?: 'success' | 'warning' | 'error' | 'i
         `;
     }
   }}
-`;
-
-export const MigrationInfo = styled(Alert)`
-  background-color: #f0f9ff;
-  color: #0c4a6e;
-  border: 1px solid #7dd3fc;
-  margin-bottom: ${spacing.lg};
 `;

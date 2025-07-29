@@ -26,8 +26,9 @@ import {
   SupplierLocationFormData,
   UserProfile,
   UserProfileFormData,
+  BugReport,
+  BugReportFormData,
   ApiResponse, 
-  MigrationInfo,
   FilterOptions 
 } from '../types';
 
@@ -136,15 +137,6 @@ export class AccountsReceivablesService {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
 
-  /**
-   * Get PowerApps migration information for this entity
-   */
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(
-      `${this.baseEndpoint}/migration_info/`
-    );
-    return response.data;
-  }
 }
 
 /**
@@ -182,11 +174,6 @@ export class SuppliersService {
 
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
-  }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
   }
 }
 
@@ -226,11 +213,6 @@ export class CustomersService {
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
-  }
 }
 
 /**
@@ -268,11 +250,6 @@ export class ContactsService {
 
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
-  }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
   }
 }
 
@@ -354,11 +331,6 @@ export class PurchaseOrdersService {
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
-  }
 }
 
 /**
@@ -396,11 +368,6 @@ export class SupplierPlantMappingsService {
 
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
-  }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
   }
 }
 
@@ -440,11 +407,6 @@ export class CarrierInfoService {
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
-  }
 }
 
 /**
@@ -483,11 +445,6 @@ export class PlantsService {
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
   }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
-  }
 }
 
 /**
@@ -525,11 +482,6 @@ export class SupplierLocationsService {
 
   static async delete(id: number): Promise<void> {
     await apiClient.delete(`${this.baseEndpoint}/${id}/`);
-  }
-
-  static async getMigrationInfo(): Promise<MigrationInfo> {
-    const response: AxiosResponse<MigrationInfo> = await apiClient.get(`${this.baseEndpoint}/migration_info/`);
-    return response.data;
   }
 }
 
@@ -603,6 +555,90 @@ export class UserProfilesService {
       const response: AxiosResponse<UserProfile> = await apiClient.patch(`${this.baseEndpoint}/${id}/`, data);
       return response.data;
     }
+  }
+}
+
+/**
+ * Bug Reports API service
+ */
+export class BugReportsService {
+  private static baseEndpoint = '/bug-reports';
+
+  /**
+   * Get paginated list of bug reports
+   */
+  static async getList(page: number = 1, filters: FilterOptions = {}): Promise<ApiResponse<BugReport>> {
+    const params = new URLSearchParams({ page: page.toString() });
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+
+    const response: AxiosResponse<ApiResponse<BugReport>> = await apiClient.get(
+      `${this.baseEndpoint}/?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Get detailed information for a specific bug report
+   */
+  static async getDetail(id: number): Promise<BugReport> {
+    const response: AxiosResponse<BugReport> = await apiClient.get(`${this.baseEndpoint}/${id}/`);
+    return response.data;
+  }
+
+  /**
+   * Create new bug report
+   */
+  static async create(data: BugReportFormData): Promise<BugReport> {
+    // Check if we have file uploads and use FormData if so
+    const hasFiles = data.screenshot instanceof File;
+    
+    if (hasFiles) {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else if (typeof value === 'object') {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, value.toString());
+          }
+        }
+      });
+      
+      const response: AxiosResponse<BugReport> = await apiClient.post(`${this.baseEndpoint}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } else {
+      const response: AxiosResponse<BugReport> = await apiClient.post(`${this.baseEndpoint}/`, data);
+      return response.data;
+    }
+  }
+
+  /**
+   * Get current user's bug reports
+   */
+  static async getUserReports(): Promise<{ success: boolean; count: number; data: BugReport[] }> {
+    const response = await apiClient.get(`${this.baseEndpoint}/user_reports/`);
+    return response.data;
+  }
+
+  /**
+   * Get bug report statistics
+   */
+  static async getStats(): Promise<any> {
+    const response = await apiClient.get(`${this.baseEndpoint}/stats/`);
+    return response.data;
+  }
+
+  /**
+   * Retry GitHub issue creation for a failed bug report
+   */
+  static async retryGithubCreation(id: number): Promise<{ success: boolean; message: string; data: BugReport }> {
+    const response = await apiClient.post(`${this.baseEndpoint}/${id}/retry_github_creation/`);
+    return response.data;
   }
 }
 

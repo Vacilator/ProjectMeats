@@ -14,9 +14,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { ContactInfo } from '../types';
-import type { MigrationInfo } from '../types';
 import { ContactsService } from '../services/api';
-import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
+import { Container, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -151,7 +150,6 @@ const ContactsScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingContact, setEditingContact] = useState<ContactInfo | null>(null);
@@ -173,19 +171,9 @@ const ContactsScreen: React.FC = () => {
     }
   }, [searchTerm]);
 
-  const loadMigrationInfo = useCallback(async () => {
-    try {
-      const info = await ContactsService.getMigrationInfo();
-      setMigrationInfo(info);
-    } catch (err) {
-      console.error('Error loading migration info:', err);
-    }
-  }, []);
-
   useEffect(() => {
     loadContacts();
-    loadMigrationInfo();
-  }, [loadContacts, loadMigrationInfo]);
+  }, [loadContacts]);
 
   // Form field definitions for ContactInfo
   const formFields: FormField[] = [
@@ -343,7 +331,6 @@ const ContactsScreen: React.FC = () => {
           <Title>Contact Information</Title>
           <Subtitle>
             Manage contact records migrated from PowerApps pro_contactinfo
-            {migrationInfo && ` • ${migrationInfo.total_records} total records`}
           </Subtitle>
         </div>
         <Controls>
@@ -362,12 +349,6 @@ const ContactsScreen: React.FC = () => {
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {migrationInfo && (
-        <SharedMigrationInfo>
-          📞 PowerApps Migration Status: {migrationInfo.active_records} active contacts 
-          from {migrationInfo.powerapps_entity_name} entity
-        </SharedMigrationInfo>
-      )}
 
       <Table>
         <thead>

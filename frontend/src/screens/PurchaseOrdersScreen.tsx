@@ -14,9 +14,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { PurchaseOrder, Customer, Supplier } from '../types';
-import type { MigrationInfo } from '../types';
 import { PurchaseOrdersService, CustomersService, SuppliersService } from '../services/api';
-import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
+import { Container, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -149,8 +148,6 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
-  const [showMigrationInfo, setShowMigrationInfo] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingPurchaseOrder, setEditingPurchaseOrder] = useState<PurchaseOrder | null>(null);
@@ -167,7 +164,6 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
   }, [currentPage, searchTerm, statusFilter]);
 
   useEffect(() => {
-    loadMigrationInfo();
     loadCustomersAndSuppliers();
   }, []);
 
@@ -276,14 +272,6 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
     }
   };
 
-  const loadMigrationInfo = async () => {
-    try {
-      const info = await PurchaseOrdersService.getMigrationInfo();
-      setMigrationInfo(info);
-    } catch (err) {
-      console.error('Error loading migration info:', err);
-    }
-  };
 
   const loadCustomersAndSuppliers = async () => {
     try {
@@ -450,12 +438,6 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
             <option value="inactive">Inactive</option>
           </FilterSelect>
           <Button
-            variant="secondary"
-            onClick={() => setShowMigrationInfo(!showMigrationInfo)}
-          >
-            {showMigrationInfo ? 'Hide' : 'Show'} Migration Info
-          </Button>
-          <Button
             variant="primary"
             onClick={() => setShowCreateForm(true)}
           >
@@ -466,19 +448,6 @@ const PurchaseOrdersScreen: React.FC<PurchaseOrdersScreenProps> = () => {
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {showMigrationInfo && migrationInfo && (
-        <SharedMigrationInfo>
-          <strong>PowerApps Migration Info:</strong><br />
-          Entity: {migrationInfo.powerapps_entity_name} → {migrationInfo.django_model_name}<br />
-          Records: {migrationInfo.active_records} active / {migrationInfo.total_records} total<br />
-          <details style={{ marginTop: '8px' }}>
-            <summary>Field Mappings</summary>
-            <pre style={{ fontSize: '12px', marginTop: '8px' }}>
-              {JSON.stringify(migrationInfo.field_mappings, null, 2)}
-            </pre>
-          </details>
-        </SharedMigrationInfo>
-      )}
 
       <Table>
         <thead>

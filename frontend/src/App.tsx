@@ -28,6 +28,7 @@ import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import AIAssistantScreen from './screens/AIAssistantScreen';
 
+
 // Enhanced global styles with design system
 const GlobalStyle = createGlobalStyle`
   * {
@@ -351,11 +352,13 @@ const AppContent: React.FC = () => {
                 <DashboardScreen />
               </ProtectedRoute>
             } />
+
             <Route path="/ai-assistant" element={
               <ProtectedRoute>
                 <AIAssistantScreen />
               </ProtectedRoute>
             } />
+
             <Route path="/accounts-receivables" element={
               <ProtectedRoute>
                 <AccountsReceivablesScreen />

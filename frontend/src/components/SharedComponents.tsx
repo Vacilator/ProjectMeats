@@ -13,16 +13,6 @@ export const Title = styled.h1`
   margin-bottom: 20px;
 `;
 
-export const MigrationInfo = styled.div`
-  background: #e7f3ff;
-  border: 1px solid #b8daff;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 20px;
-  font-size: 14px;
-  color: #0066cc;
-`;
-
 export const LoadingMessage = styled.div`
   text-align: center;
   padding: 20px;

@@ -13,9 +13,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Customer, ContactInfo } from '../types';
-import type { MigrationInfo } from '../types';
 import { CustomersService, ContactsService } from '../services/api';
-import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
+import { Container, ErrorMessage, LoadingMessage } from '../components/SharedComponents';
 import EntityForm, { FormField } from '../components/EntityForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -117,7 +116,6 @@ const CustomersScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -130,7 +128,6 @@ const CustomersScreen: React.FC = () => {
 
   useEffect(() => {
     loadCustomers();
-    loadMigrationInfo();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -227,14 +224,6 @@ const CustomersScreen: React.FC = () => {
     }
   };
 
-  const loadMigrationInfo = async () => {
-    try {
-      const info = await CustomersService.getMigrationInfo();
-      setMigrationInfo(info);
-    } catch (err) {
-      console.error('Error loading migration info:', err);
-    }
-  };
 
   const loadCustomerContacts = async () => {
     try {
@@ -404,7 +393,6 @@ const CustomersScreen: React.FC = () => {
           <Title>Customers</Title>
           <Subtitle>
             Manage customer records migrated from PowerApps pro_customer
-            {migrationInfo && ` • ${migrationInfo.total_records} total records`}
           </Subtitle>
         </div>
         <Controls>
@@ -423,12 +411,6 @@ const CustomersScreen: React.FC = () => {
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {migrationInfo && (
-        <SharedMigrationInfo>
-          🏢 PowerApps Migration Status: {migrationInfo.active_records} active customers 
-          from {migrationInfo.powerapps_entity_name} entity
-        </SharedMigrationInfo>
-      )}
 
       <Table>
         <thead>

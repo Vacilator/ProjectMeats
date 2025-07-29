@@ -13,9 +13,9 @@
  */
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { SupplierLocation, FilterOptions, MigrationInfo } from '../types';
+import { SupplierLocation, FilterOptions } from '../types';
 import { SupplierLocationsService } from '../services/api';
-import { Container, MigrationInfo as SharedMigrationInfo, ErrorMessage } from '../components/SharedComponents';
+import { Container, ErrorMessage } from '../components/SharedComponents';
 
 // Styled components (reusing consistent patterns)
 const Header = styled.div`
@@ -171,8 +171,6 @@ const SupplierLocationsScreen: React.FC<SupplierLocationsScreenProps> = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [migrationInfo, setMigrationInfo] = useState<MigrationInfo | null>(null);
-  const [showMigrationInfo, setShowMigrationInfo] = useState(false);
 
   // Load data on component mount and when filters change
   useEffect(() => {
@@ -202,16 +200,7 @@ const SupplierLocationsScreen: React.FC<SupplierLocationsScreenProps> = () => {
   }, [currentPage, searchTerm, statusFilter]);
 
   useEffect(() => {
-    const loadMigrationInfo = async () => {
-      try {
-        const info = await SupplierLocationsService.getMigrationInfo();
-        setMigrationInfo(info);
-      } catch (err) {
-        console.error('Error loading migration info:', err);
-      }
-    };
 
-    loadMigrationInfo();
   }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -262,30 +251,11 @@ const SupplierLocationsScreen: React.FC<SupplierLocationsScreenProps> = () => {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </FilterSelect>
-          <Button
-            variant="secondary"
-            onClick={() => setShowMigrationInfo(!showMigrationInfo)}
-          >
-            {showMigrationInfo ? 'Hide' : 'Show'} Migration Info
-          </Button>
         </Controls>
       </Header>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {showMigrationInfo && migrationInfo && (
-        <SharedMigrationInfo>
-          <strong>PowerApps Migration Info:</strong><br />
-          Entity: {migrationInfo.powerapps_entity_name} → {migrationInfo.django_model_name}<br />
-          Records: {migrationInfo.active_records} active / {migrationInfo.total_records} total<br />
-          <details style={{ marginTop: '8px' }}>
-            <summary>Field Mappings</summary>
-            <pre style={{ fontSize: '12px', marginTop: '8px' }}>
-              {JSON.stringify(migrationInfo.field_mappings, null, 2)}
-            </pre>
-          </details>
-        </SharedMigrationInfo>
-      )}
 
       <Table>
         <thead>
