@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/v1/", include("apps.purchase_orders.urls")),
     path("api/v1/", include("apps.plants.urls")),
     path("api/v1/", include("apps.carriers.urls")),
+    path("api/v1/", include("apps.ai_assistant.urls")),
     path("api/v1/", include("apps.core.urls")),
     path("api/v1/", include("apps.bug_reports.urls")),
     # API Documentation

@@ -361,6 +361,144 @@ export interface SupplierLocationFormData {
   status: 'active' | 'inactive';
 }
 
+// AI Assistant types
+export interface ChatSession extends OwnedEntity, StatusEntity {
+  id: string;
+  title?: string;
+  session_status: 'active' | 'completed' | 'archived';
+  context_data: Record<string, any>;
+  last_activity: string;
+  message_count: number;
+  has_documents: boolean;
+}
+
+export interface ChatMessage extends OwnedEntity {
+  id: string;
+  session: string;
+  message_type: 'user' | 'assistant' | 'system' | 'document';
+  content: string;
+  metadata: Record<string, any>;
+  is_processed: boolean;
+  processing_error?: string;
+  uploaded_document?: UploadedDocument;
+}
+
+export interface UploadedDocument extends OwnedEntity, StatusEntity {
+  id: string;
+  file: string;
+  file_url?: string;
+  original_filename: string;
+  file_size: number;
+  file_size_mb: number;
+  file_type: string;
+  document_type: 'purchase_order' | 'invoice' | 'supplier_document' | 'customer_document' | 'contract' | 'receipt' | 'unknown';
+  confidence_score: number;
+  processing_status: 'pending' | 'processing' | 'completed' | 'failed' | 'manual_review';
+  is_processed: boolean;
+  extracted_text?: string;
+  extracted_data: Record<string, any>;
+  processing_metadata: Record<string, any>;
+  processing_error?: string;
+  created_entities: Array<{type: string; id: number; name?: string}>;
+}
+
+export interface AIConfiguration {
+  id: number;
+  name: string;
+  provider: 'openai' | 'azure_openai' | 'anthropic' | 'local';
+  model_name: string;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface ProcessingTask extends OwnedEntity {
+  id: string;
+  task_type: string;
+  document?: UploadedDocument;
+  session: ChatSession;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'manual_review';
+  progress_percentage: number;
+  input_data: Record<string, any>;
+  output_data: Record<string, any>;
+  error_details?: string;
+  started_at?: string;
+  completed_at?: string;
+  duration?: number;
+}
+
+// Chat API request/response types
+export interface ChatRequest {
+  message: string;
+  session_id?: string;
+  context?: Record<string, any>;
+}
+
+export interface ChatResponse {
+  response: string;
+  session_id: string;
+  message_id: string;
+  processing_time: number;
+  metadata: Record<string, any>;
+}
+
+export interface DocumentProcessingRequest {
+  document_id: string;
+  session_id?: string;
+  processing_options?: Record<string, any>;
+}
+
+export interface DocumentProcessingResponse {
+  task_id: string;
+  document_id: string;
+  status: string;
+  estimated_completion?: string;
+  message: string;
+}
+
+// Form data types for AI Assistant
+export interface ChatSessionFormData {
+  title?: string;
+  session_status?: 'active' | 'completed' | 'archived';
+  context_data?: Record<string, any>;
+}
+
+export interface DocumentUploadFormData {
+  file: File;
+  original_filename?: string;
+}
+
+// Bug Report types
+export interface BugReport extends TimestampedEntity {
+  id: number;
+  title: string;
+  description: string;
+  steps_to_reproduce?: string;
+  expected_behavior?: string;
+  actual_behavior?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  priority_display: string;
+  current_url?: string;
+  page_title?: string;
+  browser_info: Record<string, any>;
+  user_agent?: string;
+  application_state: Record<string, any>;
+  screenshot?: string;
+  additional_files?: string;
+  status: 'pending' | 'submitted' | 'in_progress' | 'resolved' | 'failed';
+  status_display: string;
+  github_issue_number?: number;
+  github_issue_url?: string;
+  error_message?: string;
+  assigned_to_copilot: boolean;
+  labels: string[];
+  reporter: number;
+  reporter_username: string;
+  reporter_full_name: string;
+  reporter_email: string;
+  created_on_formatted: string;
+}
+
 export interface BugReportFormData {
   title: string;
   description: string;
