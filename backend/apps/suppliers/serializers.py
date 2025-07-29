@@ -56,9 +56,7 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
     modified_by_username = serializers.CharField(
         source="modified_by.username", read_only=True
     )
-    owner_username = serializers.CharField(
-        source="owner.username", read_only=True
-    )
+    owner_username = serializers.CharField(source="owner.username", read_only=True)
 
     # Related object display names
     accounts_receivable_name = serializers.CharField(
@@ -107,9 +105,7 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         """Ensure name is provided and not empty (PowerApps required field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
 
@@ -132,9 +128,7 @@ class SupplierCreateSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         """Name is required (PowerApps primary field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
     def create(self, validated_data):
@@ -158,12 +152,8 @@ class SupplierPlantMappingListSerializer(serializers.ModelSerializer):
     has_documents = serializers.BooleanField(read_only=True)
 
     # Related object display names
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
-    customer_name = serializers.CharField(
-        source="customer.name", read_only=True
-    )
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
     contact_info_name = serializers.CharField(
         source="contact_info.name", read_only=True
     )
@@ -214,17 +204,11 @@ class SupplierPlantMappingDetailSerializer(serializers.ModelSerializer):
     modified_by_username = serializers.CharField(
         source="modified_by.username", read_only=True
     )
-    owner_username = serializers.CharField(
-        source="owner.username", read_only=True
-    )
+    owner_username = serializers.CharField(source="owner.username", read_only=True)
 
     # Related object display names
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
-    customer_name = serializers.CharField(
-        source="customer.name", read_only=True
-    )
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
     contact_info_name = serializers.CharField(
         source="contact_info.name", read_only=True
     )
@@ -276,9 +260,7 @@ class SupplierPlantMappingDetailSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         """Ensure name is provided and not empty (PowerApps required field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
 
@@ -302,9 +284,7 @@ class SupplierPlantMappingCreateSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         """Name is required (PowerApps primary field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
     def create(self, validated_data):
@@ -326,9 +306,7 @@ class SupplierLocationListSerializer(serializers.ModelSerializer):
 
     has_address = serializers.BooleanField(read_only=True)
     has_contact_info = serializers.BooleanField(read_only=True)
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
 
     class Meta:
         model = SupplierLocation
@@ -374,14 +352,10 @@ class SupplierLocationDetailSerializer(serializers.ModelSerializer):
     modified_by_username = serializers.CharField(
         source="modified_by.username", read_only=True
     )
-    owner_username = serializers.CharField(
-        source="owner.username", read_only=True
-    )
+    owner_username = serializers.CharField(source="owner.username", read_only=True)
 
     # Related object display names
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
 
     class Meta:
         model = SupplierLocation

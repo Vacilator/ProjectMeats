@@ -86,9 +86,7 @@ class AccountsReceivable(OwnedModel, StatusModel):
         from django.core.exceptions import ValidationError
 
         if not self.name or not self.name.strip():
-            raise ValidationError(
-                {"name": "Name is required and cannot be empty."}
-            )
+            raise ValidationError({"name": "Name is required and cannot be empty."})
 
     @property
     def has_contact_info(self):

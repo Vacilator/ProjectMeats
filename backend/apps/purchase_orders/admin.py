@@ -134,9 +134,7 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
             request, f"{updated} purchase order records marked as inactive."
         )
 
-    mark_inactive.short_description = (
-        "Mark selected purchase orders as inactive"
-    )
+    mark_inactive.short_description = "Mark selected purchase orders as inactive"
 
     def total_amount(self, obj):
         """Display calculated total amount."""

@@ -85,9 +85,7 @@ class CarrierInfoModelTest(TestCase):
 
     def test_powerapps_entity_name(self):
         """Test PowerApps entity name method."""
-        self.assertEqual(
-            CarrierInfo.get_powerapps_entity_name(), "cr7c4_carrierinfo"
-        )
+        self.assertEqual(CarrierInfo.get_powerapps_entity_name(), "cr7c4_carrierinfo")
 
 
 class CarrierInfoAPITest(APITestCase):
@@ -137,9 +135,7 @@ class CarrierInfoAPITest(APITestCase):
         """Test migration info endpoint."""
         response = self.client.get("/api/v1/carrier-infos/migration_info/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data["powerapps_entity_name"], "cr7c4_carrierinfo"
-        )
+        self.assertEqual(response.data["powerapps_entity_name"], "cr7c4_carrierinfo")
         self.assertEqual(response.data["django_model_name"], "CarrierInfo")
         self.assertEqual(response.data["total_records"], 1)
         self.assertEqual(response.data["active_records"], 1)

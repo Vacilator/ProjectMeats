@@ -41,9 +41,7 @@ class SupplierModelTest(TestCase):
         self.assertEqual(supplier.status, "active")  # Default status
         self.assertFalse(supplier.delivery_type_profile)  # Default value
         self.assertEqual(str(supplier), "Test Supplier")
-        self.assertEqual(
-            supplier.get_powerapps_entity_name(), "cr7c4_supplier"
-        )
+        self.assertEqual(supplier.get_powerapps_entity_name(), "cr7c4_supplier")
 
     def test_supplier_with_relationships(self):
         """Test supplier with foreign key relationships."""
@@ -145,9 +143,7 @@ class SupplierAPITest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], "Test Supplier")
-        self.assertEqual(
-            response.data["powerapps_entity_name"], "cr7c4_supplier"
-        )
+        self.assertEqual(response.data["powerapps_entity_name"], "cr7c4_supplier")
 
     def test_update_supplier(self):
         """Test updating a supplier."""
@@ -175,9 +171,7 @@ class SupplierAPITest(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data["powerapps_entity_name"], "cr7c4_supplier"
-        )
+        self.assertEqual(response.data["powerapps_entity_name"], "cr7c4_supplier")
         self.assertEqual(response.data["django_model_name"], "Supplier")
         self.assertEqual(response.data["total_records"], 1)
         self.assertEqual(response.data["active_records"], 1)
@@ -382,9 +376,7 @@ class SupplierPlantMappingAPITest(APITestCase):
 
     def test_retrieve_supplier_plant_mapping(self):
         """Test retrieving a specific supplier plant mapping."""
-        url = reverse(
-            "supplier-plant-mapping-detail", kwargs={"pk": self.mapping.pk}
-        )
+        url = reverse("supplier-plant-mapping-detail", kwargs={"pk": self.mapping.pk})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -395,9 +387,7 @@ class SupplierPlantMappingAPITest(APITestCase):
 
     def test_update_supplier_plant_mapping(self):
         """Test updating a supplier plant mapping."""
-        url = reverse(
-            "supplier-plant-mapping-detail", kwargs={"pk": self.mapping.pk}
-        )
+        url = reverse("supplier-plant-mapping-detail", kwargs={"pk": self.mapping.pk})
         data = {
             "name": "Updated Mapping",
             "documents_reference": "Updated docs",
@@ -411,9 +401,7 @@ class SupplierPlantMappingAPITest(APITestCase):
 
     def test_delete_supplier_plant_mapping_soft_delete(self):
         """Test soft delete of supplier plant mapping (sets status to inactive)."""
-        url = reverse(
-            "supplier-plant-mapping-detail", kwargs={"pk": self.mapping.pk}
-        )
+        url = reverse("supplier-plant-mapping-detail", kwargs={"pk": self.mapping.pk})
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -429,9 +417,7 @@ class SupplierPlantMappingAPITest(APITestCase):
         self.assertEqual(
             response.data["powerapps_entity_name"], "pro_supplierplantmapping"
         )
-        self.assertEqual(
-            response.data["django_model_name"], "SupplierPlantMapping"
-        )
+        self.assertEqual(response.data["django_model_name"], "SupplierPlantMapping")
         self.assertEqual(response.data["total_records"], 1)
         self.assertEqual(response.data["active_records"], 1)
         self.assertIn("field_mappings", response.data)
@@ -497,12 +483,8 @@ class SupplierLocationModelTest(TestCase):
         self.assertEqual(location.name, "Test Location")
         self.assertEqual(location.supplier, self.supplier)
         self.assertEqual(location.status, "active")  # Default status
-        self.assertEqual(
-            str(location), f"{self.supplier.name} - Test Location"
-        )
-        self.assertEqual(
-            location.get_powerapps_entity_name(), "pro_supplier_locations"
-        )
+        self.assertEqual(str(location), f"{self.supplier.name} - Test Location")
+        self.assertEqual(location.get_powerapps_entity_name(), "pro_supplier_locations")
 
     def test_supplier_location_with_full_address(self):
         """Test supplier location with complete address information."""
@@ -521,9 +503,7 @@ class SupplierLocationModelTest(TestCase):
         )
 
         self.assertTrue(location.has_address)
-        self.assertEqual(
-            location.full_address, "123 Main St, New York, NY, 10001, USA"
-        )
+        self.assertEqual(location.full_address, "123 Main St, New York, NY, 10001, USA")
         self.assertEqual(location.location_type, "headquarters")
 
     def test_supplier_location_with_contact_info(self):
@@ -640,9 +620,7 @@ class SupplierLocationAPITest(APITestCase):
 
     def test_retrieve_supplier_location(self):
         """Test retrieving a specific supplier location."""
-        url = reverse(
-            "supplier-location-detail", kwargs={"pk": self.location.pk}
-        )
+        url = reverse("supplier-location-detail", kwargs={"pk": self.location.pk})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -695,9 +673,7 @@ class SupplierLocationAPITest(APITestCase):
 
     def test_update_supplier_location(self):
         """Test updating a supplier location."""
-        url = reverse(
-            "supplier-location-detail", kwargs={"pk": self.location.pk}
-        )
+        url = reverse("supplier-location-detail", kwargs={"pk": self.location.pk})
         data = {"name": "Updated Office Name", "location_type": "office"}
 
         response = self.client.patch(url, data)
@@ -713,9 +689,7 @@ class SupplierLocationAPITest(APITestCase):
 
     def test_delete_supplier_location_soft_delete(self):
         """Test soft delete of supplier location (sets status to inactive)."""
-        url = reverse(
-            "supplier-location-detail", kwargs={"pk": self.location.pk}
-        )
+        url = reverse("supplier-location-detail", kwargs={"pk": self.location.pk})
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -785,9 +759,7 @@ class SupplierLocationAPITest(APITestCase):
         self.assertEqual(
             response.data["powerapps_entity_name"], "pro_supplier_locations"
         )
-        self.assertEqual(
-            response.data["django_model_name"], "SupplierLocation"
-        )
+        self.assertEqual(response.data["django_model_name"], "SupplierLocation")
         self.assertEqual(response.data["total_records"], 1)
         self.assertEqual(response.data["active_records"], 1)
         self.assertIn("field_mappings", response.data)

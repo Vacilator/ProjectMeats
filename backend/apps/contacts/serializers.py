@@ -69,17 +69,11 @@ class ContactInfoDetailSerializer(serializers.ModelSerializer):
     modified_by_username = serializers.CharField(
         source="modified_by.username", read_only=True
     )
-    owner_username = serializers.CharField(
-        source="owner.username", read_only=True
-    )
+    owner_username = serializers.CharField(source="owner.username", read_only=True)
 
     # Related object display names
-    customer_name = serializers.CharField(
-        source="customer.name", read_only=True
-    )
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
 
     class Meta:
         model = ContactInfo
@@ -128,9 +122,7 @@ class ContactInfoDetailSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         """Ensure name is provided and not empty (PowerApps required field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
     def validate_email(self, value):
@@ -168,9 +160,7 @@ class ContactInfoCreateSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         """Name is required (PowerApps primary field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
     def create(self, validated_data):

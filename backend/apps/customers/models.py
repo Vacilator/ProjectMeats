@@ -41,7 +41,9 @@ class Customer(OwnedModel, StatusModel):
         indexes = [
             models.Index(fields=["name"]),
             models.Index(fields=["status"]),
-            models.Index(fields=["status", "name"]),  # Composite index for filtered lists
+            models.Index(
+                fields=["status", "name"]
+            ),  # Composite index for filtered lists
         ]
 
     def __str__(self):
@@ -53,9 +55,7 @@ class Customer(OwnedModel, StatusModel):
         from django.core.exceptions import ValidationError
 
         if not self.name or not self.name.strip():
-            raise ValidationError(
-                {"name": "Name is required and cannot be empty."}
-            )
+            raise ValidationError({"name": "Name is required and cannot be empty."})
 
     @classmethod
     def get_powerapps_entity_name(cls):

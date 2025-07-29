@@ -19,11 +19,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import ContactInfo
-from .serializers import (
-    ContactInfoCreateSerializer,
-    ContactInfoDetailSerializer,
-    ContactInfoListSerializer,
-)
+from .serializers import (ContactInfoCreateSerializer,
+                          ContactInfoDetailSerializer,
+                          ContactInfoListSerializer)
 
 
 @extend_schema_view(
@@ -120,9 +118,7 @@ class ContactInfoViewSet(viewsets.ModelViewSet):
 
         # Filter by records with relationships
         if self.request.query_params.get("has_relationships") == "true":
-            queryset = queryset.exclude(
-                customer__isnull=True, supplier__isnull=True
-            )
+            queryset = queryset.exclude(customer__isnull=True, supplier__isnull=True)
 
         return queryset
 

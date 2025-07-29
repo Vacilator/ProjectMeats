@@ -109,9 +109,7 @@ class CustomerAPITest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], "Test Customer")
-        self.assertEqual(
-            response.data["powerapps_entity_name"], "pro_customer"
-        )
+        self.assertEqual(response.data["powerapps_entity_name"], "pro_customer")
 
     def test_update_customer(self):
         """Test updating a customer."""
@@ -138,9 +136,7 @@ class CustomerAPITest(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data["powerapps_entity_name"], "pro_customer"
-        )
+        self.assertEqual(response.data["powerapps_entity_name"], "pro_customer")
         self.assertEqual(response.data["django_model_name"], "Customer")
         self.assertEqual(response.data["total_records"], 1)
         self.assertEqual(response.data["active_records"], 1)

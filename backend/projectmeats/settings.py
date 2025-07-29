@@ -49,7 +49,7 @@ LOCAL_APPS = [
     "apps.plants",
     "apps.carriers",
     "apps.bug_reports",
-    "apps.ai_assistant"
+    # "apps.ai_assistant",  # Disabled - not core to meat sales business
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -89,9 +89,7 @@ WSGI_APPLICATION = "projectmeats.wsgi.application"
 # Supports both SQLite (dev) and PostgreSQL (production) via DATABASE_URL
 DATABASES = {
     "default": dj_database_url.config(
-        default=config(
-            "DATABASE_URL", default=f"sqlite:///{BASE_DIR}/db.sqlite3"
-        )
+        default=config("DATABASE_URL", default=f"sqlite:///{BASE_DIR}/db.sqlite3")
     )
 }
 

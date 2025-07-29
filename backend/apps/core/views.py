@@ -4,17 +4,19 @@ Core views for ProjectMeats.
 Base view classes that provide common functionality for all entities
 migrated from PowerApps/Dataverse.
 """
-from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-from django.contrib.auth import get_user_model, authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import User
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.response import Response
+
 from .models import UserProfile
-from .serializers import UserProfileSerializer, UserProfileCreateSerializer, AuthLoginSerializer, AuthSignupSerializer
+from .serializers import (AuthLoginSerializer, AuthSignupSerializer,
+                          UserProfileCreateSerializer, UserProfileSerializer)
 
 
 class PowerAppsModelViewSet(viewsets.ModelViewSet):
@@ -106,9 +108,7 @@ class PowerAppsModelViewSet(viewsets.ModelViewSet):
 
         Must be implemented by subclasses to provide specific migration details.
         """
-        raise NotImplementedError(
-            "Subclasses must implement the migration_info action"
-        )
+        raise NotImplementedError("Subclasses must implement the migration_info action")
 
 
 class ReadOnlyPowerAppsModelViewSet(viewsets.ReadOnlyModelViewSet):
@@ -152,17 +152,19 @@ class ReadOnlyPowerAppsModelViewSet(viewsets.ReadOnlyModelViewSet):
         Endpoint to get PowerApps migration information.
         Must be implemented by subclasses.
         """
-        raise NotImplementedError(
-            "Subclasses must implement the migration_info action"
-        )
+        raise NotImplementedError("Subclasses must implement the migration_info action")
 
 
 @extend_schema_view(
     list=extend_schema(
-        summary="List User Profiles", description="Retrieve a list of user profiles.", tags=["User Profiles"]
+        summary="List User Profiles",
+        description="Retrieve a list of user profiles.",
+        tags=["User Profiles"],
     ),
     create=extend_schema(
-        summary="Create User Profile", description="Create a new user and profile.", tags=["User Profiles"]
+        summary="Create User Profile",
+        description="Create a new user and profile.",
+        tags=["User Profiles"],
     ),
     retrieve=extend_schema(
         summary="Get User Profile",
@@ -170,7 +172,9 @@ class ReadOnlyPowerAppsModelViewSet(viewsets.ReadOnlyModelViewSet):
         tags=["User Profiles"],
     ),
     update=extend_schema(
-        summary="Update User Profile", description="Update an existing user profile.", tags=["User Profiles"]
+        summary="Update User Profile",
+        description="Update an existing user profile.",
+        tags=["User Profiles"],
     ),
     partial_update=extend_schema(
         summary="Partially Update User Profile",
@@ -198,8 +202,22 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser, JSONParser]  # Support file uploads
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["department", "email_notifications"]
-    search_fields = ["user__username", "user__first_name", "user__last_name", "user__email", "job_title", "department"]
-    ordering_fields = ["user__username", "user__first_name", "user__last_name", "department", "job_title", "created_on"]
+    search_fields = [
+        "user__username",
+        "user__first_name",
+        "user__last_name",
+        "user__email",
+        "job_title",
+        "department",
+    ]
+    ordering_fields = [
+        "user__username",
+        "user__first_name",
+        "user__last_name",
+        "department",
+        "job_title",
+        "created_on",
+    ]
     ordering = ["user__last_name", "user__first_name"]
 
     def get_serializer_class(self):
@@ -220,7 +238,13 @@ class UserProfileViewSet(viewsets.ModelViewSet):
                 user__email__isnull=False,
                 department__isnull=False,
                 job_title__isnull=False,
-            ).exclude(user__first_name="", user__last_name="", user__email="", department="", job_title="")
+            ).exclude(
+                user__first_name="",
+                user__last_name="",
+                user__email="",
+                department="",
+                job_title="",
+            )
 
         return queryset
 
@@ -244,7 +268,9 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         total_count = len(completion_items)
         completion_percentage = (completed_count / total_count) * 100
 
-        missing_items = [field for field, completed in completion_items.items() if not completed]
+        missing_items = [
+            field for field, completed in completion_items.items() if not completed
+        ]
 
         return Response(
             {
@@ -261,8 +287,11 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     def me(self, request):
         """Get current user's profile."""
         if not request.user.is_authenticated:
-            return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
-        
+            return Response(
+                {"detail": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         try:
             profile = UserProfile.objects.select_related("user").get(user=request.user)
         except UserProfile.DoesNotExist:
@@ -278,38 +307,44 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     description="Authenticate user and create session",
     tags=["Authentication"],
     request=AuthLoginSerializer,
-    responses={200: {"description": "Login successful"}, 401: {"description": "Invalid credentials"}}
+    responses={
+        200: {"description": "Login successful"},
+        401: {"description": "Invalid credentials"},
+    },
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([permissions.AllowAny])
 def login_view(request):
     """User login endpoint."""
     serializer = AuthLoginSerializer(data=request.data)
     if serializer.is_valid():
-        username = serializer.validated_data['username']
-        password = serializer.validated_data['password']
-        
+        username = serializer.validated_data["username"]
+        password = serializer.validated_data["password"]
+
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            
+
             # Get or create user profile
             try:
                 profile = UserProfile.objects.select_related("user").get(user=user)
             except UserProfile.DoesNotExist:
                 profile = UserProfile.objects.create(user=user)
-            
-            profile_serializer = UserProfileSerializer(profile, context={'request': request})
-            
-            return Response({
-                'message': 'Login successful',
-                'user': profile_serializer.data
-            }, status=status.HTTP_200_OK)
+
+            profile_serializer = UserProfileSerializer(
+                profile, context={"request": request}
+            )
+
+            return Response(
+                {"message": "Login successful", "user": profile_serializer.data},
+                status=status.HTTP_200_OK,
+            )
         else:
-            return Response({
-                'error': 'Invalid username or password'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-    
+            return Response(
+                {"error": "Invalid username or password"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -317,13 +352,13 @@ def login_view(request):
     summary="User Logout",
     description="Logout user and clear session",
     tags=["Authentication"],
-    responses={200: {"description": "Logout successful"}}
+    responses={200: {"description": "Logout successful"}},
 )
-@api_view(['POST'])
+@api_view(["POST"])
 def logout_view(request):
     """User logout endpoint."""
     logout(request)
-    return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
+    return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -331,9 +366,12 @@ def logout_view(request):
     description="Create new user account and profile",
     tags=["Authentication"],
     request=AuthSignupSerializer,
-    responses={201: {"description": "User created successfully"}, 400: {"description": "Invalid data"}}
+    responses={
+        201: {"description": "User created successfully"},
+        400: {"description": "Invalid data"},
+    },
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([permissions.AllowAny])
 def signup_view(request):
     """User signup endpoint."""
@@ -341,41 +379,44 @@ def signup_view(request):
     if serializer.is_valid():
         # Create user
         user_data = {
-            'username': serializer.validated_data['username'],
-            'email': serializer.validated_data['email'],
-            'first_name': serializer.validated_data.get('first_name', ''),
-            'last_name': serializer.validated_data.get('last_name', ''),
+            "username": serializer.validated_data["username"],
+            "email": serializer.validated_data["email"],
+            "first_name": serializer.validated_data.get("first_name", ""),
+            "last_name": serializer.validated_data.get("last_name", ""),
         }
-        
+
         user = User.objects.create_user(
-            password=serializer.validated_data['password'],
-            **user_data
+            password=serializer.validated_data["password"], **user_data
         )
-        
+
         # For dev environment, give admin access automatically
-        if request.META.get('HTTP_HOST', '').startswith('localhost') or 'development' in str(request.META.get('HTTP_HOST', '')):
+        if request.META.get("HTTP_HOST", "").startswith(
+            "localhost"
+        ) or "development" in str(request.META.get("HTTP_HOST", "")):
             user.is_staff = True
             user.is_superuser = True
             user.save()
-        
+
         # Create user profile
         profile_data = {
-            'phone': serializer.validated_data.get('phone', ''),
-            'department': serializer.validated_data.get('department', ''),
-            'job_title': serializer.validated_data.get('job_title', ''),
+            "phone": serializer.validated_data.get("phone", ""),
+            "department": serializer.validated_data.get("department", ""),
+            "job_title": serializer.validated_data.get("job_title", ""),
         }
         profile = UserProfile.objects.create(user=user, **profile_data)
-        
+
         # Auto-login the user
         login(request, user)
-        
-        profile_serializer = UserProfileSerializer(profile, context={'request': request})
-        
-        return Response({
-            'message': 'User created successfully',
-            'user': profile_serializer.data
-        }, status=status.HTTP_201_CREATED)
-    
+
+        profile_serializer = UserProfileSerializer(
+            profile, context={"request": request}
+        )
+
+        return Response(
+            {"message": "User created successfully", "user": profile_serializer.data},
+            status=status.HTTP_201_CREATED,
+        )
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -383,9 +424,9 @@ def signup_view(request):
     summary="Current User Status",
     description="Get current user authentication status",
     tags=["Authentication"],
-    responses={200: {"description": "User status"}}
+    responses={200: {"description": "User status"}},
 )
-@api_view(['GET'])
+@api_view(["GET"])
 def auth_status_view(request):
     """Get current user authentication status."""
     if request.user.is_authenticated:
@@ -393,14 +434,10 @@ def auth_status_view(request):
             profile = UserProfile.objects.select_related("user").get(user=request.user)
         except UserProfile.DoesNotExist:
             profile = UserProfile.objects.create(user=request.user)
-        
-        profile_serializer = UserProfileSerializer(profile, context={'request': request})
-        return Response({
-            'authenticated': True,
-            'user': profile_serializer.data
-        })
+
+        profile_serializer = UserProfileSerializer(
+            profile, context={"request": request}
+        )
+        return Response({"authenticated": True, "user": profile_serializer.data})
     else:
-        return Response({
-            'authenticated': False,
-            'user': None
-        })
+        return Response({"authenticated": False, "user": None})

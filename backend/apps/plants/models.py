@@ -174,9 +174,7 @@ class Plant(OwnedModel, StatusModel):
         if not self.storage:
             return []
         return [
-            storage.strip()
-            for storage in self.storage.split(",")
-            if storage.strip()
+            storage.strip() for storage in self.storage.split(",") if storage.strip()
         ]
 
     @classmethod

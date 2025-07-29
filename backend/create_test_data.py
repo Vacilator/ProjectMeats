@@ -26,11 +26,8 @@ from apps.contacts.models import ContactInfo
 from apps.customers.models import Customer
 from apps.plants.models import Plant
 from apps.purchase_orders.models import PurchaseOrder
-from apps.suppliers.models import (
-    Supplier,
-    SupplierLocation,
-    SupplierPlantMapping,
-)
+from apps.suppliers.models import (Supplier, SupplierLocation,
+                                   SupplierPlantMapping)
 
 
 def create_users():
@@ -503,9 +500,7 @@ def create_purchase_orders(users, suppliers, customers):
     return PurchaseOrder.objects.all()
 
 
-def create_supplier_plant_mappings(
-    users, suppliers, plants, customers, contacts
-):
+def create_supplier_plant_mappings(users, suppliers, plants, customers, contacts):
     """Create comprehensive test data for SupplierPlantMappings."""
     print("\nCreating SupplierPlantMapping test data...")
 
@@ -562,9 +557,7 @@ def main():
     contacts = create_contact_info(users, suppliers, customers)
     create_carrier_info(users, suppliers)
     create_purchase_orders(users, suppliers, customers)
-    create_supplier_plant_mappings(
-        users, suppliers, plants, customers, contacts
-    )
+    create_supplier_plant_mappings(users, suppliers, plants, customers, contacts)
 
     print("\n" + "=" * 60)
     print("✅ Test data creation completed successfully!")

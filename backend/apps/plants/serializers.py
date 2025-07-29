@@ -17,9 +17,7 @@ class PlantListSerializer(serializers.ModelSerializer):
 
     has_location = serializers.BooleanField(read_only=True)
     has_supplier = serializers.BooleanField(read_only=True)
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
 
     class Meta:
         model = Plant
@@ -63,14 +61,10 @@ class PlantDetailSerializer(serializers.ModelSerializer):
     modified_by_username = serializers.CharField(
         source="modified_by.username", read_only=True
     )
-    owner_username = serializers.CharField(
-        source="owner.username", read_only=True
-    )
+    owner_username = serializers.CharField(source="owner.username", read_only=True)
 
     # Related object display names
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
 
     # Multi-select fields as lists
     load_pickup_requirements_list = serializers.ListField(read_only=True)
@@ -125,9 +119,7 @@ class PlantDetailSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         """Ensure name is provided and not empty (PowerApps required field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
 
@@ -153,9 +145,7 @@ class PlantCreateSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         """Name is required (PowerApps primary field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
     def create(self, validated_data):
