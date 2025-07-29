@@ -37,10 +37,12 @@ help:
 	@echo "  make docs      - Generate API documentation"
 	@echo "  make clean     - Clean build artifacts"
 	@echo ""
-	@echo "Agent Activity Logging:"
-	@echo "  make agent-log - View recent agent activity log entries"
-	@echo "  make agent-log-edit - Edit agent activity log"
-	@echo "  make agent-status   - View agent activity summary"
+	@echo "Agent Orchestration System:"
+	@echo "  make agent-help        - Show all agent orchestration commands"
+	@echo "  make agent-tasks       - List available tasks for assignment"
+	@echo "  make agent-status      - View agent activity and task status"
+	@echo "  make agent-assign      - Assign task to agent (requires TASK and AGENT)"
+	@echo "  make agent-update      - Update task progress (requires TASK, AGENT, STATUS)"
 
 # Setup commands
 setup: check-os setup-backend setup-frontend
@@ -149,13 +151,98 @@ agent-log-edit:
 agent-status:
 	@echo "📊 Agent Activity Summary:"
 	@echo ""
-	@grep -c "## \[" docs/agent_activity_log.md 2>/dev/null | sed 's/^/Total log entries: /' || echo "Total log entries: 0"
-	@echo ""
-	@echo "Recent agent activities:"
-	@grep "## \[" docs/agent_activity_log.md 2>/dev/null | head -5 || echo "No activities logged yet"
+	@python agent_orchestrator.py agent-status
 	@echo ""
 	@echo "To view full log: make agent-log"
 	@echo "To add entry: make agent-log-edit"
+
+# Agent orchestration commands
+agent-tasks:
+	@echo "📋 Available Agent Tasks:"
+	@python agent_orchestrator.py list-tasks
+
+agent-tasks-priority:
+	@echo "🎯 High Priority Tasks:"
+	@python agent_orchestrator.py list-tasks --priority P0
+	@python agent_orchestrator.py list-tasks --priority P1
+
+agent-assign:
+	@echo "🎯 Assign Task to Agent"
+	@echo "Usage: make agent-assign TASK=TASK-001 AGENT=agent_name"
+	@if [ "$(TASK)" = "" ] || [ "$(AGENT)" = "" ]; then \
+		echo "❌ Both TASK and AGENT must be specified"; \
+		echo "Example: make agent-assign TASK=TASK-001 AGENT=john_doe"; \
+	else \
+		python agent_orchestrator.py assign-task $(TASK) $(AGENT); \
+	fi
+
+agent-update:
+	@echo "📝 Update Task Status"
+	@echo "Usage: make agent-update TASK=TASK-001 AGENT=agent_name STATUS=in_progress NOTES='Progress description'"
+	@if [ "$(TASK)" = "" ] || [ "$(AGENT)" = "" ] || [ "$(STATUS)" = "" ]; then \
+		echo "❌ TASK, AGENT, and STATUS must be specified"; \
+		echo "Example: make agent-update TASK=TASK-001 AGENT=john_doe STATUS=completed NOTES='Fixed the issue'"; \
+	else \
+		python agent_orchestrator.py update-task $(TASK) $(AGENT) $(STATUS) --notes "$(NOTES)"; \
+	fi
+
+agent-conflicts:
+	@echo "⚠️ Check Task Conflicts"
+	@echo "Usage: make agent-conflicts TASK=TASK-001 AGENT=agent_name"
+	@if [ "$(TASK)" = "" ] || [ "$(AGENT)" = "" ]; then \
+		echo "❌ Both TASK and AGENT must be specified"; \
+		echo "Example: make agent-conflicts TASK=TASK-001 AGENT=john_doe"; \
+	else \
+		python agent_orchestrator.py check-conflicts $(TASK) $(AGENT); \
+	fi
+
+agent-project-status:
+	@echo "📊 ProjectMeats Overall Status:"
+	@python agent_orchestrator.py project-status
+
+agent-progress-report:
+	@echo "📈 Generating Progress Report..."
+	@python agent_orchestrator.py progress-report
+
+agent-dashboard:
+	@echo "📊 Generating Visual Progress Dashboard..."
+	@python agent_dashboard.py
+	@echo "✅ Dashboard saved to AGENT_PROGRESS_DASHBOARD.md"
+	@echo "🔗 View at: file://$(PWD)/AGENT_PROGRESS_DASHBOARD.md"
+
+agent-dashboard-json:
+	@echo "📈 Generating Dashboard with JSON Metrics..."
+	@python agent_dashboard.py --json
+	@echo "✅ Dashboard and metrics generated"
+
+agent-help:
+	@echo "🤖 Agent Orchestration Commands:"
+	@echo ""
+	@echo "📋 Task Management:"
+	@echo "  make agent-tasks              - List all available tasks"
+	@echo "  make agent-tasks-priority     - Show high priority tasks only"
+	@echo "  make agent-assign TASK=... AGENT=... - Assign task to agent"
+	@echo "  make agent-update TASK=... AGENT=... STATUS=... NOTES=... - Update task status"
+	@echo "  make agent-conflicts TASK=... AGENT=... - Check for conflicts"
+	@echo ""
+	@echo "📊 Status & Reporting:"
+	@echo "  make agent-status             - Agent activity summary"
+	@echo "  make agent-project-status     - Overall project status"
+	@echo "  make agent-progress-report    - Detailed progress report"
+	@echo "  make agent-dashboard          - Generate visual progress dashboard"
+	@echo "  make agent-dashboard-json     - Generate dashboard with JSON metrics"
+	@echo ""
+	@echo "📝 Documentation:"
+	@echo "  make agent-log                - View recent activity log"
+	@echo "  make agent-log-edit           - Edit activity log"
+	@echo ""
+	@echo "Valid task statuses: available, in_progress, blocked, completed, cancelled"
+	@echo "Valid priorities: P0 (critical), P1 (high), P2 (medium), P3 (low)"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make agent-assign TASK=TASK-001 AGENT=john_doe"
+	@echo "  make agent-update TASK=TASK-001 AGENT=john_doe STATUS=completed NOTES='Fixed the bug'"
+	@echo "  make agent-conflicts TASK=TASK-006 AGENT=jane_smith"
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
