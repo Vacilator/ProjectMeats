@@ -414,21 +414,23 @@ const AppContent: React.FC = () => {
         
 
         {isAuthenticated && (
-          <Footer>
-            <FooterContent>
-              <FooterText>
-                ProjectMeats © 2024 | Professional Meat Sales Management Platform
-              </FooterText>
-              <FooterLinks>
-                <FooterLink href="#support">Support</FooterLink>
-                <FooterLink href="#documentation">Documentation</FooterLink>
-                <FooterLink href="#api">API</FooterLink>
-              </FooterLinks>
-            </FooterContent>
-          </Footer>
-                    
-        {/* Floating Bug Report Button */}
-        <BugReportButton position="bottom-right" size="medium" />
+          <>
+            <Footer>
+              <FooterContent>
+                <FooterText>
+                  ProjectMeats © 2024 | Professional Meat Sales Management Platform
+                </FooterText>
+                <FooterLinks>
+                  <FooterLink href="#support">Support</FooterLink>
+                  <FooterLink href="#documentation">Documentation</FooterLink>
+                  <FooterLink href="#api">API</FooterLink>
+                </FooterLinks>
+              </FooterContent>
+            </Footer>
+                      
+            {/* Floating Bug Report Button */}
+            <BugReportButton position="bottom-right" size="medium" />
+          </>
         )}
 
       </AppContainer>
