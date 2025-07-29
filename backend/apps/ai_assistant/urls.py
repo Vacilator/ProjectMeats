@@ -24,8 +24,6 @@ router.register(r'ai-configurations', AIConfigurationViewSet, basename='ai-confi
 router.register(r'ai-tasks', ProcessingTaskViewSet, basename='ai-task')
 router.register(r'ai-chat', ChatBotAPIViewSet, basename='ai-chatbot')
 
-app_name = 'ai_assistant'
-
 urlpatterns = [
     path('', include(router.urls)),
 ]

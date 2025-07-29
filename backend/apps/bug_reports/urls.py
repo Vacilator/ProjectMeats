@@ -7,7 +7,9 @@ from .views import BugReportViewSet
 
 # Create router and register viewsets
 router = DefaultRouter()
+
 router.register(r"bug-reports", BugReportViewSet, basename="bug-reports")
+
 
 urlpatterns = [
     path("", include(router.urls)),
