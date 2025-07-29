@@ -39,6 +39,7 @@ help:
 	@echo ""
 	@echo "Agent Orchestration System:"
 	@echo "  make agent-help        - Show all agent orchestration commands"
+	@echo "  make agent-quickstart  - 🚀 5-minute guide to get started"
 	@echo "  make agent-tasks       - List available tasks for assignment"
 	@echo "  make agent-status      - View agent activity and task status"
 	@echo "  make agent-assign      - Assign task to agent (requires TASK and AGENT)"
@@ -218,6 +219,11 @@ agent-dashboard-json:
 agent-help:
 	@echo "🤖 Agent Orchestration Commands:"
 	@echo ""
+	@echo "🚀 GETTING STARTED:"
+	@echo "  make agent-quickstart         - 📖 5-minute quick start guide"
+	@echo "  make agent-docs              - 📚 Open all documentation"
+	@echo "  make agent-validate          - 🧪 Test system functionality"
+	@echo ""
 	@echo "📋 Task Management:"
 	@echo "  make agent-tasks              - List all available tasks"
 	@echo "  make agent-tasks-priority     - Show high priority tasks only"
@@ -239,10 +245,47 @@ agent-help:
 	@echo "Valid task statuses: available, in_progress, blocked, completed, cancelled"
 	@echo "Valid priorities: P0 (critical), P1 (high), P2 (medium), P3 (low)"
 	@echo ""
-	@echo "Examples:"
+	@echo "📖 Quick Examples:"
 	@echo "  make agent-assign TASK=TASK-001 AGENT=john_doe"
 	@echo "  make agent-update TASK=TASK-001 AGENT=john_doe STATUS=completed NOTES='Fixed the bug'"
 	@echo "  make agent-conflicts TASK=TASK-006 AGENT=jane_smith"
+	@echo ""
+	@echo "🆘 Need Help? Check the documentation:"
+	@echo "  docs/agent_quick_start_guide.md    - 🚀 5-minute setup"
+	@echo "  docs/agent_workflow_guide.md       - 📋 Complete workflows"
+	@echo "  docs/agent_examples_guide.md       - 🎯 Real examples"
+	@echo "  docs/agent_troubleshooting_faq.md  - 🔧 Troubleshooting"
+
+agent-quickstart:
+	@echo "🚀 Agent Orchestration Quick Start"
+	@echo ""
+	@echo "📖 Reading the Quick Start Guide..."
+	@echo ""
+	@cat docs/agent_quick_start_guide.md | head -50
+	@echo ""
+	@echo "📋 Current High Priority Tasks:"
+	@python agent_orchestrator.py list-tasks --priority P0
+	@echo ""
+	@echo "📚 Full guide: docs/agent_quick_start_guide.md"
+	@echo "🆘 Need help? Use: make agent-help"
+
+agent-docs:
+	@echo "📚 Agent Orchestration Documentation:"
+	@echo ""
+	@echo "📖 Available guides:"
+	@echo "  🚀 Quick Start (5 min): docs/agent_quick_start_guide.md"
+	@echo "  📋 Complete Workflows: docs/agent_workflow_guide.md"
+	@echo "  🎯 Real Examples: docs/agent_examples_guide.md"
+	@echo "  🔧 Troubleshooting: docs/agent_troubleshooting_faq.md"
+	@echo "  🔗 Integration Guide: docs/agent_integration_guide.md"
+	@echo "  📊 System Overview: AGENT_ORCHESTRATION_README.md"
+	@echo "  👨‍💻 Developer Guide: AGENT_ORCHESTRATION_DEVELOPER_GUIDE.md"
+	@echo ""
+	@echo "💡 Start with the Quick Start guide for fastest onboarding!"
+
+agent-validate:
+	@echo "🧪 Validating Agent Orchestration System..."
+	@python validate_agent_system.py
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
