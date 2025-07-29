@@ -6,6 +6,8 @@ A comprehensive business management application for meat sales brokers, migrated
 
 **🚀 New to ProjectMeats?** Start with the **[Setup Overview](SETUP_OVERVIEW.md)** for a comprehensive setup guide and links to all documentation.
 
+**🤖 New to Agent Orchestration?** Check out the **[Agent Developer Guide](AGENT_ORCHESTRATION_DEVELOPER_GUIDE.md)** for the simplified workflow system that enables conflict-free parallel development.
+
 ## ⚠️ Python 3.13+ Setup Issue
 
 **Windows users with Python 3.13+**: If setup fails with PostgreSQL adapter errors, see **[Python 3.13+ Setup Guide](PYTHON_3_13_SETUP.md)** for solutions.
