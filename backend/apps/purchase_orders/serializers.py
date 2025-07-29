@@ -22,14 +22,14 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
     has_documents = serializers.BooleanField(read_only=True)
 
     # Related object display names for list view
-    customer_name = serializers.CharField(
-        source="customer.name", read_only=True
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
+    origin_location_name = serializers.CharField(
+        source="origin_location.name", read_only=True
     )
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
+    end_location_name = serializers.CharField(
+        source="end_location.name", read_only=True
     )
-    origin_location_name = serializers.CharField(source="origin_location.name", read_only=True)
-    end_location_name = serializers.CharField(source="end_location.name", read_only=True)
 
     class Meta:
         model = PurchaseOrder
@@ -92,19 +92,17 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     modified_by_username = serializers.CharField(
         source="modified_by.username", read_only=True
     )
-    owner_username = serializers.CharField(
-        source="owner.username", read_only=True
-    )
+    owner_username = serializers.CharField(source="owner.username", read_only=True)
 
     # Related object display names
-    customer_name = serializers.CharField(
-        source="customer.name", read_only=True
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
+    origin_location_name = serializers.CharField(
+        source="origin_location.name", read_only=True
     )
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
+    end_location_name = serializers.CharField(
+        source="end_location.name", read_only=True
     )
-    origin_location_name = serializers.CharField(source="origin_location.name", read_only=True)
-    end_location_name = serializers.CharField(source="end_location.name", read_only=True)
 
     class Meta:
         model = PurchaseOrder

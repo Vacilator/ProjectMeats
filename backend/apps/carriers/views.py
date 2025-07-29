@@ -12,11 +12,9 @@ from rest_framework.response import Response
 from apps.core.views import PowerAppsModelViewSet
 
 from .models import CarrierInfo
-from .serializers import (
-    CarrierInfoCreateSerializer,
-    CarrierInfoDetailSerializer,
-    CarrierInfoListSerializer,
-)
+from .serializers import (CarrierInfoCreateSerializer,
+                          CarrierInfoDetailSerializer,
+                          CarrierInfoListSerializer)
 
 
 @extend_schema_view(

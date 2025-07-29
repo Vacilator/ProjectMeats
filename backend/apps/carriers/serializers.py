@@ -6,11 +6,8 @@ Migrated from PowerApps cr7c4_carrierinfo entity.
 """
 from rest_framework import serializers
 
-from apps.core.serializers import (
-    BaseCreateSerializer,
-    BaseDetailSerializer,
-    BaseListSerializer,
-)
+from apps.core.serializers import (BaseCreateSerializer, BaseDetailSerializer,
+                                   BaseListSerializer)
 
 from .models import CarrierInfo
 
@@ -26,9 +23,7 @@ class CarrierInfoListSerializer(BaseListSerializer):
     has_supplier = serializers.BooleanField(read_only=True)
 
     # Related object display names for list view
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
 
     class Meta:
         model = CarrierInfo
@@ -65,9 +60,7 @@ class CarrierInfoDetailSerializer(BaseDetailSerializer):
     has_supplier = serializers.BooleanField(read_only=True)
 
     # Related object display names
-    supplier_name = serializers.CharField(
-        source="supplier.name", read_only=True
-    )
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
 
     class Meta:
         model = CarrierInfo

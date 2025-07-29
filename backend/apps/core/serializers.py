@@ -4,8 +4,9 @@ Core serializers for ProjectMeats.
 Base serializer classes that provide common functionality for all entities
 migrated from PowerApps/Dataverse.
 """
-from rest_framework import serializers
 from django.contrib.auth.models import User
+from rest_framework import serializers
+
 from .models import UserProfile
 
 
@@ -53,9 +54,7 @@ class BaseDetailSerializer(serializers.ModelSerializer):
     modified_by_username = serializers.CharField(
         source="modified_by.username", read_only=True
     )
-    owner_username = serializers.CharField(
-        source="owner.username", read_only=True
-    )
+    owner_username = serializers.CharField(source="owner.username", read_only=True)
 
     class Meta:
         abstract = True
@@ -242,12 +241,14 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
 
 class AuthLoginSerializer(serializers.Serializer):
     """Serializer for user login."""
+
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(max_length=128, write_only=True)
 
 
 class AuthSignupSerializer(serializers.Serializer):
     """Serializer for user signup."""
+
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField()
     password = serializers.CharField(max_length=128, write_only=True)

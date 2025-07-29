@@ -91,9 +91,7 @@ class ContactInfoAPITest(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data["powerapps_entity_name"], "pro_contactinfo"
-        )
+        self.assertEqual(response.data["powerapps_entity_name"], "pro_contactinfo")
         self.assertEqual(response.data["django_model_name"], "ContactInfo")
         self.assertEqual(response.data["total_records"], 1)
         self.assertEqual(response.data["active_records"], 1)

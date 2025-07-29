@@ -6,11 +6,8 @@ Migrated from PowerApps cr7c4_accountsreceivables entity.
 """
 from rest_framework import serializers
 
-from apps.core.serializers import (
-    BaseCreateSerializer,
-    BaseDetailSerializer,
-    BaseListSerializer,
-)
+from apps.core.serializers import (BaseCreateSerializer, BaseDetailSerializer,
+                                   BaseListSerializer)
 
 from .models import AccountsReceivable
 
@@ -71,9 +68,7 @@ class AccountsReceivableDetailSerializer(BaseDetailSerializer):
     def validate_name(self, value):
         """Ensure name is provided and not empty (PowerApps required field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
     def validate_email(self, value):
@@ -114,9 +109,7 @@ class AccountsReceivableCreateSerializer(BaseCreateSerializer):
     def validate_name(self, value):
         """Name is required (PowerApps primary field)."""
         if not value or not value.strip():
-            raise serializers.ValidationError(
-                "Name is required and cannot be empty."
-            )
+            raise serializers.ValidationError("Name is required and cannot be empty.")
         return value.strip()
 
     def create(self, validated_data):

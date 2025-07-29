@@ -19,11 +19,8 @@ from rest_framework.response import Response
 from apps.core.views import PowerAppsModelViewSet
 
 from .models import Customer
-from .serializers import (
-    CustomerCreateSerializer,
-    CustomerDetailSerializer,
-    CustomerListSerializer,
-)
+from .serializers import (CustomerCreateSerializer, CustomerDetailSerializer,
+                          CustomerListSerializer)
 
 
 @extend_schema_view(
@@ -75,7 +72,7 @@ class CustomerViewSet(PowerAppsModelViewSet):
     """
 
     queryset = Customer.objects.select_related(
-        'created_by', 'modified_by', 'owner'
+        "created_by", "modified_by", "owner"
     ).all()
     filterset_fields = ["status"]
     search_fields = ["name"]

@@ -62,9 +62,7 @@ def custom_exception_handler(exc, context):
                 "message"
             ] = "You do not have permission to perform this action."
         elif response.status_code == status.HTTP_404_NOT_FOUND:
-            custom_response_data[
-                "message"
-            ] = "The requested resource was not found."
+            custom_response_data["message"] = "The requested resource was not found."
         elif response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED:
             custom_response_data[
                 "message"

@@ -19,17 +19,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Supplier, SupplierLocation, SupplierPlantMapping
-from .serializers import (
-    SupplierCreateSerializer,
-    SupplierDetailSerializer,
-    SupplierListSerializer,
-    SupplierLocationCreateSerializer,
-    SupplierLocationDetailSerializer,
-    SupplierLocationListSerializer,
-    SupplierPlantMappingCreateSerializer,
-    SupplierPlantMappingDetailSerializer,
-    SupplierPlantMappingListSerializer,
-)
+from .serializers import (SupplierCreateSerializer, SupplierDetailSerializer,
+                          SupplierListSerializer,
+                          SupplierLocationCreateSerializer,
+                          SupplierLocationDetailSerializer,
+                          SupplierLocationListSerializer,
+                          SupplierPlantMappingCreateSerializer,
+                          SupplierPlantMappingDetailSerializer,
+                          SupplierPlantMappingListSerializer)
 
 
 @extend_schema_view(
@@ -81,7 +78,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     """
 
     queryset = Supplier.objects.select_related(
-        'accounts_receivable', 'created_by', 'modified_by', 'owner'
+        "accounts_receivable", "created_by", "modified_by", "owner"
     ).all()
     filter_backends = [
         DjangoFilterBackend,
@@ -314,9 +311,7 @@ class SupplierPlantMappingViewSet(viewsets.ModelViewSet):
         else:
             owner_user = self._get_or_create_system_user()
 
-        serializer.save(
-            created_by=owner_user, modified_by=owner_user, owner=owner_user
-        )
+        serializer.save(created_by=owner_user, modified_by=owner_user, owner=owner_user)
 
     def perform_update(self, serializer):
         """Update modified_by when updating records."""

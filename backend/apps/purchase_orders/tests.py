@@ -8,10 +8,10 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -83,9 +83,7 @@ class PurchaseOrderAPITest(APITestCase):
             "quantity": 5,
             "price_per_unit": "15.50",
             "purchase_date": timezone.now().isoformat(),
-            "fulfillment_date": (
-                timezone.now() + timedelta(days=14)
-            ).isoformat(),
+            "fulfillment_date": (timezone.now() + timedelta(days=14)).isoformat(),
             "customer": self.customer.id,
             "supplier": self.supplier.id,
             "status": "active",
@@ -103,10 +101,14 @@ class PurchaseOrderAPITest(APITestCase):
 
         # Create test files
         customer_file = SimpleUploadedFile(
-            "customer_doc.pdf", b"fake customer document content", content_type="application/pdf"
+            "customer_doc.pdf",
+            b"fake customer document content",
+            content_type="application/pdf",
         )
         supplier_file = SimpleUploadedFile(
-            "supplier_doc.pdf", b"fake supplier document content", content_type="application/pdf"
+            "supplier_doc.pdf",
+            b"fake supplier document content",
+            content_type="application/pdf",
         )
 
         data = {
@@ -140,9 +142,7 @@ class PurchaseOrderAPITest(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data["powerapps_entity_name"], "pro_purchaseorder"
-        )
+        self.assertEqual(response.data["powerapps_entity_name"], "pro_purchaseorder")
         self.assertEqual(response.data["django_model_name"], "PurchaseOrder")
         self.assertEqual(response.data["total_records"], 1)
         self.assertIn("field_mappings", response.data)

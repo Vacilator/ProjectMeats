@@ -68,7 +68,9 @@ class Supplier(OwnedModel, StatusModel):
             models.Index(fields=["delivery_type_profile"]),
             models.Index(fields=["accounts_receivable"]),
             models.Index(fields=["credit_application_date"]),
-            models.Index(fields=["status", "name"]),  # Composite index for filtered lists
+            models.Index(
+                fields=["status", "name"]
+            ),  # Composite index for filtered lists
         ]
 
     def __str__(self):
@@ -80,9 +82,7 @@ class Supplier(OwnedModel, StatusModel):
         from django.core.exceptions import ValidationError
 
         if not self.name or not self.name.strip():
-            raise ValidationError(
-                {"name": "Name is required and cannot be empty."}
-            )
+            raise ValidationError({"name": "Name is required and cannot be empty."})
 
     @property
     def has_credit_application(self):
@@ -188,9 +188,7 @@ class SupplierPlantMapping(OwnedModel, StatusModel):
         from django.core.exceptions import ValidationError
 
         if not self.name or not self.name.strip():
-            raise ValidationError(
-                {"name": "Name is required and cannot be empty."}
-            )
+            raise ValidationError({"name": "Name is required and cannot be empty."})
 
     @property
     def has_contact_info(self):
@@ -343,11 +341,7 @@ class SupplierLocation(OwnedModel, StatusModel):
 
     def __str__(self):
         """String representation showing supplier and location name."""
-        return (
-            f"{self.supplier.name} - {self.name}"
-            if self.supplier
-            else self.name
-        )
+        return f"{self.supplier.name} - {self.name}" if self.supplier else self.name
 
     def clean(self):
         """Model validation - ensure name is provided."""
@@ -366,9 +360,7 @@ class SupplierLocation(OwnedModel, StatusModel):
     @property
     def has_contact_info(self):
         """Helper property to check if contact information is available."""
-        return bool(
-            self.contact_name or self.contact_phone or self.contact_email
-        )
+        return bool(self.contact_name or self.contact_phone or self.contact_email)
 
     @property
     def full_address(self):

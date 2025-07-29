@@ -74,18 +74,14 @@ class AccountsReceivableAdmin(admin.ModelAdmin):
         updated = queryset.update(status="active")
         self.message_user(request, f"{updated} records marked as active.")
 
-    mark_active.short_description = (
-        "Mark selected accounts receivable as active"
-    )
+    mark_active.short_description = "Mark selected accounts receivable as active"
 
     def mark_inactive(self, request, queryset):
         """Bulk action to mark records as inactive (soft delete)."""
         updated = queryset.update(status="inactive")
         self.message_user(request, f"{updated} records marked as inactive.")
 
-    mark_inactive.short_description = (
-        "Mark selected accounts receivable as inactive"
-    )
+    mark_inactive.short_description = "Mark selected accounts receivable as inactive"
 
     def has_contact_info(self, obj):
         """Display whether the record has contact information."""

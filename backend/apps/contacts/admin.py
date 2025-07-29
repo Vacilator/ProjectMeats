@@ -102,9 +102,7 @@ class ContactInfoAdmin(admin.ModelAdmin):
     def mark_active(self, request, queryset):
         """Bulk action to mark records as active."""
         updated = queryset.update(status="active")
-        self.message_user(
-            request, f"{updated} contact info records marked as active."
-        )
+        self.message_user(request, f"{updated} contact info records marked as active.")
 
     mark_active.short_description = "Mark selected contact info as active"
 

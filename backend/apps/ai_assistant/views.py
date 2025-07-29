@@ -272,6 +272,25 @@ class UploadedDocumentViewSet(viewsets.ModelViewSet):
         # Start document processing
         self._start_document_processing(document)
     
+    def create(self, request, *args, **kwargs):
+        """Create document and return full serialized data."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        document = serializer.save(
+            owner=request.user,
+            created_by=request.user,
+            modified_by=request.user
+        )
+        
+        # Start document processing
+        self._start_document_processing(document)
+        
+        # Return full document data
+        full_serializer = UploadedDocumentSerializer(document, context={'request': request})
+        headers = self.get_success_headers(full_serializer.data)
+        return Response(full_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
     def _start_document_processing(self, document: UploadedDocument):
         """Start background processing for uploaded document."""
         try:

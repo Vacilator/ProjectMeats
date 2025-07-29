@@ -19,11 +19,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Plant
-from .serializers import (
-    PlantCreateSerializer,
-    PlantDetailSerializer,
-    PlantListSerializer,
-)
+from .serializers import (PlantCreateSerializer, PlantDetailSerializer,
+                          PlantListSerializer)
 
 
 @extend_schema_view(
@@ -116,9 +113,7 @@ class PlantViewSet(viewsets.ModelViewSet):
 
         # Filter by records with location
         if self.request.query_params.get("has_location") == "true":
-            queryset = queryset.exclude(location__isnull=True).exclude(
-                location=""
-            )
+            queryset = queryset.exclude(location__isnull=True).exclude(location="")
 
         # Filter by records with supplier
         if self.request.query_params.get("has_supplier") == "true":

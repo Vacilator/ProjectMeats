@@ -18,7 +18,7 @@ SECRET_KEY = config(
     "SECRET_KEY", default="django-insecure-dev-key-change-in-production"
 )
 DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,testserver").split(
     ","
 )
 
@@ -49,7 +49,7 @@ LOCAL_APPS = [
     "apps.plants",
     "apps.carriers",
     "apps.bug_reports",
-    "apps.ai_assistant"
+    "apps.ai_assistant",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -89,9 +89,7 @@ WSGI_APPLICATION = "projectmeats.wsgi.application"
 # Supports both SQLite (dev) and PostgreSQL (production) via DATABASE_URL
 DATABASES = {
     "default": dj_database_url.config(
-        default=config(
-            "DATABASE_URL", default=f"sqlite:///{BASE_DIR}/db.sqlite3"
-        )
+        default=config("DATABASE_URL", default=f"sqlite:///{BASE_DIR}/db.sqlite3")
     )
 }
 
@@ -145,7 +143,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ],
-    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
     "DEFAULT_VERSION": "v1",
     "ALLOWED_VERSIONS": ["v1"],
 }

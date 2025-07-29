@@ -8,9 +8,7 @@ from .views import PurchaseOrderViewSet
 
 # Create router and register viewsets
 router = DefaultRouter()
-router.register(
-    r"purchase-orders", PurchaseOrderViewSet, basename="purchaseorder"
-)
+router.register(r"purchase-orders", PurchaseOrderViewSet, basename="purchaseorder")
 
 urlpatterns = [
     path("", include(router.urls)),

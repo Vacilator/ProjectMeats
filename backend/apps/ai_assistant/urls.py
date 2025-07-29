@@ -17,12 +17,12 @@ from .views import (
 
 # Create router for ViewSets
 router = DefaultRouter()
-router.register(r'sessions', ChatSessionViewSet)
-router.register(r'messages', ChatMessageViewSet)
-router.register(r'documents', UploadedDocumentViewSet)
-router.register(r'configurations', AIConfigurationViewSet)
-router.register(r'tasks', ProcessingTaskViewSet)
-router.register(r'chat', ChatBotAPIViewSet, basename='chatbot')
+router.register(r'ai-sessions', ChatSessionViewSet, basename='ai-session')
+router.register(r'ai-messages', ChatMessageViewSet, basename='ai-message')
+router.register(r'ai-documents', UploadedDocumentViewSet, basename='ai-document')
+router.register(r'ai-configurations', AIConfigurationViewSet, basename='ai-configuration')
+router.register(r'ai-tasks', ProcessingTaskViewSet, basename='ai-task')
+router.register(r'ai-chat', ChatBotAPIViewSet, basename='ai-chatbot')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -119,7 +119,7 @@ class ChatMessageModelTest(TestCase):
             modified_by=self.user
         )
         
-        expected = "User Message: This is a test message that is quite long and sho..."
+        expected = "User Message: This is a test message that is quite long and shou..."
         self.assertEqual(str(message), expected)
 
 
@@ -262,15 +262,15 @@ class ChatSessionAPITest(APITestCase):
     
     def test_list_chat_sessions_unauthenticated(self):
         """Test listing chat sessions without authentication."""
-        url = reverse('ai_assistant:chatsession-list')
+        url = reverse('ai_assistant:ai-session-list')
         response = self.client.get(url)
         
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
     
     def test_list_chat_sessions_authenticated(self):
         """Test listing chat sessions with authentication."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('ai_assistant:chatsession-list')
+        url = reverse('ai_assistant:ai-session-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -280,7 +280,7 @@ class ChatSessionAPITest(APITestCase):
     def test_create_chat_session(self):
         """Test creating a new chat session."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('ai_assistant:chatsession-list')
+        url = reverse('ai_assistant:ai-session-list')
         
         data = {
             'title': 'New Test Session',
@@ -296,7 +296,7 @@ class ChatSessionAPITest(APITestCase):
     def test_start_session_with_message(self):
         """Test starting a new session with initial message."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('ai_assistant:chatsession-start-session')
+        url = reverse('ai_assistant:ai-session-start-session')
         
         data = {
             'message': 'Hello, I need help with purchase orders',
@@ -328,7 +328,7 @@ class ChatBotAPITest(APITestCase):
     def test_chat_api_new_conversation(self):
         """Test chat API with new conversation."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('ai_assistant:chatbot-chat')
+        url = reverse('ai_assistant:ai-chatbot-chat')
         
         data = {
             'message': 'Hello, how can you help me with meat market operations?'
@@ -357,7 +357,7 @@ class ChatBotAPITest(APITestCase):
             modified_by=self.user
         )
         
-        url = reverse('ai_assistant:chatbot-chat')
+        url = reverse('ai_assistant:ai-chatbot-chat')
         
         data = {
             'message': 'Can you help me process a purchase order?',
@@ -372,7 +372,7 @@ class ChatBotAPITest(APITestCase):
     def test_chat_api_invalid_session(self):
         """Test chat API with invalid session ID."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('ai_assistant:chatbot-chat')
+        url = reverse('ai_assistant:ai-chatbot-chat')
         
         data = {
             'message': 'Hello',
@@ -386,7 +386,7 @@ class ChatBotAPITest(APITestCase):
     def test_chat_api_empty_message(self):
         """Test chat API with empty message."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('ai_assistant:chatbot-chat')
+        url = reverse('ai_assistant:ai-chatbot-chat')
         
         data = {
             'message': ''
@@ -411,7 +411,7 @@ class DocumentUploadAPITest(APITestCase):
     def test_upload_document(self):
         """Test uploading a document."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('ai_assistant:uploadeddocument-list')
+        url = reverse('ai_assistant:ai-document-list')
         
         # Create test file
         test_file = SimpleUploadedFile(
@@ -452,7 +452,7 @@ class DocumentUploadAPITest(APITestCase):
             modified_by=self.user
         )
         
-        url = reverse('ai_assistant:uploadeddocument-list')
+        url = reverse('ai_assistant:ai-document-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)

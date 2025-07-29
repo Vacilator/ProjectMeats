@@ -19,11 +19,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import AccountsReceivable
-from .serializers import (
-    AccountsReceivableCreateSerializer,
-    AccountsReceivableDetailSerializer,
-    AccountsReceivableListSerializer,
-)
+from .serializers import (AccountsReceivableCreateSerializer,
+                          AccountsReceivableDetailSerializer,
+                          AccountsReceivableListSerializer)
 
 
 @extend_schema_view(
@@ -75,7 +73,7 @@ class AccountsReceivableViewSet(viewsets.ModelViewSet):
     """
 
     queryset = AccountsReceivable.objects.select_related(
-        'created_by', 'modified_by', 'owner'
+        "created_by", "modified_by", "owner"
     ).all()
     filter_backends = [
         DjangoFilterBackend,

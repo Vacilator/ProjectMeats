@@ -404,6 +404,129 @@ class AIConfiguration(models.Model):
         super().save(*args, **kwargs)
 
 
+class UsageAnalytics(models.Model):
+    """
+    Track AI assistant usage for analytics and optimization.
+    
+    Provides insights into user behavior, popular features,
+    and system performance metrics.
+    """
+    
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique identifier for the analytics record"
+    )
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        help_text="User who performed the action"
+    )
+    
+    session = models.ForeignKey(
+        ChatSession,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        help_text="Chat session if applicable"
+    )
+    
+    action_type = models.CharField(
+        max_length=50,
+        help_text="Type of action performed (chat, document_upload, entity_extraction, etc.)"
+    )
+    
+    # Performance metrics
+    processing_time = models.FloatField(
+        help_text="Time taken to process the request in seconds"
+    )
+    
+    tokens_used = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of AI tokens used (if applicable)"
+    )
+    
+    success = models.BooleanField(
+        default=True,
+        help_text="Whether the action completed successfully"
+    )
+    
+    error_message = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Error message if action failed"
+    )
+    
+    # Context and metadata
+    input_data = models.JSONField(
+        default=dict,
+        help_text="Input data for the action (anonymized)"
+    )
+    
+    output_metadata = models.JSONField(
+        default=dict,
+        help_text="Metadata about the output (without sensitive content)"
+    )
+    
+    # User satisfaction
+    user_rating = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        help_text="User rating for the response (1-5 scale)"
+    )
+    
+    user_feedback = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Optional user feedback about the response"
+    )
+    
+    # System context
+    ai_provider = models.CharField(
+        max_length=50,
+        help_text="AI provider used (openai, anthropic, mock, etc.)"
+    )
+    
+    ai_model = models.CharField(
+        max_length=100,
+        help_text="Specific AI model used"
+    )
+    
+    # Timing
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the action was performed"
+    )
+    
+    class Meta:
+        db_table = "ai_assistant_usage_analytics"
+        verbose_name = "Usage Analytics"
+        verbose_name_plural = "Usage Analytics"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+            models.Index(fields=["action_type", "-created_at"]),
+            models.Index(fields=["success"]),
+            models.Index(fields=["ai_provider", "-created_at"]),
+            models.Index(fields=["processing_time"]),
+        ]
+    
+    def __str__(self):
+        return f"{self.action_type} by {self.user.username} at {self.created_at}"
+    
+    @classmethod
+    def log_action(cls, user, action_type, processing_time, **kwargs):
+        """Convenience method to log an action."""
+        return cls.objects.create(
+            user=user,
+            action_type=action_type,
+            processing_time=processing_time,
+            **kwargs
+        )
+
+
 class ProcessingTask(OwnedModel):
     """
     Background processing task for document processing and entity creation.
