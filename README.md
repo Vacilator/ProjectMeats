@@ -163,72 +163,7 @@ code ProjectMeats.code-workspace
 python verify_copilot_setup.py
 ```
 
-## 🚀 Quick Start
-
-**⚡ New: Cross-Platform Setup Script** - Works on Windows, macOS, and Linux!
-
-### Recommended Setup (All Platforms)
-```bash
-# Full setup (backend + frontend) - Works everywhere!
-python setup.py
-
-# Backend only
-python setup.py --backend
-
-# Frontend only  
-python setup.py --frontend
-
-# Show help and options
-python setup.py --help
-```
-
-### All Available Setup Methods
-
-#### 🌍 Universal (All Platforms)
-- `python setup.py` - **Recommended!** Cross-platform with error handling
-
-#### 🖥️ Windows Options
-- `python setup.py` - **Recommended**
-- `.\setup.ps1` - PowerShell script with parameters  
-- `setup.bat` - Interactive batch file
-
-#### 🐧 Linux/macOS Options
-- `python setup.py` - **Recommended**
-- `make setup` - Traditional Makefile
-- `./setup.sh` - Bash script with colored output
-
-### Alternative Setup Methods
-
-#### For Windows Users
-```powershell
-# Enhanced PowerShell script
-.\setup.ps1
-
-# With options
-.\setup.ps1 -Backend
-.\setup.ps1 -Frontend
-.\setup.ps1 -Help
-```
-
-#### For macOS/Linux Users
-```bash
-# Make commands (Unix/Linux/macOS)
-make setup           # Complete setup
-make setup-python    # Use Python script (recommended)
-make setup-backend   # Backend only
-make setup-frontend  # Frontend only
-```
-
-### 💡 Quick Troubleshooting
-- **Windows users experiencing "true is not recognized"**: Use `python setup.py` instead of make commands
-- **"python: command not found"**: Try `python3 setup.py` or install Python from python.org
-- **"node: command not found"**: Install Node.js from nodejs.org
-- **Setup errors**: See [Cross-Platform Setup Guide](docs/cross_platform_setup.md) for detailed troubleshooting
-
-### Prerequisites
-- **Python 3.9+** - [Download from python.org](https://python.org)
-- **Node.js 16+** - [Download from nodejs.org](https://nodejs.org)
-- **PostgreSQL 12+** (recommended) or SQLite for development
+## 📋 Migration Status
 
 ## 📋 Migration Status
 
