@@ -538,6 +538,43 @@ class ProjectMeatsSetup:
         self.log("✅ Frontend setup complete!", "SUCCESS")
         return True
     
+    def setup_ai_assistant_only(self):
+        """Setup AI assistant configuration only"""
+        self.log("🤖 Setting up AI Assistant configuration...", "STEP")
+        
+        # Check if the comprehensive setup script exists
+        ai_setup_script = self.project_root / "setup_ai_assistant.py"
+        if ai_setup_script.exists():
+            self.log("Running comprehensive AI assistant setup...", "INFO")
+            try:
+                import subprocess
+                result = subprocess.run([sys.executable, str(ai_setup_script)], 
+                                      cwd=self.project_root)
+                return result.returncode == 0
+            except Exception as e:
+                self.log(f"Failed to run AI assistant setup: {e}", "ERROR")
+                return False
+        else:
+            self.log("AI assistant setup script not found", "ERROR")
+            return False
+
+    def setup_ai_assistant_integration(self):
+        """Integrate AI assistant setup into main setup"""
+        self.log("🤖 AI Assistant Configuration", "STEP")
+        
+        # Ask if user wants to configure AI assistant
+        try:
+            response = input(f"{Colors.CYAN}[INPUT]{Colors.END} Configure AI Assistant now? (y/N): ").strip().lower()
+            if response in ['y', 'yes']:
+                return self.setup_ai_assistant_only()
+            else:
+                self.log("AI Assistant configuration skipped", "WARNING")
+                self.log("Run 'python setup_ai_assistant.py' later to configure AI features", "INFO")
+                return True
+        except KeyboardInterrupt:
+            self.log("\nAI Assistant configuration skipped", "WARNING")
+            return True
+
     def print_next_steps(self):
         """Print helpful next steps"""
         self.log("\n🎉 Setup completed successfully!", "SUCCESS", Colors.BOLD)
@@ -563,6 +600,25 @@ class ProjectMeatsSetup:
         print(f"   {Colors.CYAN}Backend API: http://localhost:8000{Colors.END}")
         print(f"   {Colors.CYAN}Frontend:    http://localhost:3000{Colors.END}")
         print(f"   {Colors.CYAN}API Docs:    http://localhost:8000/api/docs/{Colors.END}")
+        print(f"   {Colors.CYAN}Admin Panel: http://localhost:8000/admin/{Colors.END}")
+        
+        # Check if AI assistant is configured
+        env_file = self.backend_dir / ".env"
+        ai_configured = False
+        if env_file.exists():
+            with open(env_file, 'r') as f:
+                content = f.read()
+                ai_configured = any(key in content for key in ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'AZURE_OPENAI_API_KEY'])
+        
+        if ai_configured:
+            print(f"\n{Colors.GREEN}4.{Colors.END} AI Assistant Features:")
+            print(f"   {Colors.CYAN}Chat Interface: Access via frontend navigation{Colors.END}")
+            print(f"   {Colors.CYAN}Document Processing: Upload documents for AI analysis{Colors.END}")
+            print(f"   {Colors.CYAN}Business Intelligence: Ask questions about your data{Colors.END}")
+        else:
+            print(f"\n{Colors.YELLOW}🤖 AI Assistant Setup:{Colors.END}")
+            print(f"   {Colors.YELLOW}Run 'python setup_ai_assistant.py' to configure AI features{Colors.END}")
+            print(f"   {Colors.YELLOW}Includes document processing, chat interface, and business intelligence{Colors.END}")
         
         if not self.is_windows:
             print(f"\n{Colors.BOLD}Available Make Commands:{Colors.END}")
@@ -572,22 +628,33 @@ class ProjectMeatsSetup:
             print(f"   {Colors.CYAN}make clean{Colors.END}    - Clean build artifacts")
         
         print(f"\n{Colors.BOLD}Documentation:{Colors.END}")
-        print(f"   {Colors.CYAN}README.md{Colors.END}           - Project overview")
-        print(f"   {Colors.CYAN}docs/setup_guide.md{Colors.END} - Comprehensive setup guide")
-        print(f"   {Colors.CYAN}docs/{Colors.END}               - Complete documentation")
+        print(f"   {Colors.CYAN}README.md{Colors.END}                    - Project overview")
+        print(f"   {Colors.CYAN}docs/setup-and-development.md{Colors.END} - Development guide")
+        print(f"   {Colors.CYAN}docs/ai_assistant_setup.md{Colors.END}    - AI assistant configuration")
+        print(f"   {Colors.CYAN}docs/{Colors.END}                        - Complete documentation")
+        
+        print(f"\n{Colors.BOLD}Getting Started with AI Assistant:{Colors.END}")
+        print(f"   {Colors.GREEN}1.{Colors.END} Configure: {Colors.CYAN}python setup_ai_assistant.py{Colors.END}")
+        print(f"   {Colors.GREEN}2.{Colors.END} Test: Upload a document or send a chat message")
+        print(f"   {Colors.GREEN}3.{Colors.END} Explore: Try business intelligence queries")
+    
     
     def main(self):
         """Main setup function"""
         parser = argparse.ArgumentParser(
-            description="ProjectMeats Cross-Platform Setup Script",
+            description="ProjectMeats Cross-Platform Setup Script with AI Assistant Support",
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
-  python setup.py              # Full setup
+  python setup.py              # Full setup with AI assistant configuration
   python setup.py --backend    # Backend only  
   python setup.py --frontend   # Frontend only
+  python setup.py --ai-only    # AI assistant setup only
   
-For more information, see docs/setup_guide.md
+For comprehensive AI assistant setup, use:
+  python setup_ai_assistant.py
+  
+For more information, see docs/ai_assistant_setup.md
             """
         )
         
@@ -595,8 +662,12 @@ For more information, see docs/setup_guide.md
                            help="Setup backend only")
         parser.add_argument("--frontend", action="store_true", 
                            help="Setup frontend only") 
+        parser.add_argument("--ai-only", action="store_true",
+                           help="Setup AI assistant only")
         parser.add_argument("--skip-prereqs", action="store_true",
                            help="Skip prerequisite checks")
+        parser.add_argument("--skip-ai", action="store_true",
+                           help="Skip AI assistant configuration")
         
         args = parser.parse_args()
         
@@ -610,6 +681,10 @@ For more information, see docs/setup_guide.md
         if not args.skip_prereqs and not self.check_prerequisites():
             self.log("Prerequisites not met. Please install required dependencies.", "ERROR")
             return 1
+        
+        # AI-only setup
+        if args.ai_only:
+            return self.setup_ai_assistant_only()
         
         # Determine what to setup
         setup_backend = args.backend or not args.frontend
@@ -626,6 +701,10 @@ For more information, see docs/setup_guide.md
         if setup_frontend:
             if not self.setup_frontend():
                 success = False
+        
+        # Setup AI assistant if not skipped
+        if success and not args.skip_ai and (setup_backend or args.ai_only):
+            success = self.setup_ai_assistant_integration()
         
         if success:
             self.print_next_steps()
