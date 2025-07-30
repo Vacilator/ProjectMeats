@@ -165,8 +165,6 @@ python verify_copilot_setup.py
 
 ## 📋 Migration Status
 
-## 📋 Migration Status
-
 ### ✅ Completed Entities
 - **Accounts Receivables** (`cr7c4_accountsreceivables`)
   - Django Model: `AccountsReceivable`

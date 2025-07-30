@@ -330,4 +330,3 @@ copilot-verify:
 copilot-quickstart:
 	@echo "⚡ Starting Copilot quick-start guide..."
 	python copilot_quickstart.py
-	@echo "See existing accounts_receivables implementation for reference."
