@@ -116,7 +116,7 @@ export const chatSessionsApi = {
     if (params?.session_status) searchParams.append('session_status', params.session_status);
     if (params?.status) searchParams.append('status', params.status);
     
-    const endpoint = `/ai-assistant/sessions/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const endpoint = `/ai-assistant/ai-sessions/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
     return apiRequest<ApiResponse<ChatSession>>(endpoint);
   },
 
@@ -124,14 +124,14 @@ export const chatSessionsApi = {
    * Get a specific chat session
    */
   get: async (id: string): Promise<ChatSession> => {
-    return apiRequest<ChatSession>(`/ai-assistant/sessions/${id}/`);
+    return apiRequest<ChatSession>(`/ai-assistant/ai-sessions/${id}/`);
   },
 
   /**
    * Create a new chat session
    */
   create: async (data: ChatSessionFormData): Promise<ChatSession> => {
-    return apiRequest<ChatSession>('/ai-assistant/sessions/', {
+    return apiRequest<ChatSession>('/ai-assistant/ai-sessions/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -141,7 +141,7 @@ export const chatSessionsApi = {
    * Update a chat session
    */
   update: async (id: string, data: Partial<ChatSessionFormData>): Promise<ChatSession> => {
-    return apiRequest<ChatSession>(`/ai-assistant/sessions/${id}/`, {
+    return apiRequest<ChatSession>(`/ai-assistant/ai-sessions/${id}/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
@@ -151,7 +151,7 @@ export const chatSessionsApi = {
    * Delete a chat session
    */
   delete: async (id: string): Promise<void> => {
-    return apiRequest<void>(`/ai-assistant/sessions/${id}/`, {
+    return apiRequest<void>(`/ai-assistant/ai-sessions/${id}/`, {
       method: 'DELETE',
     });
   },
@@ -161,7 +161,7 @@ export const chatSessionsApi = {
    */
   getMessages: async (id: string, page?: number): Promise<ApiResponse<ChatMessage>> => {
     const params = page ? `?page=${page}` : '';
-    return apiRequest<ApiResponse<ChatMessage>>(`/ai-assistant/sessions/${id}/messages/${params}`);
+    return apiRequest<ApiResponse<ChatMessage>>(`/ai-assistant/ai-sessions/${id}/messages/${params}`);
   },
 
   /**
@@ -175,7 +175,7 @@ export const chatSessionsApi = {
     user_message: ChatMessage;
     ai_response: ChatMessage;
   }> => {
-    return apiRequest('/ai-assistant/sessions/start_session/', {
+    return apiRequest('/ai-assistant/ai-sessions/start_session/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -199,7 +199,7 @@ export const chatMessagesApi = {
     if (params?.session) searchParams.append('session', params.session);
     if (params?.message_type) searchParams.append('message_type', params.message_type);
     
-    const endpoint = `/ai-assistant/messages/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const endpoint = `/ai-assistant/ai-messages/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
     return apiRequest<ApiResponse<ChatMessage>>(endpoint);
   },
 
@@ -212,7 +212,7 @@ export const chatMessagesApi = {
     content: string;
     metadata?: Record<string, any>;
   }): Promise<ChatMessage> => {
-    return apiRequest<ChatMessage>('/ai-assistant/messages/', {
+    return apiRequest<ChatMessage>('/ai-assistant/ai-messages/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -222,7 +222,7 @@ export const chatMessagesApi = {
    * Get a specific message
    */
   get: async (id: string): Promise<ChatMessage> => {
-    return apiRequest<ChatMessage>(`/ai-assistant/messages/${id}/`);
+    return apiRequest<ChatMessage>(`/ai-assistant/ai-messages/${id}/`);
   },
 };
 
@@ -245,7 +245,7 @@ export const documentsApi = {
     if (params?.document_type) searchParams.append('document_type', params.document_type);
     if (params?.processing_status) searchParams.append('processing_status', params.processing_status);
     
-    const endpoint = `/ai-assistant/documents/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const endpoint = `/ai-assistant/ai-documents/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
     return apiRequest<ApiResponse<UploadedDocument>>(endpoint);
   },
 
@@ -253,7 +253,7 @@ export const documentsApi = {
    * Upload a new document
    */
   upload: async (data: DocumentUploadFormData): Promise<UploadedDocument> => {
-    return uploadFile<UploadedDocument>('/ai-assistant/documents/', data.file, {
+    return uploadFile<UploadedDocument>('/ai-assistant/ai-documents/', data.file, {
       original_filename: data.original_filename || data.file.name,
     });
   },
@@ -262,14 +262,14 @@ export const documentsApi = {
    * Get a specific document
    */
   get: async (id: string): Promise<UploadedDocument> => {
-    return apiRequest<UploadedDocument>(`/ai-assistant/documents/${id}/`);
+    return apiRequest<UploadedDocument>(`/ai-assistant/ai-documents/${id}/`);
   },
 
   /**
    * Reprocess a document
    */
   reprocess: async (id: string): Promise<UploadedDocument> => {
-    return apiRequest<UploadedDocument>(`/ai-assistant/documents/${id}/reprocess/`, {
+    return apiRequest<UploadedDocument>(`/ai-assistant/ai-documents/${id}/reprocess/`, {
       method: 'POST',
     });
   },
@@ -281,7 +281,7 @@ export const documentsApi = {
     message: string;
     created_entities: Array<{type: string; id: number; name?: string}>;
   }> => {
-    return apiRequest(`/ai-assistant/documents/${id}/create_entities/`, {
+    return apiRequest(`/ai-assistant/ai-documents/${id}/create_entities/`, {
       method: 'POST',
     });
   },
@@ -329,7 +329,7 @@ export const processingTasksApi = {
     if (params?.task_type) searchParams.append('task_type', params.task_type);
     if (params?.status) searchParams.append('status', params.status);
     
-    const endpoint = `/ai-assistant/tasks/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const endpoint = `/ai-assistant/ai-tasks/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
     return apiRequest<ApiResponse<ProcessingTask>>(endpoint);
   },
 
@@ -337,7 +337,7 @@ export const processingTasksApi = {
    * Get a specific processing task
    */
   get: async (id: string): Promise<ProcessingTask> => {
-    return apiRequest<ProcessingTask>(`/ai-assistant/tasks/${id}/`);
+    return apiRequest<ProcessingTask>(`/ai-assistant/ai-tasks/${id}/`);
   },
 };
 
@@ -349,14 +349,14 @@ export const aiConfigurationsApi = {
    * List available AI configurations
    */
   list: async (): Promise<ApiResponse<AIConfiguration>> => {
-    return apiRequest<ApiResponse<AIConfiguration>>('/ai-assistant/configurations/');
+    return apiRequest<ApiResponse<AIConfiguration>>('/ai-assistant/ai-configurations/');
   },
 
   /**
    * Get a specific AI configuration
    */
   get: async (id: number): Promise<AIConfiguration> => {
-    return apiRequest<AIConfiguration>(`/ai-assistant/configurations/${id}/`);
+    return apiRequest<AIConfiguration>(`/ai-assistant/ai-configurations/${id}/`);
   },
 };
 
