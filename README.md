@@ -134,11 +134,32 @@ make test
 - **Security review**: Comprehensive security assessment
 
 ### Production Deployment
-- **Backend**: Django + Gunicorn + PostgreSQL
-- **Frontend**: React build served via CDN/static hosting
-- **API Documentation**: Auto-generated via DRF Spectacular
 
-See [docs/production_deployment.md](docs/production_deployment.md) for complete deployment instructions.
+ProjectMeats includes an **interactive production deployment system** with guided setup:
+
+```bash
+# Interactive production setup with server recommendations
+python deploy_production.py
+
+# Or quick server provider comparison
+python server_guide.py
+```
+
+**Features**:
+- 🎯 **Interactive console prompts** for all configuration values
+- 🌟 **Server provider recommendations** with cost comparisons
+- 🔧 **Automated configuration file generation**
+- 🚀 **One-command server deployment**
+- 🔒 **Security best practices** (SSL, firewall, fail2ban)
+- 📊 **Deployment verification** and health checks
+
+**Quick Setup**:
+1. Choose server provider (DigitalOcean, Linode, Vultr, AWS Lightsail)
+2. Run `python deploy_production.py` for guided configuration
+3. Upload and execute generated deployment script on server
+4. Access your production application with SSL/HTTPS
+
+See [docs/production_setup_guide.md](docs/production_setup_guide.md) for the simplified setup guide.
 
 ## 👥 Contributing
 
