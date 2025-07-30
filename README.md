@@ -2,10 +2,15 @@
 
 A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
-## ⚠️ Python 3.13+ Setup Issue
+## ⚠️ Quick Fix: "Authentication credentials were not provided"
 
-**Windows users with Python 3.13+**: If setup fails with PostgreSQL adapter errors, see **[docs/troubleshooting.md](docs/troubleshooting.md)** for solutions.
+**Having authentication issues?** Run this one command:
 
+```bash
+python setup_ai_assistant.py
+```
+
+This interactive wizard will configure everything needed including authentication, database, and AI features. See [QUICK_SETUP.md](QUICK_SETUP.md) for more details.
 
 ## 🏗️ Technology Stack
 
@@ -43,7 +48,24 @@ ProjectMeats/
 
 **Prerequisites**: Python 3.9+, Node.js 16+, Git
 
-**Cross-Platform Setup** (recommended):
+### Option 1: Interactive AI Assistant Setup (Recommended)
+```bash
+# Clone repository
+git clone https://github.com/Vacilator/ProjectMeats.git
+cd ProjectMeats
+
+# Run comprehensive AI assistant setup wizard
+python setup_ai_assistant.py
+```
+
+This guided setup will configure:
+- ✅ Backend authentication and database
+- ✅ AI provider credentials (OpenAI, Anthropic, Azure OpenAI)
+- ✅ Environment variables and secrets
+- ✅ Frontend integration
+- ✅ Database initialization
+
+### Option 2: Standard Setup
 ```bash
 # Clone repository
 git clone https://github.com/Vacilator/ProjectMeats.git
@@ -52,16 +74,35 @@ cd ProjectMeats
 # Full setup (backend + frontend)
 python setup.py
 
+# Configure AI assistant separately
+python setup_ai_assistant.py
+```
+
+### Option 3: Platform-Specific Setup
+
+**Windows Users:**
+```cmd
+setup_windows.bat
+```
+
+**Linux/macOS:**
+```bash
+make setup
+# or
+./setup.sh
+```
+
+### Manual Setup (Advanced Users)
+```bash
 # Backend only
 python setup.py --backend
 
 # Frontend only  
 python setup.py --frontend
-```
 
-**Alternative Setup Methods**:
-- **Windows**: `setup.ps1` or `setup.bat`
-- **Linux/macOS**: `make setup` or `./setup.sh`
+# AI assistant only
+python setup.py --ai-only
+```
 
 ## 🔧 Development
 
@@ -80,6 +121,17 @@ make dev
 - **Frontend**: http://localhost:3000  
 - **API Documentation**: http://localhost:8000/api/docs/
 - **Admin Panel**: http://localhost:8000/admin/
+
+### AI Assistant Features
+After running `python setup_ai_assistant.py`:
+- **Chat Interface**: Intelligent conversational AI for business operations
+- **Document Processing**: Upload and analyze purchase orders, invoices, contracts
+- **Entity Extraction**: Automatic data extraction and database integration
+- **Business Intelligence**: Natural language queries about your data
+
+### Default Credentials
+- **Username**: admin
+- **Password**: WATERMELON1219
 
 ### Development Commands
 ```bash
@@ -119,7 +171,12 @@ make test
 
 ## 📚 Documentation
 
+### Quick Start Guides
+- **[QUICK_SETUP.md](QUICK_SETUP.md)** - Solve authentication issues in 5 minutes
+- **[AI Assistant Setup](docs/ai_assistant_setup.md)** - Complete AI configuration guide
 - **[Setup & Development Guide](docs/setup-and-development.md)** - Complete setup and development instructions
+
+### Technical Documentation  
 - **[API Reference](docs/api_reference.md)** - Complete API documentation  
 - **[Production Deployment](docs/production_deployment.md)** - Production deployment guide
 - **[Migration Mapping](docs/migration_mapping.md)** - PowerApps to Django mappings
