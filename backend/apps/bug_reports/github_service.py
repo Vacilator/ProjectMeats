@@ -6,11 +6,9 @@ and proper formatting for bug report data.
 """
 import json
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import requests
-from django.conf import settings
-from django.utils import timezone
 
 
 class GitHubIssueService:
@@ -175,7 +173,7 @@ class GitHubIssueService:
                 body_parts.append("```json")
                 body_parts.append(state_str)
                 body_parts.append("```")
-            except:
+            except (TypeError, ValueError):
                 body_parts.append(str(bug_report.application_state))
             body_parts.append("")
 

@@ -4,7 +4,6 @@ Bug Reports serializers for Django REST Framework.
 Handles serialization of bug report data for API responses
 and form data processing.
 """
-from django.contrib.auth.models import User
 from rest_framework import serializers
 
 from .models import BugReport
