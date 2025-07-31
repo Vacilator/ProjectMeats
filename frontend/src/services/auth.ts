@@ -19,6 +19,27 @@ const authClient = axios.create({
   withCredentials: true, // Include cookies for session authentication
 });
 
+// Add CSRF token interceptor
+authClient.interceptors.request.use(
+  (config) => {
+    // Get CSRF token from cookies for non-GET requests
+    if (config.method && config.method.toLowerCase() !== 'get') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+          config.headers['X-CSRFToken'] = value;
+          break;
+        }
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Types for authentication
 export interface LoginCredentials {
   username: string;

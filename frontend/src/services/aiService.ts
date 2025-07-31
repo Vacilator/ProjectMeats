@@ -22,6 +22,20 @@ import {
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 /**
+ * Get CSRF token from cookies
+ */
+function getCSRFToken(): string | null {
+  const cookies = document.cookie.split(';');
+  for (let cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'csrftoken') {
+      return value;
+    }
+  }
+  return null;
+}
+
+/**
  * Generic fetch wrapper with error handling
  */
 async function apiRequest<T>(
@@ -30,14 +44,28 @@ async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  const defaultHeaders = {
+  const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
   };
+
+  // Merge with provided headers
+  if (options.headers) {
+    Object.assign(defaultHeaders, options.headers);
+  }
+
+  // Add CSRF token for non-GET requests
+  const method = options.method || 'GET';
+  if (method.toUpperCase() !== 'GET') {
+    const csrfToken = getCSRFToken();
+    if (csrfToken) {
+      defaultHeaders['X-CSRFToken'] = csrfToken;
+    }
+  }
 
   const config: RequestInit = {
     ...options,
     headers: defaultHeaders,
+    credentials: 'include', // Include cookies for session authentication
   };
 
   try {
@@ -79,10 +107,19 @@ async function uploadFile<T>(
     formData.append(key, value);
   });
 
+  // Prepare headers with CSRF token
+  const headers: Record<string, string> = {};
+  const csrfToken = getCSRFToken();
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
       body: formData,
+      headers: headers,
+      credentials: 'include', // Include cookies for session authentication
     });
     
     if (!response.ok) {
