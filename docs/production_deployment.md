@@ -74,9 +74,26 @@ Infrastructure:
 
 ## 🚀 Automated Deployment
 
-### One-Command Production Setup
+### ⚡ No-Authentication Deployment (Recommended)
 
-The fastest way to deploy ProjectMeats to production:
+**Having GitHub authentication issues?** Use our special deployment script that doesn't require any GitHub authentication:
+
+```bash
+# One-command deployment (no authentication needed)
+curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash
+```
+
+**This method:**
+- ✅ No GitHub account required
+- ✅ No Personal Access Token setup needed  
+- ✅ No SSH key configuration required
+- ✅ Downloads via public GitHub APIs
+- ✅ Multiple fallback download methods
+- ✅ Works behind corporate firewalls
+
+### 🔧 Traditional Git Clone Method
+
+If you have GitHub authentication properly set up:
 
 ```bash
 # Clone repository to production server
@@ -84,8 +101,10 @@ git clone https://github.com/Vacilator/ProjectMeats.git
 cd ProjectMeats
 
 # Run automated deployment script
-sudo ./deploy_production.sh
+sudo ./deploy_production.py
 ```
+
+**⚠️ Authentication Issues?** If you see errors like "Invalid username or token", GitHub no longer supports password authentication. See our [Authentication Guide](deployment_authentication_guide.md) for solutions.
 
 ### What the Deployment Script Does
 
