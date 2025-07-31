@@ -699,7 +699,14 @@ GENERATE_SOURCEMAP=false
                 self.log("Node.js dependencies installed successfully", "SUCCESS")
             except subprocess.CalledProcessError as e:
                 self.log(f"Failed to install Node.js dependencies: {e}", "ERROR")
-                self.log("You may need to run 'npm install' manually in the frontend directory", "WARNING")
+                self.log("You may need to run 'npm install' manually in the "
+                         "frontend directory", "WARNING")
+            except (FileNotFoundError, OSError) as e:
+                self.log("npm command not found - Node.js is not installed or not in PATH", 
+                         "ERROR")
+                self.log("Please install Node.js and npm, then run 'npm install' "
+                         "manually in the frontend directory", "WARNING")
+                self.log("Download Node.js from: https://nodejs.org/", "INFO")
     
     def initialize_database(self):
         """Initialize database and create admin user"""
