@@ -10,7 +10,6 @@ import { ChatSession, ChatMessage } from '../../types';
 import { chatApi, chatSessionsApi, documentsApi, aiUtils } from '../../services/aiService';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import DocumentUpload from './DocumentUpload';
 
 interface ChatWindowProps {
   sessionId?: string;
@@ -244,12 +243,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
       {/* Input Area */}
       <InputArea>
-        <DocumentUpload
-          onFileUpload={uploadDocument}
-          disabled={loading}
-        />
         <MessageInput
           onSendMessage={sendMessage}
+          onFileUpload={uploadDocument}
           disabled={loading}
           placeholder={
             !session 
@@ -411,7 +407,7 @@ const FeatureItem = styled.div`
 `;
 
 const InputArea = styled.div`
-  padding: 20px;
+  padding: 16px 20px 20px 20px;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
 `;
