@@ -137,7 +137,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileUpload(files[0]);
+      handleFileUpload(files[0] as File);
     }
     // Reset input value to allow same file upload
     e.target.value = '';
