@@ -628,7 +628,7 @@ SECURE_HSTS_PRELOAD={self.env_vars.get('SECURE_HSTS_PRELOAD', 'True')}
 """
         
         # Write the file
-        with open(env_path, 'w') as f:
+        with open(env_path, 'w', encoding='utf-8') as f:
             f.write(env_content)
         
         self.log(f"Created backend .env file: {env_path}", "SUCCESS")
@@ -650,7 +650,7 @@ GENERATE_SOURCEMAP=false
 """
         
         # Write the file
-        with open(env_path, 'w') as f:
+        with open(env_path, 'w', encoding='utf-8') as f:
             f.write(env_content)
         
         self.log(f"Created frontend .env.local file: {env_path}", "SUCCESS")
@@ -660,7 +660,7 @@ GENERATE_SOURCEMAP=false
         if 'ai_provider' in self.config:
             ai_config_path = self.backend_dir / "ai_config.json"
             
-            with open(ai_config_path, 'w') as f:
+            with open(ai_config_path, 'w', encoding='utf-8') as f:
                 json.dump(self.config['ai_provider'], f, indent=2)
             
             self.log(f"Created AI configuration file: {ai_config_path}", "SUCCESS")
