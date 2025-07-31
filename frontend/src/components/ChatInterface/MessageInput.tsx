@@ -16,19 +16,7 @@ interface MessageInputProps {
   className?: string;
 }
 
-// Supported file types for upload
-const SUPPORTED_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg', 
-  'image/png',
-  'text/plain',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-];
-
+// Supported file extensions and constraints
 const SUPPORTED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'txt', 'doc', 'docx', 'xls', 'xlsx'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 

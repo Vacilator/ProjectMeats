@@ -3,7 +3,7 @@
  * 
  * Handles user authentication, login, logout, signup, and session management.
  */
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { UserProfile } from '../types';
 
 // Configure API base URL
@@ -21,13 +21,14 @@ const authClient = axios.create({
 
 // Add CSRF token interceptor
 authClient.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     // Get CSRF token from cookies for non-GET requests
     if (config.method && config.method.toLowerCase() !== 'get') {
       const cookies = document.cookie.split(';');
       for (let cookie of cookies) {
         const [name, value] = cookie.trim().split('=');
         if (name === 'csrftoken') {
+          config.headers = config.headers || {};
           config.headers['X-CSRFToken'] = value;
           break;
         }
@@ -35,7 +36,7 @@ authClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );

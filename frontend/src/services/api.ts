@@ -4,7 +4,7 @@
  * Handles all HTTP requests to the ProjectMeats API endpoints
  * migrated from PowerApps/Dataverse.
  */
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import {
   AccountsReceivable,
   AccountsReceivableFormData,
@@ -46,11 +46,11 @@ const apiClient = axios.create({
 // Request interceptor for debugging in development
 if (process.env.NODE_ENV === 'development') {
   apiClient.interceptors.request.use(
-    (config) => {
+    (config: InternalAxiosRequestConfig) => {
       console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
       return config;
     },
-    (error) => {
+    (error: AxiosError) => {
       console.error('🚨 API Request Error:', error);
       return Promise.reject(error);
     }
@@ -59,11 +59,11 @@ if (process.env.NODE_ENV === 'development') {
 
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse) => {
     console.log(`✅ API Response: ${response.status} ${response.config.url}`);
     return response;
   },
-  (error) => {
+  (error: AxiosError) => {
     console.error('🚨 API Response Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
