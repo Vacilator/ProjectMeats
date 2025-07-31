@@ -380,14 +380,14 @@ class ProductionDeployment:
             self.log(f"Backed up existing .env to .env.backup", "WARNING")
         
         # Write new environment file
-        with open(env_file, 'w') as f:
+        with open(env_file, 'w', encoding='utf-8') as f:
             f.write(env_content)
         
         self.log("✓ Environment file created successfully", "SUCCESS")
         
         # Create production config backup
         config_backup = self.project_root / "production_config.json"
-        with open(config_backup, 'w') as f:
+        with open(config_backup, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, indent=2)
         
         self.log(f"✓ Configuration saved to production_config.json", "SUCCESS")
@@ -537,7 +537,7 @@ class ProductionDeployment:
         ]
         
         frontend_env = self.frontend_dir / ".env.production"
-        with open(frontend_env, 'w') as f:
+        with open(frontend_env, 'w', encoding='utf-8') as f:
             f.write('\n'.join(env_content) + '\n')
         
         self.log("✓ Frontend environment file created", "SUCCESS")
@@ -550,7 +550,7 @@ class ProductionDeployment:
         deploy_script = self.create_server_deployment_script()
         deploy_file = self.project_root / "deploy_server.sh"
         
-        with open(deploy_file, 'w') as f:
+        with open(deploy_file, 'w', encoding='utf-8') as f:
             f.write(deploy_script)
         
         os.chmod(deploy_file, 0o755)
@@ -1089,7 +1089,7 @@ systemctl reload nginx
 echo "✅ Update completed!"
 """
         
-        with open(scripts_dir / "update.sh", 'w') as f:
+        with open(scripts_dir / "update.sh", 'w', encoding='utf-8') as f:
             f.write(update_script)
         os.chmod(scripts_dir / "update.sh", 0o755)
         
@@ -1138,7 +1138,7 @@ echo "📈 Application Logs (last 10 lines):"
 tail -10 /home/projectmeats/logs/gunicorn_error.log
 """
         
-        with open(scripts_dir / "status.sh", 'w') as f:
+        with open(scripts_dir / "status.sh", 'w', encoding='utf-8') as f:
             f.write(status_script)
         os.chmod(scripts_dir / "status.sh", 0o755)
         

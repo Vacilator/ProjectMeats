@@ -527,7 +527,7 @@ class ProjectMeatsSetup:
         else:
             # Create a basic environment file
             try:
-                with open(env_dest, 'w') as f:
+                with open(env_dest, 'w', encoding='utf-8') as f:
                     f.write("# React Environment Variables\n")
                     f.write("REACT_APP_API_BASE_URL=http://localhost:8000/api/v1\n")
                     f.write("REACT_APP_ENVIRONMENT=development\n")
