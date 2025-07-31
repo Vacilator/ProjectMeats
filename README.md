@@ -122,6 +122,49 @@ python setup.py --frontend
 python setup.py --ai-only
 ```
 
+## 🚀 Production Deployment
+
+### Quick Deployment (No Authentication Required)
+
+**Fastest method - works without GitHub authentication:**
+
+```bash
+# One-command production deployment
+curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash
+```
+
+### Alternative Deployment Methods
+
+**If you have GitHub authentication set up:**
+
+```bash
+# Traditional git clone method
+git clone https://github.com/Vacilator/ProjectMeats.git
+cd ProjectMeats
+sudo python3 deploy_production.py
+```
+
+**Having authentication issues?** See [DEPLOYMENT_AUTH_QUICKREF.md](DEPLOYMENT_AUTH_QUICKREF.md)
+
+### Deployment Verification
+
+Check if your system is ready for deployment:
+
+```bash
+# Download and run verification
+curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/verify_deployment_readiness.sh | bash
+
+# Or if you have the project locally
+./verify_deployment_readiness.sh
+```
+
+### Documentation
+
+- 📖 [Complete Production Guide](docs/production_deployment.md)
+- 🔐 [Authentication Solutions](docs/deployment_authentication_guide.md)  
+- ⚡ [Quick Setup Guide](docs/production_setup_guide.md)
+- 📋 [Quick Reference](DEPLOYMENT_AUTH_QUICKREF.md)
+
 ## 🔧 Development
 
 ### Start Development Servers

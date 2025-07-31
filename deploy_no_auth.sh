@@ -176,25 +176,62 @@ deploy_method_3_individual_files() {
     fi
 }
 
-deploy_method_4_manual() {
-    echo -e "${YELLOW}📋 Method 4: Manual Setup Instructions${NC}"
+deploy_method_4_local_file() {
+    echo -e "${BLUE}📦 Method 4: Using Local Files${NC}"
+    
+    # Check if we're already in a ProjectMeats directory
+    if [ -f "../README.md" ] && [ -f "../deploy_production.py" ]; then
+        print_status "Found local ProjectMeats files, using current directory"
+        cp -r .. projectmeats
+        # Remove .git directory to avoid confusion
+        rm -rf projectmeats/.git
+        return 0
+    fi
+    
+    if [ -f "./README.md" ] && [ -f "./deploy_production.py" ]; then
+        print_status "Using current directory as ProjectMeats source"
+        mkdir -p projectmeats
+        cp -r . projectmeats/
+        # Remove .git directory to avoid confusion
+        rm -rf projectmeats/.git
+        return 0
+    fi
+    
+    print_warning "Local files method failed"
+    return 1
+}
+
+deploy_method_5_manual() {
+    echo -e "${YELLOW}📋 Method 5: Manual Setup Instructions${NC}"
     echo ""
-    echo "Automatic download failed. Please follow these manual steps:"
+    echo "Automatic download failed. This could be due to:"
+    echo "- Network restrictions or firewall"
+    echo "- Private repository requiring authentication"
+    echo "- GitHub API rate limiting"
     echo ""
-    echo "1. On your local machine with GitHub access:"
+    echo "Manual solutions:"
+    echo ""
+    echo "1. 🔗 If you have GitHub authentication set up:"
+    echo "   git clone https://github.com/$GITHUB_REPO.git"
+    echo "   # Or with Personal Access Token:"
+    echo "   git clone https://USERNAME:TOKEN@github.com/$GITHUB_REPO.git"
+    echo ""
+    echo "2. 📦 On your local machine with GitHub access:"
     echo "   git clone https://github.com/$GITHUB_REPO.git"
     echo "   tar -czf projectmeats.tar.gz $PROJECT_NAME/"
     echo ""
-    echo "2. Transfer the file to this server:"
+    echo "3. 📤 Transfer the file to this server:"
     echo "   scp projectmeats.tar.gz user@$(hostname -I | awk '{print $1}'):/tmp/"
     echo ""
-    echo "3. Extract on this server:"
+    echo "4. 📥 Extract on this server:"
     echo "   cd /tmp && tar -xzf projectmeats.tar.gz"
     echo "   sudo mv $PROJECT_NAME /home/projectmeats/app"
     echo ""
-    echo "4. Continue with the deployment:"
+    echo "5. 🚀 Continue with the deployment:"
     echo "   cd /home/projectmeats/app"
-    echo "   sudo ./deploy_production.py"
+    echo "   sudo python3 deploy_production.py"
+    echo ""
+    echo "6. 📧 Contact support if needed with deployment questions"
     echo ""
     exit 1
 }
@@ -203,7 +240,9 @@ deploy_method_4_manual() {
 if ! deploy_method_1_release; then
     if ! deploy_method_2_tarball; then
         if ! deploy_method_3_individual_files; then
-            deploy_method_4_manual
+            if ! deploy_method_4_local_file; then
+                deploy_method_5_manual
+            fi
         fi
     fi
 fi
