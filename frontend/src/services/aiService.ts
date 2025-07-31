@@ -332,7 +332,7 @@ export const chatApi = {
    * Send a message and get AI response
    */
   sendMessage: async (data: ChatRequest): Promise<ChatResponse> => {
-    return apiRequest<ChatResponse>('/ai-assistant/chat/chat/', {
+    return apiRequest<ChatResponse>('/ai-assistant/ai-chat/chat/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -342,7 +342,7 @@ export const chatApi = {
    * Process a document with AI
    */
   processDocument: async (data: DocumentProcessingRequest): Promise<DocumentProcessingResponse> => {
-    return apiRequest<DocumentProcessingResponse>('/ai-assistant/chat/process_document/', {
+    return apiRequest<DocumentProcessingResponse>('/ai-assistant/ai-chat/process_document/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
