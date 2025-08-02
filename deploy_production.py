@@ -660,10 +660,44 @@ chown -R projectmeats:projectmeats /home/projectmeats/
 # Clone or update application
 log_info "Setting up application code..."
 if [ ! -d "/home/projectmeats/app" ]; then
-    sudo -u projectmeats git clone https://github.com/Vacilator/ProjectMeats.git /home/projectmeats/app
+    # Try git clone with error handling
+    if ! sudo -u projectmeats git clone https://github.com/Vacilator/ProjectMeats.git /home/projectmeats/app 2>/dev/null; then
+        log_error "Git clone failed due to authentication issues."
+        echo ""
+        echo "GitHub authentication error detected!"
+        echo "This is because GitHub no longer supports password authentication."
+        echo ""
+        echo "Solutions:"
+        echo "1. Use the no-authentication deployment script:"
+        echo "   curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash"
+        echo ""
+        echo "2. Setup Personal Access Token (PAT):"
+        echo "   - Go to GitHub.com -> Settings -> Developer settings -> Personal access tokens"
+        echo "   - Generate a new token with 'repo' scope"
+        echo "   - Use: git clone https://USERNAME:TOKEN@github.com/Vacilator/ProjectMeats.git"
+        echo ""
+        echo "3. Setup SSH keys:"
+        echo "   - Generate: ssh-keygen -t ed25519"
+        echo "   - Add public key to GitHub -> Settings -> SSH keys"
+        echo "   - Use: git clone git@github.com:Vacilator/ProjectMeats.git"
+        echo ""
+        echo "4. Manual transfer:"
+        echo "   - Download the project on a machine with GitHub access"
+        echo "   - Transfer to this server via SCP"
+        echo ""
+        echo "For detailed instructions, see:"
+        echo "https://github.com/Vacilator/ProjectMeats/blob/main/docs/deployment_authentication_guide.md"
+        echo ""
+        exit 1
+    fi
 else
     cd /home/projectmeats/app
-    sudo -u projectmeats git pull origin main
+    if ! sudo -u projectmeats git pull origin main 2>/dev/null; then
+        log_warning "Git pull failed, continuing with existing code..."
+        echo "Note: Unable to update code from GitHub. Using existing installation."
+        echo "If you need the latest version, see the authentication guide:"
+        echo "https://github.com/Vacilator/ProjectMeats/blob/main/docs/deployment_authentication_guide.md"
+    fi
 fi
 
 # Copy environment configuration
