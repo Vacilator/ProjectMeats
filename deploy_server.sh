@@ -48,12 +48,19 @@ log_info "  Database: SQLITE"
 log_info "Updating system packages..."
 apt update && apt upgrade -y
 
-# Install required packages
+# Install required packages (excluding nodejs for now)
 log_info "Installing system dependencies..."
-apt install -y python3 python3-pip python3-venv nodejs npm nginx git curl ufw fail2ban
+apt install -y python3 python3-pip python3-venv nginx git curl ufw fail2ban
 
-# Install Node.js 18 LTS
+# Remove existing Node.js packages that might conflict
+log_info "Removing conflicting Node.js packages..."
+apt remove -y nodejs npm libnode-dev libnode72 || true
+apt autoremove -y || true
+
+# Install Node.js 18 LTS from NodeSource
+log_info "Installing Node.js 18 LTS..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+apt update
 apt install -y nodejs
 
 # Create application user
