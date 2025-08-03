@@ -229,6 +229,7 @@ class UnifiedDeploymentOrchestrator:
     
     def __init__(self):
         self.config = None
+        self.script_dir = Path(__file__).parent.absolute()
         
     def run_help(self):
         """Print comprehensive help and usage"""
@@ -318,6 +319,284 @@ See UNIFIED_DEPLOYMENT_COMPLETE_GUIDE.md for comprehensive documentation.
 {Colors.BOLD}Version:{Colors.END} 1.0 - Unified Deployment System
 {Colors.BOLD}Author:{Colors.END} ProjectMeats AI Assistant
 """)
+    
+    def run_production_deployment(self, args):
+        """Execute production deployment"""
+        print(f"\n{Colors.BOLD}{Colors.GREEN}🚀 Starting Production Deployment{Colors.END}")
+        
+        # Build deployment command
+        cmd = [str(self.script_dir / "one_click_deploy.sh")]
+        
+        # Add domain if specified
+        if args.domain:
+            # Set environment variable for the deployment script
+            os.environ['DOMAIN'] = args.domain
+            print(f"{Colors.CYAN}   Domain: {args.domain}{Colors.END}")
+        
+        # Add server if specified
+        if args.server:
+            os.environ['SERVER_IP'] = args.server
+            print(f"{Colors.CYAN}   Server: {args.server}{Colors.END}")
+        
+        # Add GitHub authentication if specified
+        if args.github_user:
+            os.environ['GITHUB_USER'] = args.github_user
+            print(f"{Colors.CYAN}   GitHub User: {args.github_user}{Colors.END}")
+        
+        if args.github_token:
+            os.environ['GITHUB_TOKEN'] = args.github_token
+            print(f"{Colors.CYAN}   GitHub Token: [REDACTED]{Colors.END}")
+        
+        print(f"\n{Colors.YELLOW}📋 Executing deployment script...{Colors.END}")
+        
+        try:
+            # Check if running as root or with sudo
+            if os.geteuid() != 0 and not args.interactive:
+                print(f"{Colors.RED}⚠️ Production deployment requires root privileges{Colors.END}")
+                print(f"{Colors.CYAN}💡 Try: sudo python3 unified_deployment_tool.py --production{Colors.END}")
+                return 1
+            
+            # Execute the deployment script
+            if args.interactive:
+                print(f"\n{Colors.CYAN}🧙‍♂️ Interactive mode - You'll be prompted for configuration{Colors.END}")
+                # For interactive mode, we can run without sudo and let the script handle it
+                result = subprocess.run(cmd, check=False)
+            else:
+                # For auto mode, run the script directly
+                result = subprocess.run(cmd, check=False)
+            
+            if result.returncode == 0:
+                print(f"\n{Colors.BOLD}{Colors.GREEN}✅ Production deployment completed successfully!{Colors.END}")
+                return 0
+            else:
+                print(f"\n{Colors.BOLD}{Colors.RED}❌ Deployment failed with exit code {result.returncode}{Colors.END}")
+                return result.returncode
+                
+        except FileNotFoundError:
+            print(f"{Colors.RED}❌ Deployment script not found: {cmd[0]}{Colors.END}")
+            print(f"{Colors.CYAN}💡 Make sure you're running from the ProjectMeats directory{Colors.END}")
+            return 1
+        except Exception as e:
+            print(f"{Colors.RED}❌ Deployment failed: {e}{Colors.END}")
+            return 1
+    
+    def run_diagnostics(self, args):
+        """Run comprehensive system diagnostics"""
+        print(f"\n{Colors.BOLD}{Colors.BLUE}🔍 Running System Diagnostics{Colors.END}")
+        
+        if args.domain:
+            print(f"{Colors.CYAN}   Target Domain: {args.domain}{Colors.END}")
+        if args.server:
+            print(f"{Colors.CYAN}   Target Server: {args.server}{Colors.END}")
+        
+        print(f"\n{Colors.YELLOW}🔍 Checking system components...{Colors.END}")
+        
+        # Check if diagnostic scripts exist
+        diagnostic_scripts = [
+            "check_dns_propagation.py",
+            "verify_domain.py", 
+            "validate_production.py"
+        ]
+        
+        issues_found = []
+        
+        for script in diagnostic_scripts:
+            script_path = self.script_dir / script
+            if script_path.exists():
+                print(f"{Colors.GREEN}✅ Found diagnostic script: {script}{Colors.END}")
+                try:
+                    # Run the diagnostic script
+                    cmd = ["python3", str(script_path)]
+                    if args.domain and script in ["check_dns_propagation.py", "verify_domain.py"]:
+                        cmd.extend(["--domain", args.domain])
+                    if args.server:
+                        cmd.extend(["--server", args.server])
+                    
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                    if result.returncode == 0:
+                        print(f"{Colors.GREEN}   ✅ {script}: PASSED{Colors.END}")
+                    else:
+                        print(f"{Colors.RED}   ❌ {script}: FAILED{Colors.END}")
+                        if result.stderr:
+                            print(f"{Colors.YELLOW}      Error: {result.stderr.strip()}{Colors.END}")
+                        issues_found.append(script)
+                        
+                except subprocess.TimeoutExpired:
+                    print(f"{Colors.YELLOW}   ⏱️ {script}: TIMEOUT{Colors.END}")
+                    issues_found.append(script)
+                except Exception as e:
+                    print(f"{Colors.RED}   ❌ {script}: ERROR - {e}{Colors.END}")
+                    issues_found.append(script)
+            else:
+                print(f"{Colors.YELLOW}⚠️ Diagnostic script not found: {script}{Colors.END}")
+        
+        # Basic system checks
+        print(f"\n{Colors.YELLOW}🔍 Basic system checks...{Colors.END}")
+        
+        # Check Python
+        try:
+            result = subprocess.run(["python3", "--version"], capture_output=True, text=True)
+            if result.returncode == 0:
+                version = result.stdout.strip()
+                print(f"{Colors.GREEN}✅ Python: {version}{Colors.END}")
+            else:
+                print(f"{Colors.RED}❌ Python 3 not found{Colors.END}")
+                issues_found.append("python3")
+        except:
+            print(f"{Colors.RED}❌ Python 3 not found{Colors.END}")
+            issues_found.append("python3")
+        
+        # Check Node.js
+        try:
+            result = subprocess.run(["node", "--version"], capture_output=True, text=True)
+            if result.returncode == 0:
+                version = result.stdout.strip()
+                print(f"{Colors.GREEN}✅ Node.js: {version}{Colors.END}")
+            else:
+                print(f"{Colors.YELLOW}⚠️ Node.js not found (required for frontend){Colors.END}")
+        except:
+            print(f"{Colors.YELLOW}⚠️ Node.js not found (required for frontend){Colors.END}")
+        
+        # Check Git
+        try:
+            result = subprocess.run(["git", "--version"], capture_output=True, text=True)
+            if result.returncode == 0:
+                version = result.stdout.strip()
+                print(f"{Colors.GREEN}✅ Git: {version}{Colors.END}")
+            else:
+                print(f"{Colors.RED}❌ Git not found{Colors.END}")
+                issues_found.append("git")
+        except:
+            print(f"{Colors.RED}❌ Git not found{Colors.END}")
+            issues_found.append("git")
+        
+        # Summary
+        if issues_found:
+            print(f"\n{Colors.BOLD}{Colors.RED}❌ Diagnostics completed with {len(issues_found)} issues found{Colors.END}")
+            print(f"{Colors.YELLOW}Issues: {', '.join(issues_found)}{Colors.END}")
+            print(f"\n{Colors.CYAN}💡 Try running: python3 unified_deployment_tool.py --fix{Colors.END}")
+            return 1
+        else:
+            print(f"\n{Colors.BOLD}{Colors.GREEN}✅ All diagnostics passed successfully!{Colors.END}")
+            return 0
+    
+    def run_auto_fix(self, args):
+        """Auto-fix common deployment issues"""
+        print(f"\n{Colors.BOLD}{Colors.BLUE}🛠️ Running Auto-Fix{Colors.END}")
+        
+        print(f"{Colors.YELLOW}🔧 Attempting to fix common issues...{Colors.END}")
+        
+        fixes_applied = []
+        
+        # Try to fix Node.js issues
+        fix_nodejs_script = self.script_dir / "fix_nodejs.sh"
+        if fix_nodejs_script.exists():
+            print(f"{Colors.CYAN}🔧 Fixing Node.js conflicts...{Colors.END}")
+            try:
+                result = subprocess.run(["bash", str(fix_nodejs_script)], 
+                                      capture_output=True, text=True, timeout=120)
+                if result.returncode == 0:
+                    print(f"{Colors.GREEN}   ✅ Node.js issues fixed{Colors.END}")
+                    fixes_applied.append("nodejs")
+                else:
+                    print(f"{Colors.YELLOW}   ⚠️ Node.js fix completed with warnings{Colors.END}")
+            except Exception as e:
+                print(f"{Colors.RED}   ❌ Node.js fix failed: {e}{Colors.END}")
+        
+        # Check if there are any fix scripts in deprecated folder
+        deprecated_fix_scripts = [
+            "deprecated_deployment_scripts/fix_meatscentral_access.py",
+            "deprecated_deployment_scripts/diagnose_domain_access.py"
+        ]
+        
+        for script in deprecated_fix_scripts:
+            script_path = self.script_dir / script
+            if script_path.exists():
+                script_name = Path(script).name
+                print(f"{Colors.CYAN}🔧 Running {script_name}...{Colors.END}")
+                try:
+                    cmd = ["python3", str(script_path)]
+                    if args.domain:
+                        cmd.extend(["--domain", args.domain])
+                    if args.server:
+                        cmd.extend(["--server", args.server])
+                    
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                    if result.returncode == 0:
+                        print(f"{Colors.GREEN}   ✅ {script_name} completed successfully{Colors.END}")
+                        fixes_applied.append(script_name)
+                    else:
+                        print(f"{Colors.YELLOW}   ⚠️ {script_name} completed with warnings{Colors.END}")
+                        if result.stderr:
+                            print(f"{Colors.YELLOW}      {result.stderr.strip()}{Colors.END}")
+                except Exception as e:
+                    print(f"{Colors.RED}   ❌ {script_name} failed: {e}{Colors.END}")
+        
+        # Summary
+        if fixes_applied:
+            print(f"\n{Colors.BOLD}{Colors.GREEN}✅ Auto-fix completed! Applied {len(fixes_applied)} fixes{Colors.END}")
+            print(f"{Colors.CYAN}Fixes applied: {', '.join(fixes_applied)}{Colors.END}")
+            print(f"\n{Colors.CYAN}💡 Try running diagnostics again: python3 unified_deployment_tool.py --diagnose{Colors.END}")
+            return 0
+        else:
+            print(f"\n{Colors.YELLOW}⚠️ No automatic fixes were applied{Colors.END}")
+            print(f"{Colors.CYAN}💡 Run diagnostics first: python3 unified_deployment_tool.py --diagnose{Colors.END}")
+            return 0
+    
+    def run_status_check(self, args):
+        """Run system status check"""
+        print(f"\n{Colors.BOLD}{Colors.BLUE}📊 System Status Check{Colors.END}")
+        
+        print(f"{Colors.YELLOW}📋 Checking system health...{Colors.END}")
+        
+        # Check if validation script exists
+        validation_script = self.script_dir / "validate_production.py"
+        if validation_script.exists():
+            try:
+                result = subprocess.run(["python3", str(validation_script)], 
+                                      capture_output=True, text=True, timeout=30)
+                if result.returncode == 0:
+                    print(f"{Colors.GREEN}✅ Production validation: PASSED{Colors.END}")
+                    if result.stdout:
+                        print(f"{Colors.CYAN}{result.stdout.strip()}{Colors.END}")
+                else:
+                    print(f"{Colors.RED}❌ Production validation: FAILED{Colors.END}")
+                    if result.stderr:
+                        print(f"{Colors.YELLOW}Error: {result.stderr.strip()}{Colors.END}")
+            except Exception as e:
+                print(f"{Colors.RED}❌ Status check failed: {e}{Colors.END}")
+        else:
+            print(f"{Colors.YELLOW}⚠️ Validation script not found{Colors.END}")
+        
+        # Basic status checks
+        services_to_check = [
+            ("nginx", "Web server"),
+            ("postgresql", "Database"),
+            ("systemctl is-active projectmeats", "ProjectMeats service")
+        ]
+        
+        for service_cmd, description in services_to_check:
+            try:
+                if service_cmd.startswith("systemctl"):
+                    result = subprocess.run(service_cmd.split(), 
+                                          capture_output=True, text=True, timeout=10)
+                else:
+                    result = subprocess.run(["systemctl", "is-active", service_cmd], 
+                                          capture_output=True, text=True, timeout=10)
+                
+                if result.returncode == 0:
+                    status = result.stdout.strip()
+                    if status == "active":
+                        print(f"{Colors.GREEN}✅ {description}: ACTIVE{Colors.END}")
+                    else:
+                        print(f"{Colors.YELLOW}⚠️ {description}: {status.upper()}{Colors.END}")
+                else:
+                    print(f"{Colors.RED}❌ {description}: INACTIVE{Colors.END}")
+            except Exception:
+                print(f"{Colors.YELLOW}⚠️ {description}: UNKNOWN{Colors.END}")
+        
+        print(f"\n{Colors.BOLD}{Colors.GREEN}📊 Status check completed{Colors.END}")
+        return 0
 
 
 # ============================================================================
@@ -382,32 +661,72 @@ def main():
         orchestrator.run_help()
         return 0
     
-    # For now, just show that the tool is working
+    # Create orchestrator instance
+    orchestrator = UnifiedDeploymentOrchestrator()
+    
+    # Show tool status
     print(f"\n{Colors.BOLD}{Colors.GREEN}✅ Unified Deployment Tool is ready!{Colors.END}")
     print(f"{Colors.CYAN}This tool consolidates ALL ProjectMeats deployment functionality.{Colors.END}")
     
-    if args.production:
-        print(f"\n{Colors.BLUE}🎯 Production deployment mode selected{Colors.END}")
-        print(f"{Colors.YELLOW}⚠️ Full implementation in progress...{Colors.END}")
-        
-    elif args.diagnose:
-        print(f"\n{Colors.BLUE}🔍 Diagnostic mode selected{Colors.END}")
-        if args.domain:
-            print(f"   Domain: {args.domain}")
-        if args.server:
-            print(f"   Server: {args.server}")
-        print(f"{Colors.YELLOW}⚠️ Full implementation in progress...{Colors.END}")
-        
-    elif args.fix:
-        print(f"\n{Colors.BLUE}🛠️ Auto-fix mode selected{Colors.END}")
-        print(f"{Colors.YELLOW}⚠️ Full implementation in progress...{Colors.END}")
-        
-    elif args.status:
-        print(f"\n{Colors.BLUE}📊 Status check mode selected{Colors.END}")
-        print(f"{Colors.YELLOW}⚠️ Full implementation in progress...{Colors.END}")
-        
-    else:
-        print(f"\n{Colors.CYAN}Use --help to see all available options{Colors.END}")
+    # Execute based on mode
+    try:
+        if args.production:
+            print(f"\n{Colors.BLUE}🎯 Production deployment mode selected{Colors.END}")
+            return orchestrator.run_production_deployment(args)
+            
+        elif args.diagnose:
+            print(f"\n{Colors.BLUE}🔍 Diagnostic mode selected{Colors.END}")
+            if args.domain:
+                print(f"   Domain: {args.domain}")
+            if args.server:
+                print(f"   Server: {args.server}")
+            return orchestrator.run_diagnostics(args)
+            
+        elif args.fix:
+            print(f"\n{Colors.BLUE}🛠️ Auto-fix mode selected{Colors.END}")
+            return orchestrator.run_auto_fix(args)
+            
+        elif args.status:
+            print(f"\n{Colors.BLUE}📊 Status check mode selected{Colors.END}")
+            return orchestrator.run_status_check(args)
+            
+        elif args.staging:
+            print(f"\n{Colors.BLUE}🧪 Staging deployment mode selected{Colors.END}")
+            print(f"{Colors.YELLOW}⚠️ Staging mode implementation in progress...{Colors.END}")
+            # For now, just run diagnostics
+            return orchestrator.run_diagnostics(args)
+            
+        elif args.clean:
+            print(f"\n{Colors.BLUE}🧹 Clean mode selected{Colors.END}")
+            print(f"{Colors.YELLOW}🧹 Cleaning server environment...{Colors.END}")
+            
+            # Run cleanup script if it exists
+            cleanup_script = Path(__file__).parent / "cleanup_deprecated_scripts.sh"
+            if cleanup_script.exists():
+                try:
+                    result = subprocess.run(["bash", str(cleanup_script)], check=False)
+                    if result.returncode == 0:
+                        print(f"{Colors.GREEN}✅ Cleanup completed successfully{Colors.END}")
+                    else:
+                        print(f"{Colors.YELLOW}⚠️ Cleanup completed with warnings{Colors.END}")
+                    return result.returncode
+                except Exception as e:
+                    print(f"{Colors.RED}❌ Cleanup failed: {e}{Colors.END}")
+                    return 1
+            else:
+                print(f"{Colors.YELLOW}⚠️ Cleanup script not found{Colors.END}")
+                return 0
+                
+        else:
+            print(f"\n{Colors.CYAN}Use --help to see all available options{Colors.END}")
+            return 0
+            
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}⚠️ Operation cancelled by user{Colors.END}")
+        return 130
+    except Exception as e:
+        print(f"\n{Colors.RED}❌ Unexpected error: {e}{Colors.END}")
+        return 1
     
     print(f"\n{Colors.BOLD}📖 For detailed documentation:{Colors.END}")
     print(f"   UNIFIED_DEPLOYMENT_COMPLETE_GUIDE.md")
