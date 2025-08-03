@@ -927,8 +927,8 @@ class AIDeploymentOrchestrator:
         return True
     
     def deploy_download_application(self) -> bool:
-        """Download application with proper validation and backup handling"""
-        self.log("Downloading ProjectMeats...", "INFO")
+        """Download application with improved timeout and error handling"""
+        self.log("Setting up ProjectMeats application...", "INFO")
         
         project_dir = "/opt/projectmeats"
         
@@ -941,10 +941,18 @@ class AIDeploymentOrchestrator:
             self.log("Failed to create project directory", "ERROR")
             return False
         
-        # Check if directory already has content and handle it
-        exit_code, stdout, stderr = self.execute_command(f"ls -la {project_dir}")
-        if exit_code == 0 and stdout and len(stdout.strip().split('\n')) > 3:  # More than just . and ..
-            self.log("Project directory already contains files", "WARNING")
+        # Check if application is already downloaded and valid
+        exit_code, stdout, stderr = self.execute_command(
+            f"ls -la {project_dir}/backend {project_dir}/frontend {project_dir}/README.md 2>/dev/null"
+        )
+        if exit_code == 0:
+            self.log("ProjectMeats application already exists - skipping download", "SUCCESS")
+            return True
+        
+        # Check if directory has content that needs backup
+        exit_code, stdout, stderr = self.execute_command(f"ls -A {project_dir} 2>/dev/null | wc -l")
+        if exit_code == 0 and stdout and int(stdout.strip()) > 0:
+            self.log("Project directory contains files - creating backup", "WARNING")
             
             # Create backup of existing content
             backup_dir = f"{project_dir}_backup_{int(time.time())}"
@@ -960,122 +968,120 @@ class AIDeploymentOrchestrator:
                 self.log("Failed to recreate project directory", "ERROR")
                 return False
         
-        # Download from GitHub (multiple methods with validation)
+        # Test network connectivity first
+        self.log("Testing network connectivity...", "INFO")
+        exit_code, stdout, stderr = self.execute_command("curl -s --connect-timeout 10 https://github.com > /dev/null")
+        if exit_code != 0:
+            self.log("Network connectivity issue - cannot reach GitHub", "ERROR")
+            return False
+        
+        # Download from GitHub with improved timeout handling
         project_downloaded = False
+        download_timeout = 1200  # 20 minutes for download operations
         
         # Method 1: Git clone with PAT authentication (if configured)
         if self.config['github'].get('user') and self.config['github'].get('token'):
             self.log("Attempting git clone with Personal Access Token...", "INFO")
+            self.log("This may take several minutes for a large repository...", "INFO")
             try:
                 github_url = f"https://{self.config['github']['user']}:{self.config['github']['token']}@github.com/Vacilator/ProjectMeats.git"
                 exit_code, stdout, stderr = self.execute_command(
-                    f"cd {project_dir} && git clone {github_url} ."
+                    f"cd {project_dir} && timeout {download_timeout} git clone --progress {github_url} .",
+                    timeout=download_timeout + 60
                 )
                 if exit_code == 0:
                     project_downloaded = True
                     self.log("Successfully downloaded using PAT authentication", "SUCCESS")
                 else:
-                    self.log("PAT authentication failed, trying other methods...", "WARNING")
+                    self.log(f"PAT authentication failed (exit code: {exit_code}), trying other methods...", "WARNING")
+                    if stderr:
+                        self.log(f"Error details: {stderr[:200]}...", "WARNING")
             except Exception as e:
                 self.log(f"PAT authentication error: {e}", "WARNING")
         
         # Method 2: Basic git clone (public access)
         if not project_downloaded:
             self.log("Attempting git clone (public access)...", "INFO")
+            self.log("This may take several minutes for a large repository...", "INFO")
             exit_code, stdout, stderr = self.execute_command(
-                f"cd {project_dir} && git clone https://github.com/Vacilator/ProjectMeats.git ."
+                f"cd {project_dir} && timeout {download_timeout} git clone --progress https://github.com/Vacilator/ProjectMeats.git .",
+                timeout=download_timeout + 60
             )
             if exit_code == 0:
                 project_downloaded = True
                 self.log("Successfully downloaded using git clone", "SUCCESS")
+            else:
+                self.log(f"Git clone failed (exit code: {exit_code}), trying direct download...", "WARNING")
+                if stderr:
+                    self.log(f"Error details: {stderr[:200]}...", "WARNING")
         
-        # Method 3: Direct zip download with validation
+        # Method 3: Direct zip download (fallback)
         if not project_downloaded:
-            self.log("Attempting direct zip download...", "INFO")
+            self.log("Attempting direct zip download as fallback...", "INFO")
             
-            # Download
+            # Download with timeout
             exit_code, stdout, stderr = self.execute_command(
-                f"cd {project_dir} && curl -L https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip"
+                f"cd {project_dir} && timeout {download_timeout} curl -L --connect-timeout 30 --max-time {download_timeout} https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip",
+                timeout=download_timeout + 60
             )
             if exit_code == 0:
-                # Validate download size
-                exit_code, stdout, stderr = self.execute_command(
-                    f"stat -c%s {project_dir}/project.zip 2>/dev/null || echo 0"
-                )
-                if exit_code == 0 and stdout:
-                    zip_size = int(stdout.strip())
-                    if zip_size < 1000:  # Less than 1KB indicates error response
-                        self.log(f"Download failed - file too small ({zip_size} bytes)", "ERROR")
+                # Quick size check
+                exit_code, stdout, stderr = self.execute_command(f"stat -c%s {project_dir}/project.zip 2>/dev/null || echo 0")
+                if exit_code == 0 and stdout and int(stdout.strip()) > 1000:
+                    # Extract without complex validation
+                    self.log("Extracting downloaded archive...", "INFO")
+                    exit_code, stdout, stderr = self.execute_command(
+                        f"cd {project_dir} && unzip -q project.zip && mv ProjectMeats-main/* . && rmdir ProjectMeats-main && rm project.zip"
+                    )
+                    if exit_code == 0:
+                        project_downloaded = True
+                        self.log("Successfully downloaded via direct zip download", "SUCCESS")
                     else:
-                        # Check if it's actually a zip file
-                        exit_code, stdout, stderr = self.execute_command(
-                            f"cd {project_dir} && file project.zip"
-                        )
-                        if exit_code == 0 and "zip" in stdout.lower():
-                            # Extract
-                            exit_code, stdout, stderr = self.execute_command(
-                                f"cd {project_dir} && unzip -q project.zip && mv ProjectMeats-main/* . && mv ProjectMeats-main/.* . 2>/dev/null || true && rm -rf ProjectMeats-main project.zip"
-                            )
-                            if exit_code == 0:
-                                project_downloaded = True
-                                self.log("Successfully downloaded via direct zip download", "SUCCESS")
-                            else:
-                                self.log("Failed to extract zip file", "ERROR")
-                        else:
-                            self.log("Downloaded file is not a valid zip archive", "ERROR")
-                            # Clean up invalid file
-                            self.execute_command(f"rm -f {project_dir}/project.zip")
-        
-        # Method 4: Try tarball download as alternative
-        if not project_downloaded:
-            self.log("Attempting tarball download...", "INFO")
-            
-            # Download
-            exit_code, stdout, stderr = self.execute_command(
-                f"cd {project_dir} && curl -L https://github.com/Vacilator/ProjectMeats/archive/refs/heads/main.tar.gz -o project.tar.gz"
-            )
-            if exit_code == 0:
-                # Validate tarball size
-                exit_code, stdout, stderr = self.execute_command(
-                    f"stat -c%s {project_dir}/project.tar.gz 2>/dev/null || echo 0"
-                )
-                if exit_code == 0 and stdout:
-                    tar_size = int(stdout.strip())
-                    if tar_size < 1000:  # Less than 1KB indicates error response
-                        self.log(f"Tarball download failed - file too small ({tar_size} bytes)", "ERROR")
-                    else:
-                        # Check if it's actually a tar.gz file
-                        exit_code, stdout, stderr = self.execute_command(
-                            f"cd {project_dir} && file project.tar.gz"
-                        )
-                        if exit_code == 0 and "gzip compressed" in stdout.lower():
-                            # Extract
-                            exit_code, stdout, stderr = self.execute_command(
-                                f"cd {project_dir} && tar -xzf project.tar.gz && mv ProjectMeats-main/* . && mv ProjectMeats-main/.* . 2>/dev/null || true && rm -rf ProjectMeats-main project.tar.gz"
-                            )
-                            if exit_code == 0:
-                                project_downloaded = True
-                                self.log("Successfully downloaded via tarball", "SUCCESS")
-                            else:
-                                self.log("Failed to extract tarball", "ERROR")
-                        else:
-                            self.log("Downloaded file is not a valid gzip archive", "ERROR")
-                            # Clean up invalid file
-                            self.execute_command(f"rm -f {project_dir}/project.tar.gz")
+                        self.log("Failed to extract zip file", "ERROR")
+                        # Clean up
+                        self.execute_command(f"rm -f {project_dir}/project.zip")
+                else:
+                    self.log("Downloaded file appears invalid or too small", "ERROR")
+                    self.execute_command(f"rm -f {project_dir}/project.zip")
+            else:
+                self.log(f"Direct download failed (exit code: {exit_code})", "WARNING")
         
         if not project_downloaded:
             self.log("All download methods failed", "ERROR")
+            self.log("Please check network connectivity and GitHub access", "ERROR")
             return False
         
-        # Verify that essential files exist
+        # Simple verification that essential files exist
+        self.log("Verifying downloaded application...", "INFO")
         exit_code, stdout, stderr = self.execute_command(
-            f"ls -la {project_dir}/backend {project_dir}/frontend {project_dir}/README.md"
+            f"test -d {project_dir}/backend && test -d {project_dir}/frontend && test -f {project_dir}/README.md"
         )
         if exit_code != 0:
             self.log("Downloaded project appears incomplete - missing essential directories", "ERROR")
+            self.log("Required: backend/, frontend/, README.md", "ERROR")
             return False
         
-        self.log("ProjectMeats application downloaded and validated successfully", "SUCCESS")
+        # Check for key files
+        self.log("Checking for key application files...", "INFO")
+        key_files = [
+            "backend/manage.py",
+            "backend/requirements.txt", 
+            "frontend/package.json"
+        ]
+        
+        missing_files = []
+        for file_path in key_files:
+            exit_code, stdout, stderr = self.execute_command(f"test -f {project_dir}/{file_path}")
+            if exit_code != 0:
+                missing_files.append(file_path)
+        
+        if missing_files:
+            self.log(f"Warning: Some expected files are missing: {', '.join(missing_files)}", "WARNING")
+            self.log("Deployment will continue but may fail in later steps", "WARNING")
+        else:
+            self.log("All key application files found", "SUCCESS")
+        
+        self.log("ProjectMeats application setup completed successfully", "SUCCESS")
         return True
     
     def deploy_configure_backend(self) -> bool:
@@ -1171,6 +1177,7 @@ def main():
     parser.add_argument("--test-connection", action="store_true", help="Test server connection only")
     parser.add_argument("--resume", help="Resume deployment with given ID")
     parser.add_argument("--config", help="Configuration file path")
+    parser.add_argument("--profile", help="Use predefined server profile from configuration")
     
     args = parser.parse_args()
     
@@ -1276,6 +1283,36 @@ def main():
             orchestrator.config['domain'] = domain
             
             # Run deployment
+            success = orchestrator.run_deployment(server_config)
+            return 0 if success else 1
+        
+        elif args.profile:
+            # Use predefined server profile
+            profiles = orchestrator.config.get('server_profiles', {})
+            if args.profile not in profiles:
+                orchestrator.log(f"Profile '{args.profile}' not found in configuration", "ERROR")
+                available_profiles = list(profiles.keys())
+                if available_profiles:
+                    orchestrator.log(f"Available profiles: {', '.join(available_profiles)}", "INFO")
+                else:
+                    orchestrator.log("No profiles configured. Run setup_ai_deployment.py first.", "INFO")
+                return 1
+            
+            profile = profiles[args.profile]
+            server_config = {
+                'hostname': profile['hostname'],
+                'username': profile.get('username', 'root'),
+                'key_file': profile.get('key_file') if not profile.get('use_password', False) else None,
+                'password': None,  # Password will be prompted if needed
+                'domain': profile.get('domain')
+            }
+            
+            if profile.get('domain'):
+                orchestrator.config['domain'] = profile['domain']
+            
+            orchestrator.log(f"Using profile '{args.profile}' for deployment", "INFO")
+            orchestrator.log(f"Target: {profile['hostname']}", "INFO")
+            
             success = orchestrator.run_deployment(server_config)
             return 0 if success else 1
         
