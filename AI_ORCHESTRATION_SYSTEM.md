@@ -1,8 +1,8 @@
 # ProjectMeats AI Orchestration System
 
-## Complete Autonomous Task Management & GitHub Integration
+## Complete Autonomous Task Management & GitHub Integration with Continuous Growth Discovery
 
-The ProjectMeats AI Orchestration System provides **complete end-to-end autonomous task management** with intelligent agent delegation and automatic GitHub issue creation for production failures.
+The ProjectMeats AI Orchestration System provides **complete end-to-end autonomous task management** with intelligent agent delegation, automatic GitHub issue creation for production failures, and **continuous task discovery for application growth**.
 
 ## 🎯 System Overview
 
@@ -14,6 +14,9 @@ The orchestration system automatically:
 4. **Creates GitHub issues** with detailed error context and recovery suggestions
 5. **Monitors task progress** and handles failures with retry/escalation logic
 6. **Provides real-time monitoring** and comprehensive dashboards
+7. **🆕 Discovers new tasks for continuous growth** every 30-60 minutes
+8. **🆕 Analyzes application state** and generates improvement tasks autonomously
+9. **🆕 Maintains agent utilization** by ensuring continuous development work
 
 ## 🏗️ Architecture
 
@@ -21,19 +24,21 @@ The orchestration system automatically:
 
 - **Django App**: `apps.task_orchestration`
 - **Models**: Agent, Task, TaskAssignment, TaskExecutionLog, OrchestrationRule, SystemHealth
-- **Services**: OrchestrationEngine, ProductionDeploymentMonitor
+- **Services**: OrchestrationEngine, ProductionDeploymentMonitor, **TaskDiscoveryService**
 - **APIs**: Full REST API with comprehensive endpoints
-- **Management**: Django management commands for continuous operation
+- **Management**: Django management commands for continuous operation and discovery
+- **🆕 GitHub Workflow**: Scheduled task discovery every 45 minutes
 
 ### Agent Types
 
-The system includes 5 specialized AI agents:
+The system includes **6 specialized AI agents** (enhanced from 5):
 
 1. **DeploymentAgent-Primary** - Handles production deployments and critical infrastructure issues
 2. **GitHubAgent-Issues** - Manages GitHub issue creation and tracking
 3. **CodeAgent-Emergency** - Handles urgent code fixes and emergency responses
 4. **MonitoringAgent-System** - Provides continuous system monitoring and health checks
 5. **GeneralAgent-Backup** - Backup agent for overflow and general tasks
+6. **🆕 DiscoveryAgent-Growth** - Analyzes application state and discovers new growth tasks
 
 ## 🚀 Quick Start
 
@@ -45,19 +50,39 @@ source venv/bin/activate
 python manage.py run_orchestration --verbose
 ```
 
-### 2. Monitor via API
+### 2. 🆕 Run Task Discovery
+
+```bash
+# Discover new tasks for application growth
+python manage.py discover_tasks --verbose
+
+# Run discovery analysis without creating tasks
+python manage.py discover_tasks --dry-run --verbose
+
+# Force discovery even if recent tasks exist
+python manage.py discover_tasks --force --max-tasks=5
+```
+
+### 3. Monitor via API
 
 Access the dashboard at:
 ```
 http://localhost:8000/api/v1/orchestration/status/dashboard/
 ```
 
-### 3. Admin Interface
+### 4. Admin Interface
 
 View and manage tasks at:
 ```
 http://localhost:8000/admin/
 ```
+
+### 5. 🆕 Scheduled Discovery
+
+The system automatically runs task discovery every 45 minutes via GitHub Actions workflow:
+- Manual trigger available at: GitHub Actions → "AI Task Discovery Agent"
+- Logs available in workflow artifacts
+- Configurable parameters: max_tasks, force_discovery, dry_run
 
 ## 📋 Key Features
 

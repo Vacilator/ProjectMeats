@@ -109,6 +109,19 @@ class EnhancedDeploymentOrchestrator:
                     'overflow_handling': True,
                     'general_purpose': True
                 }
+            },
+            {
+                'name': 'DiscoveryAgent-Growth',
+                'agent_type': AgentType.DISCOVERY_AGENT,
+                'capabilities': [TaskType.TASK_DISCOVERY, TaskType.APPLICATION_ANALYSIS, TaskType.FEATURE_DEVELOPMENT, TaskType.PERFORMANCE_OPTIMIZATION],
+                'max_concurrent_tasks': 2,
+                'priority_weight': 9.0,
+                'configuration': {
+                    'specialization': 'continuous_growth',
+                    'discovery_enabled': True,
+                    'analysis_focus': 'business_value',
+                    'autonomous_discovery': True
+                }
             }
         ]
         

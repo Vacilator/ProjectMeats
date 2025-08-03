@@ -1,0 +1,313 @@
+name: AI Task Discovery Agent
+
+on:
+  schedule:
+    # Run every 45 minutes to discover new tasks for continuous growth
+    - cron: '*/45 * * * *'
+  
+  # Allow manual triggering for testing and immediate discovery
+  workflow_dispatch:
+    inputs:
+      max_tasks:
+        description: 'Maximum number of tasks to create'
+        required: false
+        default: '3'
+        type: choice
+        options:
+        - '1'
+        - '2'
+        - '3'
+        - '5'
+        - '10'
+      
+      force_discovery:
+        description: 'Force discovery even if recent tasks exist'
+        required: false
+        default: false
+        type: boolean
+      
+      dry_run:
+        description: 'Run analysis without creating tasks'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  DJANGO_SETTINGS_MODULE: projectmeats.settings
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/projectmeats_discovery
+  SECRET_KEY: discovery-agent-secret-key
+  DEBUG: False
+
+jobs:
+  task-discovery:
+    name: Autonomous Task Discovery
+    runs-on: ubuntu-latest
+    
+    # Use concurrency to prevent multiple discovery runs from overlapping
+    concurrency:
+      group: task-discovery
+      cancel-in-progress: false
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: projectmeats_discovery
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-discovery-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-discovery-
+          ${{ runner.os }}-pip-
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Set up database and environment
+      run: |
+        cd backend
+        cp .env.example .env
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/projectmeats_discovery" >> .env
+        python manage.py migrate
+    
+    - name: Initialize orchestration system
+      run: |
+        cd backend
+        echo "🤖 Initializing AI orchestration system..."
+        python manage.py shell -c "
+        from apps.task_orchestration.services.orchestration_engine import orchestration_engine
+        from apps.task_orchestration.models import Agent, AgentType, AgentStatus, TaskType
+        from datetime import timedelta
+        
+        # Ensure core agents exist for task assignment
+        agents_config = [
+            {
+                'name': 'DiscoveryAgent-Growth',
+                'agent_type': AgentType.DISCOVERY_AGENT,
+                'capabilities': [TaskType.TASK_DISCOVERY, TaskType.APPLICATION_ANALYSIS, TaskType.FEATURE_DEVELOPMENT],
+                'max_concurrent_tasks': 3,
+                'priority_weight': 9.0,
+                'configuration': {'specialization': 'application_growth', 'discovery_enabled': True}
+            },
+            {
+                'name': 'CodeAgent-Development',
+                'agent_type': AgentType.CODE_AGENT,
+                'capabilities': [TaskType.FEATURE_DEVELOPMENT, TaskType.BUG_FIX, TaskType.CODE_REVIEW],
+                'max_concurrent_tasks': 4,
+                'priority_weight': 7.0,
+                'configuration': {'development_focus': True}
+            },
+            {
+                'name': 'GeneralAgent-Growth',
+                'agent_type': AgentType.GENERAL_AGENT,
+                'capabilities': [TaskType.DOCUMENTATION, TaskType.TESTING, TaskType.MAINTENANCE],
+                'max_concurrent_tasks': 3,
+                'priority_weight': 5.0,
+                'configuration': {'growth_support': True}
+            }
+        ]
+        
+        for config in agents_config:
+            agent, created = Agent.objects.get_or_create(
+                name=config['name'],
+                defaults={
+                    'agent_type': config['agent_type'],
+                    'capabilities': config['capabilities'],
+                    'max_concurrent_tasks': config['max_concurrent_tasks'],
+                    'priority_weight': config['priority_weight'],
+                    'configuration': config['configuration'],
+                    'status': AgentStatus.AVAILABLE,
+                    'is_active': True
+                }
+            )
+            if created:
+                print(f'Created agent: {agent.name}')
+            else:
+                print(f'Agent exists: {agent.name}')
+        
+        print('Orchestration system initialized')
+        "
+    
+    - name: Run task discovery analysis
+      id: discovery
+      run: |
+        cd backend
+        
+        # Set up parameters from workflow inputs or defaults
+        MAX_TASKS="${{ github.event.inputs.max_tasks || '3' }}"
+        FORCE_FLAG=""
+        DRY_RUN_FLAG=""
+        
+        if [ "${{ github.event.inputs.force_discovery }}" = "true" ]; then
+          FORCE_FLAG="--force"
+        fi
+        
+        if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+          DRY_RUN_FLAG="--dry-run"
+        fi
+        
+        echo "🔍 Running task discovery with parameters:"
+        echo "  Max tasks: $MAX_TASKS"
+        echo "  Force: ${{ github.event.inputs.force_discovery || 'false' }}"
+        echo "  Dry run: ${{ github.event.inputs.dry_run || 'false' }}"
+        echo ""
+        
+        # Run discovery command
+        python manage.py discover_tasks \
+          --max-tasks="$MAX_TASKS" \
+          $FORCE_FLAG \
+          $DRY_RUN_FLAG \
+          --verbose \
+          --report-format=json > discovery_result.json
+        
+        # Display results
+        echo "📊 Discovery Results:"
+        cat discovery_result.json | python -m json.tool
+        
+        # Extract key metrics for workflow summary
+        TASKS_CREATED=$(cat discovery_result.json | python -c "import json, sys; data=json.load(sys.stdin); print(data.get('tasks_created', 0))")
+        DISCOVERY_NEEDED=$(cat discovery_result.json | python -c "import json, sys; data=json.load(sys.stdin); print(data.get('discovery_needed', False))")
+        
+        echo "tasks_created=$TASKS_CREATED" >> $GITHUB_OUTPUT
+        echo "discovery_needed=$DISCOVERY_NEEDED" >> $GITHUB_OUTPUT
+        
+        # Save full results for artifact upload
+        cp discovery_result.json /tmp/discovery_result.json
+    
+    - name: Validate created tasks
+      if: steps.discovery.outputs.tasks_created > 0
+      run: |
+        cd backend
+        echo "✅ Validating created tasks..."
+        
+        python manage.py shell -c "
+        from apps.task_orchestration.models import Task, TaskStatus
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        # Get recently created tasks
+        recent_tasks = Task.objects.filter(
+            created_on__gte=timezone.now() - timedelta(minutes=5)
+        ).order_by('-created_on')
+        
+        print(f'Recently created tasks: {recent_tasks.count()}')
+        for task in recent_tasks:
+            print(f'  • {task.title} ({task.task_type}) - {task.status}')
+            print(f'    Priority: {task.priority}, Agent: {task.assigned_agent}')
+        
+        # Validate task assignment
+        pending_tasks = recent_tasks.filter(status=TaskStatus.PENDING)
+        if pending_tasks.exists():
+            print(f'\\nPending tasks ready for assignment: {pending_tasks.count()}')
+        
+        assigned_tasks = recent_tasks.exclude(assigned_agent=None)
+        if assigned_tasks.exists():
+            print(f'Tasks automatically assigned: {assigned_tasks.count()}')
+        "
+    
+    - name: Update agent orchestration status
+      if: always()
+      run: |
+        cd backend
+        echo "📈 Updating agent orchestration status..."
+        
+        python manage.py shell -c "
+        from apps.task_orchestration.models import Agent, Task, SystemHealth
+        from django.utils import timezone
+        import json
+        
+        # Update system health metrics
+        try:
+            total_tasks = Task.objects.count()
+            pending_tasks = Task.objects.filter(status='pending').count()
+            active_agents = Agent.objects.filter(is_active=True).count()
+            
+            # Create/update discovery health metric
+            health_data = {
+                'total_tasks': total_tasks,
+                'pending_tasks': pending_tasks,
+                'active_agents': active_agents,
+                'last_discovery': timezone.now().isoformat(),
+                'discovery_source': 'github_workflow'
+            }
+            
+            health_metric, created = SystemHealth.objects.update_or_create(
+                component='task_discovery',
+                metric_name='discovery_status',
+                defaults={
+                    'metric_value': health_data,
+                    'status': 'healthy' if total_tasks > 0 else 'warning'
+                }
+            )
+            
+            print(f'System health updated: {health_metric.status}')
+            print(f'Health data: {json.dumps(health_data, indent=2)}')
+            
+        except Exception as e:
+            print(f'Error updating system health: {e}')
+        "
+    
+    - name: Generate workflow summary
+      if: always()
+      run: |
+        echo "## 🤖 AI Task Discovery Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+        echo "**Discovery Needed:** ${{ steps.discovery.outputs.discovery_needed }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Tasks Created:** ${{ steps.discovery.outputs.tasks_created }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.discovery.outputs.tasks_created }}" -gt "0" ]; then
+          echo "✅ **Status:** New tasks successfully discovered and created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The AI orchestration system identified opportunities for application growth and created ${{ steps.discovery.outputs.tasks_created }} new tasks to keep development agents busy." >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.discovery.outputs.discovery_needed }}" = "true" ]; then
+          echo "ℹ️ **Status:** Discovery analysis completed, but no new tasks were needed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⏭️ **Status:** Discovery skipped - recent tasks exist and queue is adequate" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Next Discovery:** Scheduled for $(date -u -d '+45 minutes' '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload discovery results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: task-discovery-results-${{ github.run_number }}
+        path: /tmp/discovery_result.json
+        retention-days: 7
+    
+    # Optional: Create GitHub issue if discovery fails repeatedly
+    - name: Report discovery failures
+      if: failure() && github.event_name == 'schedule'
+      run: |
+        echo "⚠️ Task discovery workflow failed during scheduled run"
+        echo "This indicates an issue with the autonomous task discovery system"
+        echo "Manual investigation may be required to ensure continuous application growth"
+        
+        # Could add GitHub issue creation here if needed
+        # For now, just log the failure for monitoring
