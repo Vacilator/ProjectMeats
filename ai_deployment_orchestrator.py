@@ -59,6 +59,16 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 import argparse
 
+# Import GitHub integration
+try:
+    from github_integration import GitHubIntegration, DeploymentLogManager, DeploymentLogEntry
+    GITHUB_INTEGRATION_AVAILABLE = True
+except ImportError:
+    GITHUB_INTEGRATION_AVAILABLE = False
+    GitHubIntegration = None
+    DeploymentLogManager = None
+    DeploymentLogEntry = None
+
 
 class DeploymentStatus(Enum):
     """Deployment status enumeration"""
@@ -90,6 +100,9 @@ class DeploymentState:
     warnings: List[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    domain_accessible: bool = False  # NEW: Track domain accessibility
+    services_healthy: bool = False   # NEW: Track service health
+    critical_checks_passed: bool = False  # NEW: Track critical deployment checks
     
     def __post_init__(self):
         if self.warnings is None:
@@ -238,6 +251,11 @@ class AIDeploymentOrchestrator:
         # Initialize logging
         self._setup_logging()
         
+        # GitHub integration - must be after logging setup
+        self.github_log_manager: Optional[DeploymentLogManager] = None
+        self.github_integration: Optional[GitHubIntegration] = None
+        self._setup_github_integration()  # Call here instead of in _setup_logging
+        
         # Remote connection
         self.ssh_client = None
         self.sftp_client = None
@@ -250,7 +268,7 @@ class AIDeploymentOrchestrator:
         # Error patterns for intelligent recovery
         self.error_patterns = self._initialize_error_patterns()
         
-        # Deployment steps
+        # Deployment steps with enhanced verification
         self.deployment_steps = [
             ("validate_server", "Server validation and prerequisites"),
             ("setup_authentication", "Authentication and security setup"),
@@ -262,7 +280,8 @@ class AIDeploymentOrchestrator:
             ("configure_frontend", "Frontend build and configuration"),
             ("setup_webserver", "Web server and SSL configuration"),
             ("setup_services", "System services and monitoring"),
-            ("final_verification", "Final testing and verification")
+            ("final_verification", "Final testing and verification"),
+            ("domain_accessibility_check", "Domain accessibility verification")  # NEW: Critical final check
         ]
     
     def _load_config(self) -> Dict[str, Any]:
@@ -405,6 +424,32 @@ class AIDeploymentOrchestrator:
         self.logger = logging.getLogger(__name__)
         self.log(f"Logging initialized - {log_filename}", "INFO")
     
+    def _setup_github_integration(self):
+        """Setup GitHub integration for logging and issue creation"""
+        # Initialize GitHub-related attributes
+        self.github_log_manager: Optional[DeploymentLogManager] = None
+        self.github_integration: Optional[GitHubIntegration] = None
+        
+        if not GITHUB_INTEGRATION_AVAILABLE:
+            self.log("GitHub integration not available (missing github_integration module)", "WARNING")
+            return
+        
+        # Check for GitHub token
+        github_token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_PAT')
+        if not github_token:
+            self.log("GitHub token not found in environment variables", "INFO")
+            self.log("Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "INFO")
+            return
+        
+        try:
+            self.github_integration = GitHubIntegration(
+                token=github_token,
+                repo="Vacilator/ProjectMeats"
+            )
+            self.log("GitHub integration initialized successfully", "SUCCESS")
+        except Exception as e:
+            self.log(f"Failed to initialize GitHub integration: {e}", "WARNING")
+    
     def _initialize_error_patterns(self) -> List[ErrorPattern]:
         """Initialize error detection patterns"""
         return [
@@ -507,6 +552,18 @@ class AIDeploymentOrchestrator:
                 f.write(json.dumps(log_entry) + '\n')
         except Exception:
             pass  # Don't fail deployment for logging issues
+        
+        # Add to GitHub log manager if available
+        if hasattr(self, 'github_log_manager') and self.github_log_manager and level in ["ERROR", "CRITICAL", "WARNING", "SUCCESS"]:
+            try:
+                current_step = None
+                if self.state and hasattr(self.state, 'current_step'):
+                    step_name = self.deployment_steps[self.state.current_step - 1][0] if self.state.current_step > 0 else None
+                    current_step = step_name
+                
+                self.github_log_manager.add_log(level, message, current_step)
+            except Exception:
+                pass  # Don't fail deployment for GitHub logging issues
     
     def save_state(self):
         """Save deployment state to file"""
@@ -864,6 +921,12 @@ class AIDeploymentOrchestrator:
                 server_info=server_config
             )
             
+            # Initialize GitHub log manager
+            if GITHUB_INTEGRATION_AVAILABLE and self.github_integration:
+                self.github_log_manager = DeploymentLogManager(deployment_id)
+                self.github_log_manager.github = self.github_integration
+                self.github_log_manager.update_status("in_progress")
+            
             self.save_state()
             
             self.log(f"Starting deployment {deployment_id}", "INFO", Colors.BOLD + Colors.PURPLE)
@@ -877,31 +940,55 @@ class AIDeploymentOrchestrator:
                 server_config.get('password')
             ):
                 self.state.status = DeploymentStatus.FAILED
-                self.save_state()
+                self._handle_deployment_failure("server_connection", "Failed to connect to server")
                 return False
             
             # Execute deployment steps
+            failed_step = None
             for i, (step_name, step_description) in enumerate(self.deployment_steps):
                 self.state.current_step = i + 1
                 self.save_state()
                 
-                if not self.execute_deployment_step(step_name, step_description):
+                step_success = self.execute_deployment_step(step_name, step_description)
+                
+                if not step_success:
+                    failed_step = step_name
                     self.state.status = DeploymentStatus.FAILED
                     self.state.error_count += 1
                     self.save_state()
                     
                     if not self.config['recovery']['auto_recovery']:
+                        self._handle_deployment_failure(step_name, f"Step failed: {step_description}")
                         return False
                     
                     # Try automatic recovery
                     self.log("Attempting automatic recovery...", "WARNING")
-                    if not self.attempt_recovery(step_name):
+                    if self.attempt_recovery(step_name):
+                        # Re-run the failed step after successful recovery
+                        self.log(f"Re-running step after recovery: {step_description}", "INFO")
+                        if not self.execute_deployment_step(step_name, step_description):
+                            self._handle_deployment_failure(step_name, f"Step failed even after recovery: {step_description}")
+                            return False
+                    else:
+                        self._handle_deployment_failure(step_name, f"Step failed and recovery unsuccessful: {step_description}")
                         return False
+            
+            # CRITICAL FIX: Only mark as successful if all critical checks pass
+            if not self._verify_deployment_success():
+                self._handle_deployment_failure("final_verification", "Deployment verification failed - application not accessible")
+                return False
             
             # Deployment completed successfully
             self.state.status = DeploymentStatus.SUCCESS
             self.state.end_time = datetime.now()
             self.save_state()
+            
+            # Update GitHub status
+            if self.github_log_manager:
+                domain = server_config.get('domain', server_config['hostname'])
+                target_url = f"https://{domain}" if domain else None
+                self.github_log_manager.update_status("success", target_url)
+                self.github_log_manager.post_final_logs("success")
             
             self.log("Deployment completed successfully!", "SUCCESS", Colors.BOLD + Colors.GREEN)
             self.print_deployment_summary()
@@ -912,16 +999,192 @@ class AIDeploymentOrchestrator:
             self.log("Deployment cancelled by user", "WARNING")
             self.state.status = DeploymentStatus.CANCELLED
             self.save_state()
+            self._handle_deployment_failure("user_cancelled", "Deployment cancelled by user")
             return False
             
         except Exception as e:
             self.log(f"Deployment failed with exception: {e}", "CRITICAL")
             self.state.status = DeploymentStatus.FAILED
             self.save_state()
+            self._handle_deployment_failure("exception", f"Deployment failed with exception: {e}")
             return False
             
         finally:
             self.disconnect_from_server()
+    
+    def _handle_deployment_failure(self, failed_step: str, error_message: str):
+        """Handle deployment failure with GitHub integration"""
+        self.log(f"Deployment failed at step: {failed_step}", "CRITICAL")
+        self.log(f"Error: {error_message}", "CRITICAL")
+        
+        # Update GitHub status and create issue
+        if self.github_log_manager:
+            self.github_log_manager.update_status("failure")
+            
+            error_details = {
+                "failed_step": failed_step,
+                "error_message": error_message,
+                "server_info": self.state.server_info if self.state else {},
+                "auto_recovery": self.config.get('recovery', {}).get('auto_recovery', False),
+                "deployment_step": self.state.current_step if self.state else 0,
+                "total_steps": len(self.deployment_steps)
+            }
+            
+            # Create GitHub issue for the failure
+            issue_number = self.github_log_manager.create_failure_issue(error_details)
+            if issue_number:
+                self.log(f"Created GitHub issue #{issue_number} for deployment failure", "INFO")
+            
+            # Post final logs
+            self.github_log_manager.post_final_logs("failed")
+    
+    def _verify_deployment_success(self) -> bool:
+        """Comprehensive verification that deployment actually succeeded"""
+        self.log("Performing comprehensive deployment verification...", "INFO", Colors.BOLD + Colors.BLUE)
+        
+        # Check 1: Services are running
+        if not self._verify_services_health():
+            return False
+        
+        # Check 2: Domain is accessible (critical check)
+        if not self._verify_domain_accessibility():
+            return False
+        
+        # Check 3: Application endpoints respond correctly
+        if not self._verify_application_endpoints():
+            return False
+        
+        # All critical checks passed
+        self.state.critical_checks_passed = True
+        self.state.services_healthy = True
+        self.state.domain_accessible = True
+        self.save_state()
+        
+        self.log("✓ All deployment verification checks passed", "SUCCESS", Colors.BOLD + Colors.GREEN)
+        return True
+    
+    def _verify_services_health(self) -> bool:
+        """Verify that all required services are healthy"""
+        self.log("Checking service health...", "INFO")
+        
+        required_services = ["nginx", "postgresql"]
+        optional_services = ["projectmeats"]  # May not exist if backend setup failed
+        
+        for service in required_services:
+            exit_code, stdout, stderr = self.execute_command(f"systemctl is-active {service}")
+            if exit_code != 0:
+                self.log(f"✗ Required service {service} is not running", "ERROR")
+                return False
+            else:
+                self.log(f"✓ Service {service} is running", "SUCCESS")
+        
+        for service in optional_services:
+            exit_code, stdout, stderr = self.execute_command(f"systemctl is-active {service}")
+            if exit_code != 0:
+                self.log(f"⚠ Optional service {service} is not running", "WARNING")
+            else:
+                self.log(f"✓ Service {service} is running", "SUCCESS")
+        
+        return True
+    
+    def _verify_domain_accessibility(self) -> bool:
+        """Verify that the domain is accessible from external sources"""
+        domain = self.config.get('domain', 'localhost')
+        
+        if not domain or domain == 'localhost':
+            self.log("No domain configured, skipping external accessibility check", "WARNING")
+            return True
+        
+        self.log(f"Testing external accessibility for domain: {domain}", "INFO")
+        
+        # Test HTTP accessibility
+        exit_code, stdout, stderr = self.execute_command(
+            f"curl -f -L --max-time 30 --connect-timeout 10 http://{domain}/health || echo 'HTTP_ACCESS_FAILED'"
+        )
+        
+        if exit_code == 0 and "healthy" in stdout:
+            self.log(f"✓ Domain {domain} is accessible via HTTP", "SUCCESS")
+            return True
+        elif exit_code == 0 and "HTTP_ACCESS_FAILED" not in stdout:
+            # Got a response but not the health endpoint
+            self.log(f"✓ Domain {domain} is responding (health endpoint may not be configured)", "SUCCESS")
+            return True
+        else:
+            self.log(f"✗ CRITICAL: Domain {domain} is NOT accessible externally", "CRITICAL")
+            self.log("This means the deployment has not succeeded despite completing all steps", "CRITICAL")
+            
+            # Perform diagnostic checks
+            self._diagnose_domain_accessibility_issues(domain)
+            return False
+    
+    def _verify_application_endpoints(self) -> bool:
+        """Verify that application endpoints are working"""
+        self.log("Testing application endpoints...", "INFO")
+        
+        # Test local nginx
+        exit_code, stdout, stderr = self.execute_command("curl -f http://localhost/health")
+        if exit_code != 0:
+            self.log("✗ Local nginx health check failed", "WARNING")
+            return False
+        else:
+            self.log("✓ Local nginx is responding", "SUCCESS")
+        
+        # Test if frontend files are served
+        exit_code, stdout, stderr = self.execute_command("curl -I http://localhost/")
+        if exit_code != 0:
+            self.log("✗ Frontend files not being served", "WARNING")
+            return False
+        else:
+            self.log("✓ Frontend files are being served", "SUCCESS")
+        
+        return True
+    
+    def _diagnose_domain_accessibility_issues(self, domain: str):
+        """Diagnose why domain is not accessible"""
+        self.log("Diagnosing domain accessibility issues...", "INFO")
+        
+        # Check DNS resolution
+        exit_code, stdout, stderr = self.execute_command(f"nslookup {domain}")
+        if exit_code != 0:
+            self.log(f"✗ DNS resolution failed for {domain}", "ERROR")
+            self.log("Possible causes: Domain not configured, DNS not propagated", "ERROR")
+        else:
+            self.log(f"✓ DNS resolution works for {domain}", "INFO")
+            # Extract IP address from nslookup output
+            lines = stdout.split('\n')
+            for line in lines:
+                if 'Address:' in line and '::' not in line:
+                    ip = line.split('Address:')[1].strip()
+                    self.log(f"Domain resolves to IP: {ip}", "INFO")
+                    break
+        
+        # Check if nginx is listening on port 80
+        exit_code, stdout, stderr = self.execute_command("netstat -tlnp | grep :80")
+        if exit_code != 0:
+            self.log("✗ No process listening on port 80", "ERROR")
+        else:
+            self.log(f"✓ Port 80 is being used: {stdout.strip()}", "INFO")
+        
+        # Check nginx configuration
+        exit_code, stdout, stderr = self.execute_command(f"nginx -T | grep -A 10 'server_name {domain}'")
+        if exit_code != 0:
+            self.log(f"✗ No nginx configuration found for {domain}", "ERROR")
+        else:
+            self.log(f"✓ Nginx is configured for {domain}", "INFO")
+        
+        # Check firewall
+        exit_code, stdout, stderr = self.execute_command("ufw status")
+        if exit_code == 0:
+            self.log(f"Firewall status: {stdout.strip()}", "INFO")
+        
+        # Additional network diagnostics
+        server_ip = self.state.server_info.get('hostname', 'unknown')
+        self.log(f"Server IP: {server_ip}", "INFO")
+        self.log("Suggested actions:", "INFO")
+        self.log(f"1. Verify DNS A record points {domain} → {server_ip}", "INFO")
+        self.log(f"2. Test direct IP access: http://{server_ip}/health", "INFO")
+        self.log(f"3. Check domain propagation: https://dnschecker.org/", "INFO")
+        self.log(f"4. Verify firewall allows HTTP/HTTPS traffic", "INFO")
     
     def attempt_recovery(self, failed_step: str) -> bool:
         """Attempt to recover from a failed step"""
@@ -964,7 +1227,13 @@ class AIDeploymentOrchestrator:
         print(f"{Colors.CYAN}Errors:{Colors.END} {self.state.error_count}")
         print(f"{Colors.CYAN}Warnings:{Colors.END} {len(self.state.warnings)}")
         
-        if self.state.status == DeploymentStatus.SUCCESS:
+        # Critical status indicators
+        print(f"\n{Colors.BOLD}Critical Deployment Checks:{Colors.END}")
+        print(f"{Colors.CYAN}Services Healthy:{Colors.END} {'✓ YES' if self.state.services_healthy else '✗ NO'}")
+        print(f"{Colors.CYAN}Domain Accessible:{Colors.END} {'✓ YES' if self.state.domain_accessible else '✗ NO'}")
+        print(f"{Colors.CYAN}All Checks Passed:{Colors.END} {'✓ YES' if self.state.critical_checks_passed else '✗ NO'}")
+        
+        if self.state.status == DeploymentStatus.SUCCESS and self.state.critical_checks_passed:
             server_info = self.state.server_info
             domain = server_info.get('domain', server_info['hostname'])
             
@@ -974,24 +1243,65 @@ class AIDeploymentOrchestrator:
             print(f"  {Colors.CYAN}Admin Panel:{Colors.END} https://{domain}/admin/")
             print(f"  {Colors.CYAN}API Docs:{Colors.END} https://{domain}/api/docs/")
             
-            # Add domain accessibility reminder
-            if domain and domain != 'localhost' and domain != server_info['hostname']:
-                print(f"\n{Colors.YELLOW}⚠ Important Notes:{Colors.END}")
-                print(f"  • If {domain} is not accessible, DNS may need time to propagate")
-                print(f"  • Verify DNS A record points to {server_info['hostname']}")
-                print(f"  • Test direct IP access: http://{server_info['hostname']}/health")
-                print(f"  • Run diagnostics: python diagnose_domain_access.py --domain {domain} --server {server_info['hostname']}")
-                print(f"  • Check domain status: https://dnschecker.org/")
+            # Verification URLs
+            print(f"\n{Colors.BOLD}Verification URLs:{Colors.END}")
+            print(f"  {Colors.CYAN}Health Check:{Colors.END} http://{domain}/health")
+            print(f"  {Colors.CYAN}Direct IP:{Colors.END} http://{server_info['hostname']}/health")
+            
+        elif self.state.status == DeploymentStatus.SUCCESS and not self.state.critical_checks_passed:
+            print(f"\n{Colors.YELLOW}[PARTIAL SUCCESS] Technical deployment completed but application not accessible{Colors.END}")
+            print(f"\n{Colors.BOLD}Issues detected:{Colors.END}")
+            if not self.state.services_healthy:
+                print(f"  {Colors.RED}✗ Services not healthy{Colors.END}")
+            if not self.state.domain_accessible:
+                print(f"  {Colors.RED}✗ Domain not accessible from internet{Colors.END}")
+            
+            print(f"\n{Colors.BOLD}Troubleshooting needed:{Colors.END}")
+            server_info = self.state.server_info
+            domain = server_info.get('domain', server_info['hostname'])
+            print(f"  1. Check DNS: nslookup {domain}")
+            print(f"  2. Test direct access: http://{server_info['hostname']}/health")
+            print(f"  3. Check firewall: ufw status")
+            print(f"  4. Check nginx: systemctl status nginx")
+            
+            # GitHub issue information
+            if self.github_log_manager:
+                print(f"\n{Colors.CYAN}A GitHub issue has been created with detailed diagnostics{Colors.END}")
+                
+        else:
+            print(f"\n{Colors.RED}[FAILED] Deployment Failed{Colors.END}")
+            print(f"\n{Colors.BOLD}The deployment did not complete successfully.{Colors.END}")
+            
+            if self.github_log_manager:
+                print(f"\n{Colors.CYAN}A GitHub issue has been created with error details and logs{Colors.END}")
         
         print(f"\n{Colors.BLUE}Log files:{Colors.END}")
         print(f"  State: {self.state_file}")
         print(f"  Detailed logs: {self.log_file}")
         print(f"  System logs: logs/")
+        
+        # GitHub integration info
+        if self.github_integration:
+            print(f"  GitHub integration: ✓ Enabled")
+        else:
+            print(f"  GitHub integration: ✗ Disabled (set GITHUB_TOKEN to enable)")
+        
+        print(f"\n{Colors.BLUE}For support:{Colors.END}")
+        print(f"  Documentation: https://github.com/Vacilator/ProjectMeats/blob/main/DEPLOYMENT_README.md")
+        print(f"  Issues: https://github.com/Vacilator/ProjectMeats/issues")
     
     # Deployment step implementations
     def deploy_validate_server(self) -> bool:
-        """Validate server prerequisites"""
+        """Validate server prerequisites and optionally prepare golden image"""
         self.log("Validating server environment...", "INFO")
+        
+        # Import server initializer
+        try:
+            from server_initialization import ServerInitializer
+            server_init = ServerInitializer(self.ssh_client, self.logger)
+        except ImportError:
+            server_init = None
+            self.log("Server initialization module not available", "WARNING")
         
         # Check OS
         exit_code, stdout, stderr = self.execute_command("cat /etc/os-release")
@@ -1007,15 +1317,82 @@ class AIDeploymentOrchestrator:
             self.log("Root access required", "ERROR")
             return False
         
-        # Check disk space
-        exit_code, stdout, stderr = self.execute_command("df -h /")
+        # Check disk space (minimum 5GB free)
+        exit_code, stdout, stderr = self.execute_command("df -BG /")
         if exit_code == 0:
             self.log(f"Disk space: {stdout}", "INFO")
+            # Extract available space
+            lines = stdout.strip().split('\n')
+            if len(lines) > 1:
+                parts = lines[1].split()
+                if len(parts) >= 4:
+                    available_gb = parts[3].replace('G', '')
+                    try:
+                        if int(available_gb) < 5:
+                            self.log(f"WARNING: Low disk space ({available_gb}GB available, 5GB minimum recommended)", "WARNING")
+                    except ValueError:
+                        pass
         
-        # Check memory
-        exit_code, stdout, stderr = self.execute_command("free -h")
+        # Check memory (minimum 1GB)
+        exit_code, stdout, stderr = self.execute_command("free -m")
         if exit_code == 0:
             self.log(f"Memory: {stdout}", "INFO")
+            lines = stdout.strip().split('\n')
+            if len(lines) > 1:
+                parts = lines[1].split()
+                if len(parts) >= 2:
+                    total_mb = parts[1]
+                    try:
+                        if int(total_mb) < 1024:
+                            self.log(f"WARNING: Low memory ({total_mb}MB total, 1GB minimum recommended)", "WARNING")
+                    except ValueError:
+                        pass
+        
+        # Check if this is a fresh server or has previous deployments
+        exit_code, stdout, stderr = self.execute_command("ls -la /opt/projectmeats/ 2>/dev/null || echo 'NOT_FOUND'")
+        if "NOT_FOUND" not in stdout:
+            self.log("Previous ProjectMeats deployment detected", "INFO")
+            
+            # Check for golden image marker
+            exit_code, stdout, stderr = self.execute_command("test -f /opt/projectmeats/golden_image_info.json")
+            if exit_code == 0:
+                self.log("Golden image detected - server is pre-configured", "SUCCESS")
+            else:
+                self.log("Previous deployment found but not a golden image", "WARNING")
+                
+                # Option to clean up previous deployment
+                if self.config.get('deployment', {}).get('auto_cleanup', True):
+                    self.log("Cleaning up previous deployment...", "INFO")
+                    if server_init:
+                        if server_init.cleanup_failed_deployment():
+                            self.log("Previous deployment cleaned up successfully", "SUCCESS")
+                        else:
+                            self.log("Failed to clean up previous deployment", "WARNING")
+        else:
+            self.log("Fresh server detected", "INFO")
+            
+            # Option to prepare golden image
+            if self.config.get('deployment', {}).get('prepare_golden_image', False):
+                self.log("Preparing server as golden image...", "INFO")
+                if server_init:
+                    if server_init.prepare_golden_image():
+                        self.log("Golden image preparation completed", "SUCCESS")
+                    else:
+                        self.log("Golden image preparation failed", "WARNING")
+        
+        # Test network connectivity
+        connectivity_tests = [
+            ("GitHub", "curl -s --connect-timeout 10 https://github.com > /dev/null"),
+            ("Ubuntu repositories", "curl -s --connect-timeout 10 http://archive.ubuntu.com > /dev/null"),
+            ("DNS resolution", "nslookup google.com > /dev/null")
+        ]
+        
+        for test_name, test_command in connectivity_tests:
+            exit_code, stdout, stderr = self.execute_command(test_command)
+            if exit_code == 0:
+                self.log(f"✓ {test_name} connectivity: OK", "SUCCESS")
+            else:
+                self.log(f"✗ {test_name} connectivity: FAILED", "WARNING")
         
         return True
     
@@ -1649,6 +2026,67 @@ server {{
         
         self.log("Final verification completed successfully", "SUCCESS")
         return True
+    
+    def deploy_domain_accessibility_check(self) -> bool:
+        """CRITICAL: Verify domain accessibility - this determines real deployment success"""
+        self.log("Performing critical domain accessibility check...", "INFO", Colors.BOLD + Colors.YELLOW)
+        
+        domain = self.config.get('domain', 'localhost')
+        
+        if not domain or domain == 'localhost':
+            self.log("No external domain configured - skipping external accessibility check", "WARNING")
+            return True
+        
+        self.log(f"Testing if {domain} is accessible from the internet...", "INFO")
+        
+        # Multiple accessibility tests
+        tests_passed = 0
+        total_tests = 3
+        
+        # Test 1: HTTP health check
+        self.log("Test 1: HTTP health endpoint", "INFO")
+        exit_code, stdout, stderr = self.execute_command(
+            f"timeout 30 curl -f -L --connect-timeout 10 http://{domain}/health || echo 'FAILED'"
+        )
+        if exit_code == 0 and "healthy" in stdout and "FAILED" not in stdout:
+            self.log("✓ HTTP health endpoint accessible", "SUCCESS")
+            tests_passed += 1
+        else:
+            self.log("✗ HTTP health endpoint not accessible", "ERROR")
+        
+        # Test 2: Root page accessibility
+        self.log("Test 2: Root page accessibility", "INFO")
+        exit_code, stdout, stderr = self.execute_command(
+            f"timeout 30 curl -I -L --connect-timeout 10 http://{domain}/ || echo 'FAILED'"
+        )
+        if exit_code == 0 and ("200 OK" in stdout or "301" in stdout or "302" in stdout):
+            self.log("✓ Root page accessible", "SUCCESS")
+            tests_passed += 1
+        else:
+            self.log("✗ Root page not accessible", "ERROR")
+        
+        # Test 3: DNS resolution verification
+        self.log("Test 3: DNS resolution", "INFO")
+        exit_code, stdout, stderr = self.execute_command(f"nslookup {domain}")
+        if exit_code == 0 and "NXDOMAIN" not in stderr:
+            self.log("✓ DNS resolution working", "SUCCESS")
+            tests_passed += 1
+        else:
+            self.log("✗ DNS resolution failed", "ERROR")
+        
+        # Determine if domain accessibility check passes
+        if tests_passed >= 2:
+            self.log(f"✓ Domain accessibility check PASSED ({tests_passed}/{total_tests} tests)", "SUCCESS", Colors.BOLD + Colors.GREEN)
+            return True
+        else:
+            self.log(f"✗ Domain accessibility check FAILED ({tests_passed}/{total_tests} tests)", "CRITICAL", Colors.BOLD + Colors.RED)
+            self.log(f"CRITICAL: {domain} is not accessible from the internet", "CRITICAL")
+            self.log("This indicates the deployment has NOT succeeded despite completing technical steps", "CRITICAL")
+            
+            # Provide diagnostic information
+            self._diagnose_domain_accessibility_issues(domain)
+            
+            return False
 
 
 def main():
