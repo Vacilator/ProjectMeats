@@ -153,7 +153,7 @@ CORS_ALLOWED_ORIGINS=https://meatscentral.com,https://www.meatscentral.com
 CSRF_TRUSTED_ORIGINS=https://meatscentral.com,https://www.meatscentral.com
 STATIC_ROOT=/home/projectmeats/app/backend/staticfiles
 MEDIA_ROOT=/home/projectmeats/uploads
-DJANGO_ENV</
+DJANGO_ENV
 
 # Run Django setup
 sudo -u projectmeats ./venv/bin/python manage.py migrate
