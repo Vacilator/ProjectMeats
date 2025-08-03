@@ -313,7 +313,7 @@ class MasterDeployer:
         # Method 1: NodeSource repository (fastest for production)
         try:
             self.log("Installing via NodeSource repository...")
-            # Combined setup and install for efficiency
+            # Combined setup and install for efficiency (single command reduces time)
             self.run_command("curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt install -y nodejs")
             
             # Verify installation
@@ -603,13 +603,14 @@ STATIC_ROOT={backend_dir}/staticfiles
         self.log("Running Django migrations...")
         self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py migrate")
         
-        # Create superuser - Optimized approach using Django's built-in command first
+        # Create superuser - Optimized approach using Django's built-in command first (PRIMARY METHOD)
+        # This resolves PR 81 conflicts by making Django createsuperuser the primary method
         self.log("Creating admin user...")
         
         # Clean up any existing admin script files efficiently
         self._cleanup_admin_files(backend_dir)
         
-        # Primary method: Use Django's built-in createsuperuser (most reliable)
+        # Primary method: Use Django's built-in createsuperuser (most reliable) - FROM PR 81
         if self._create_admin_with_django_command(backend_dir):
             self.log("Admin user created successfully using Django management command", 'SUCCESS')
         else:
@@ -1122,9 +1123,9 @@ else:
             except:
                 self.log("⚠️ Django deployment check failed (not critical)", 'WARNING')
         
-        # Auto-restart failed services if possible
+        # Auto-restart failed services if possible (enhanced reliability)
         if failed_services and len(failed_services) < len(services):
-            self.log("Attempting to restart failed services...", 'WARNING')
+            self.log("Attempting to auto-restart failed services...", 'WARNING')
             for service in failed_services:
                 try:
                     self.run_command(f"systemctl restart {service}")
