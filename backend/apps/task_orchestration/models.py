@@ -54,6 +54,11 @@ class TaskType(models.TextChoices):
     TESTING = "testing", "Testing"
     DOCUMENTATION = "documentation", "Documentation"
     MAINTENANCE = "maintenance", "System Maintenance"
+    TASK_DISCOVERY = "task_discovery", "Task Discovery and Analysis"
+    APPLICATION_ANALYSIS = "application_analysis", "Application Analysis"
+    PERFORMANCE_OPTIMIZATION = "performance_optimization", "Performance Optimization"
+    SECURITY_ENHANCEMENT = "security_enhancement", "Security Enhancement"
+    USER_EXPERIENCE_IMPROVEMENT = "ux_improvement", "User Experience Improvement"
 
 
 class AgentType(models.TextChoices):
@@ -65,6 +70,7 @@ class AgentType(models.TextChoices):
     MONITORING_AGENT = "monitoring", "Monitoring Agent"
     GITHUB_AGENT = "github", "GitHub Agent"
     GENERAL_AGENT = "general", "General Purpose Agent"
+    DISCOVERY_AGENT = "discovery", "Task Discovery Agent"
 
 
 class AgentStatus(models.TextChoices):
