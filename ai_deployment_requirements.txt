@@ -1,8 +1,0 @@
-# AI Deployment Orchestrator Requirements
-# Additional dependencies for the AI-driven deployment system
-
-paramiko>=2.12.0
-scp>=0.14.5
-fabric>=3.0.0
-pexpect>=4.8.0
-cryptography>=38.0.0
