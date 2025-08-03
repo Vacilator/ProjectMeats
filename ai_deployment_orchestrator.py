@@ -122,7 +122,7 @@ class AIDeploymentOrchestrator:
     """AI-driven deployment orchestrator for ProjectMeats"""
     
     def __init__(self, config_file: Optional[str] = None):
-        self.config_file = config_file or "deployment_config.json"
+        self.config_file = config_file or "ai_deployment_config.json"
         self.state_file = "deployment_state.json"
         self.log_file = "deployment_log.json"
         
@@ -997,7 +997,7 @@ def main():
     parser.add_argument("--username", default="root", help="SSH username")
     parser.add_argument("--key-file", help="SSH private key file")
     parser.add_argument("--password", help="SSH password")
-    parser.add_argument("--auto", action="store_true", help="Automatic deployment without prompts")
+    parser.add_argument("--auto-approve", action="store_true", help="Automatic deployment without prompts")
     parser.add_argument("--test-connection", action="store_true", help="Test server connection only")
     parser.add_argument("--resume", help="Resume deployment with given ID")
     parser.add_argument("--config", help="Configuration file path")
@@ -1039,21 +1039,54 @@ def main():
         elif args.interactive:
             # Interactive setup
             orchestrator.log("Starting interactive deployment setup...", "INFO")
+            print(f"\n{Colors.CYAN}Interactive Deployment Setup{Colors.END}")
+            print(f"{Colors.CYAN}{'='*40}{Colors.END}")
             
             # Get server details
-            hostname = input("Enter server hostname or IP: ").strip()
-            username = input(f"Enter SSH username [{args.username}]: ").strip() or args.username
+            print(f"\n{Colors.BOLD}Server Configuration:{Colors.END}")
+            hostname = input(f"{Colors.YELLOW}Enter server hostname or IP:{Colors.END} ").strip()
+            if not hostname:
+                orchestrator.log("Server hostname is required", "ERROR")
+                return 1
             
-            auth_method = input("Authentication method (1=password, 2=key file): ").strip()
+            username = input(f"{Colors.YELLOW}Enter SSH username [{args.username}]:{Colors.END} ").strip() or args.username
+            
+            print(f"\n{Colors.BOLD}Authentication Method:{Colors.END}")
+            print("1. Password authentication")
+            print("2. SSH key file authentication")
+            auth_method = input(f"{Colors.YELLOW}Choose authentication method (1 or 2):{Colors.END} ").strip()
+            
             if auth_method == "2":
-                key_file = input("Enter path to SSH private key: ").strip()
+                key_file = input(f"{Colors.YELLOW}Enter path to SSH private key:{Colors.END} ").strip()
+                if not key_file or not os.path.exists(key_file):
+                    orchestrator.log(f"SSH key file not found: {key_file}", "ERROR")
+                    return 1
                 password = None
             else:
-                import getpass
-                password = getpass.getpass("Enter SSH password: ")
+                print(f"{Colors.YELLOW}Enter SSH password for {username}@{hostname}:{Colors.END}")
+                try:
+                    import getpass
+                    password = getpass.getpass("Password: ")
+                except Exception as e:
+                    orchestrator.log(f"Error reading password: {e}", "ERROR")
+                    # Fallback to regular input (less secure but works)
+                    password = input("Password (will be visible): ")
                 key_file = None
             
-            domain = input("Enter domain name: ").strip()
+            domain = input(f"{Colors.YELLOW}Enter domain name (optional):{Colors.END} ").strip()
+            if not domain:
+                domain = hostname  # Use hostname as fallback
+            
+            print(f"\n{Colors.BOLD}Configuration Summary:{Colors.END}")
+            print(f"  Server: {hostname}")
+            print(f"  Username: {username}")
+            print(f"  Auth method: {'SSH Key' if key_file else 'Password'}")
+            print(f"  Domain: {domain}")
+            
+            confirm = input(f"\n{Colors.YELLOW}Proceed with deployment? [Y/n]:{Colors.END} ").strip()
+            if confirm.lower() in ['n', 'no']:
+                orchestrator.log("Deployment cancelled by user", "INFO")
+                return 0
             
             server_config = {
                 'hostname': hostname,

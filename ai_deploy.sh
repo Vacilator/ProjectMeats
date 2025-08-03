@@ -227,11 +227,11 @@ log_info "Configuration loaded: $CONFIG_FILE"
 
 # Execute AI deployment orchestrator
 log_header "🚀 Starting AI Deployment Process"
-echo -e "${CYAN}Command: python3 ai_deployment_orchestrator.py$PYTHON_ARGS${NC}"
+echo -e "${CYAN}Command: python3 ai_deployment_orchestrator.py --config $CONFIG_FILE$PYTHON_ARGS${NC}"
 echo ""
 
 # Execute with proper error handling
-if python3 ai_deployment_orchestrator.py $PYTHON_ARGS; then
+if python3 ai_deployment_orchestrator.py --config "$CONFIG_FILE" $PYTHON_ARGS; then
     echo ""
     log_success "🎉 Deployment completed successfully!"
     echo ""
