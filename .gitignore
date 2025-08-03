@@ -62,4 +62,6 @@ temp/
 # Cleanup and deployment files
 cleanup_analysis.json
 deployment_*.log
+deployment_*.json
 deployment_state_*.json
+deployment_log.json
