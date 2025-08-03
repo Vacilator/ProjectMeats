@@ -36,7 +36,10 @@ describe('App Component', () => {
     jest.clearAllMocks();
   });
 
+
   test('renders loading state initially', () => {
+
+  
     render(
       <TestAuthWrapper>
         <div>Loading...</div>
@@ -46,7 +49,10 @@ describe('App Component', () => {
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
   });
 
+
   test('AuthProvider provides context without errors', () => {
+
+
     render(
       <TestAuthWrapper>
         <div data-testid="test-content">Auth Provider Working</div>
@@ -56,6 +62,7 @@ describe('App Component', () => {
     expect(screen.getByTestId('test-content')).toBeInTheDocument();
     expect(screen.getByText('Auth Provider Working')).toBeInTheDocument();
   });
+
 
   test('basic component rendering works without errors', () => {
     render(
