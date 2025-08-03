@@ -50,17 +50,19 @@ class ProductionDeploymentMonitor:
         
     def _get_deployment_log_path(self) -> str:
         """Get the path to the deployment log file."""
-        # Check for deployment log in various locations
+        # Use configurable path from Django settings if available
+        deployment_log_path = getattr(settings, "DEPLOYMENT_LOG_PATH", None)
+        if deployment_log_path and os.path.exists(deployment_log_path):
+            return deployment_log_path
+
+        # Fallback to common locations
         possible_paths = [
-            "/home/runner/work/ProjectMeats/ProjectMeats/deployment_log.json",
             os.path.join(settings.BASE_DIR.parent, "deployment_log.json"),
             "deployment_log.json",
         ]
-        
         for path in possible_paths:
             if os.path.exists(path):
                 return path
-        
         # Default to the root project path
         return os.path.join(settings.BASE_DIR.parent, "deployment_log.json")
     
