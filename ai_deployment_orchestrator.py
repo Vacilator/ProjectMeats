@@ -973,6 +973,15 @@ class AIDeploymentOrchestrator:
             print(f"  {Colors.CYAN}Website:{Colors.END} https://{domain}")
             print(f"  {Colors.CYAN}Admin Panel:{Colors.END} https://{domain}/admin/")
             print(f"  {Colors.CYAN}API Docs:{Colors.END} https://{domain}/api/docs/")
+            
+            # Add domain accessibility reminder
+            if domain and domain != 'localhost' and domain != server_info['hostname']:
+                print(f"\n{Colors.YELLOW}⚠ Important Notes:{Colors.END}")
+                print(f"  • If {domain} is not accessible, DNS may need time to propagate")
+                print(f"  • Verify DNS A record points to {server_info['hostname']}")
+                print(f"  • Test direct IP access: http://{server_info['hostname']}/health")
+                print(f"  • Run diagnostics: python diagnose_domain_access.py --domain {domain} --server {server_info['hostname']}")
+                print(f"  • Check domain status: https://dnschecker.org/")
         
         print(f"\n{Colors.BLUE}Log files:{Colors.END}")
         print(f"  State: {self.state_file}")
@@ -1575,8 +1584,7 @@ server {{
             self.log("Database connectivity test failed", "ERROR")
             return False
         
-        # Test backend API endpoint
-        domain = self.config.get('domain', 'localhost')
+        # Test localhost health endpoint first
         exit_code, stdout, stderr = self.execute_command(f"curl -f http://localhost/health || echo 'Health check not available'")
         if exit_code == 0:
             self.log("Health check endpoint responding", "SUCCESS")
@@ -1588,6 +1596,56 @@ server {{
         if exit_code != 0:
             self.log("Frontend build files not found", "ERROR")
             return False
+        
+        # NEW: Test domain accessibility from external perspective
+        domain = self.config.get('domain', 'localhost')
+        if domain and domain != 'localhost':
+            self.log(f"Testing external domain accessibility: {domain}", "INFO")
+            
+            # Test HTTP access to the domain
+            exit_code, stdout, stderr = self.execute_command(
+                f"curl -f -L --max-time 30 --connect-timeout 10 http://{domain}/health || echo 'EXTERNAL_ACCESS_FAILED'"
+            )
+            if exit_code == 0 and "healthy" in stdout:
+                self.log(f"✓ Domain {domain} is externally accessible via HTTP", "SUCCESS")
+            else:
+                self.log(f"⚠ WARNING: Domain {domain} may not be externally accessible via HTTP", "WARNING")
+                self.log(f"This could be due to DNS propagation, firewall, or SSL redirect issues", "WARNING")
+                
+                # Try to diagnose the issue
+                self.log("Running additional diagnostics...", "INFO")
+                
+                # Check if DNS resolves
+                dns_exit_code, dns_stdout, dns_stderr = self.execute_command(f"nslookup {domain}")
+                if dns_exit_code == 0:
+                    self.log(f"✓ DNS resolution for {domain} works", "INFO")
+                else:
+                    self.log(f"⚠ DNS resolution issue for {domain}: {dns_stderr}", "WARNING")
+                
+                # Check what processes are listening on port 80
+                port_exit_code, port_stdout, port_stderr = self.execute_command("netstat -tlnp | grep :80")
+                if port_exit_code == 0:
+                    self.log(f"✓ Port 80 is being listened on: {port_stdout.strip()}", "INFO")
+                else:
+                    self.log("⚠ No process listening on port 80", "WARNING")
+                
+                # Check nginx configuration for the domain
+                config_exit_code, config_stdout, config_stderr = self.execute_command(
+                    f"nginx -T | grep -A 5 'server_name {domain}'"
+                )
+                if config_exit_code == 0:
+                    self.log(f"✓ Nginx configured for domain {domain}", "INFO")
+                else:
+                    self.log(f"⚠ Nginx may not be configured for domain {domain}", "WARNING")
+            
+            # Test HTTPS if available
+            https_exit_code, https_stdout, https_stderr = self.execute_command(
+                f"curl -f -L --max-time 30 --connect-timeout 10 https://{domain}/health || echo 'HTTPS_ACCESS_FAILED'"
+            )
+            if https_exit_code == 0 and "healthy" in https_stdout:
+                self.log(f"✓ Domain {domain} is accessible via HTTPS", "SUCCESS")
+            else:
+                self.log(f"ℹ HTTPS not available for {domain} (normal for new deployments)", "INFO")
         
         self.log("Final verification completed successfully", "SUCCESS")
         return True
