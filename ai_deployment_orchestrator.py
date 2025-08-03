@@ -1407,7 +1407,7 @@ class AIDeploymentOrchestrator:
         
         # Create projectmeats user if it doesn't exist
         self.log("Creating projectmeats user...", "INFO")
-        exit_code, stdout, stderr = self.execute_command("useradd -m -s /bin/bash projectmeats || true")
+        exit_code, stdout, stderr = self.execute_command("useradd -m -s /bin/bash projectmeats")
         if exit_code != 0 and "already exists" not in stderr:
             self.log(f"Failed to create projectmeats user: {stderr}", "ERROR")
             return False
