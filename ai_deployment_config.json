@@ -23,6 +23,18 @@
     "predictive_scaling": false
   },
   "server_profiles": {
+    "production": {
+      "hostname": "167.99.155.140",
+      "username": "root",
+      "domain": "meatscentral.com",
+      "use_password": false,
+      "key_file": "/home/runner/.ssh/id_ed25519",
+      "specs": {
+        "cpu_cores": "2",
+        "memory_gb": "4",
+        "storage_gb": "50"
+      }
+    },
     "example": {
       "hostname": "your-server.com",
       "username": "root",
