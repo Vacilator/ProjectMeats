@@ -27,6 +27,50 @@ from dataclasses import dataclass
 from enum import Enum
 import time
 import platform
+import shutil
+
+# ============================================================================
+# PLATFORM DETECTION AND UTILITIES
+# ============================================================================
+
+class PlatformUtils:
+    """Platform-specific utilities and detection"""
+    
+    @staticmethod
+    def is_windows() -> bool:
+        """Check if running on Windows"""
+        return platform.system().lower() == 'windows'
+    
+    @staticmethod
+    def is_wsl_available() -> bool:
+        """Check if WSL is available on Windows"""
+        if not PlatformUtils.is_windows():
+            return False
+        
+        try:
+            result = subprocess.run(['wsl', '--list', '--quiet'], 
+                                  capture_output=True, timeout=5)
+            return result.returncode == 0 and result.stdout.strip()
+        except:
+            return False
+    
+    @staticmethod
+    def get_shell_executor() -> Tuple[Optional[str], str]:
+        """Get the appropriate shell executor for the platform"""
+        if PlatformUtils.is_windows():
+            if PlatformUtils.is_wsl_available():
+                return "wsl", "WSL (Windows Subsystem for Linux)"
+            else:
+                return None, "Windows (no WSL available)"
+        else:
+            return "bash", "Unix/Linux"
+    
+    @staticmethod
+    def can_run_unix_scripts() -> bool:
+        """Check if we can run Unix shell scripts"""
+        executor, _ = PlatformUtils.get_shell_executor()
+        return executor is not None
+
 
 # ============================================================================
 # CORE CONFIGURATION AND TYPES
@@ -233,6 +277,19 @@ class AutonomousExecutor:
         """Apply automatic fixes based on system state"""
         fixes_applied = 0
         
+        # Check if we can run Unix scripts
+        if not PlatformUtils.can_run_unix_scripts():
+            if PlatformUtils.is_windows():
+                print(f"{Colors.YELLOW}⚠️ Windows detected. For full deployment functionality, please install WSL.{Colors.END}")
+                print(f"{Colors.CYAN}Instructions:{Colors.END}")
+                print(f"  1. Open PowerShell as Administrator")
+                print(f"  2. Run: wsl --install")
+                print(f"  3. Restart your computer")
+                print(f"  4. Run this tool again")
+                print(f"\n{Colors.GREEN}Alternative: Use setup_windows.bat for local development setup{Colors.END}")
+                return False
+            return False
+        
         # Fix Node.js conflicts (common issue)
         if not state.node_installed:
             print(f"{Colors.CYAN}🔧 Fixing Node.js installation...{Colors.END}")
@@ -256,6 +313,19 @@ class AutonomousExecutor:
         """Execute the actual deployment"""
         print(f"\n{Colors.YELLOW}📋 Executing deployment script...{Colors.END}")
         
+        # Check platform compatibility
+        if not PlatformUtils.can_run_unix_scripts():
+            if PlatformUtils.is_windows():
+                print(f"{Colors.RED}❌ Deployment requires Unix/Linux environment{Colors.END}")
+                print(f"{Colors.YELLOW}For Windows users:{Colors.END}")
+                print(f"  • Install WSL: wsl --install")
+                print(f"  • Use setup_windows.bat for local development")
+                print(f"  • Deploy to a Linux server using this tool from WSL")
+                return False
+            else:
+                print(f"{Colors.RED}❌ Deployment scripts require bash shell{Colors.END}")
+                return False
+        
         # Set environment variables
         env = os.environ.copy()
         if config.domain:
@@ -274,7 +344,19 @@ class AutonomousExecutor:
             return False
         
         try:
-            result = subprocess.run([str(script_path)], env=env, check=False)
+            # Use appropriate shell executor
+            executor, platform_desc = PlatformUtils.get_shell_executor()
+            print(f"{Colors.CYAN}Platform: {platform_desc}{Colors.END}")
+            
+            if executor == "wsl":
+                # Convert Windows path to WSL path for script execution
+                wsl_script_path = str(script_path).replace('\\', '/')
+                if wsl_script_path.startswith('C:'):
+                    wsl_script_path = '/mnt/c' + wsl_script_path[2:]
+                result = subprocess.run([executor, "bash", wsl_script_path], env=env, check=False)
+            else:
+                result = subprocess.run([executor, str(script_path)], env=env, check=False)
+            
             success = result.returncode == 0
             
             if success:
@@ -294,13 +376,30 @@ class AutonomousExecutor:
         if not script_path.exists():
             return False
         
+        # Check platform compatibility for shell scripts
+        if script_name.endswith('.sh') and not PlatformUtils.can_run_unix_scripts():
+            print(f"{Colors.YELLOW}⚠️ Cannot run shell script on this platform: {script_name}{Colors.END}")
+            return False
+        
         try:
+            executor, _ = PlatformUtils.get_shell_executor()
+            
             if script_name.endswith('.sh'):
-                result = subprocess.run(["bash", str(script_path)], 
-                                      capture_output=True, timeout=timeout)
+                if executor == "wsl":
+                    # Convert Windows path to WSL path
+                    wsl_script_path = str(script_path).replace('\\', '/')
+                    if wsl_script_path.startswith('C:'):
+                        wsl_script_path = '/mnt/c' + wsl_script_path[2:]
+                    result = subprocess.run([executor, "bash", wsl_script_path], 
+                                          capture_output=True, timeout=timeout)
+                else:
+                    result = subprocess.run([executor, str(script_path)], 
+                                          capture_output=True, timeout=timeout)
             else:
+                # Python scripts
                 result = subprocess.run(["python3", str(script_path)], 
                                       capture_output=True, timeout=timeout)
+            
             return result.returncode == 0
         except:
             return False
@@ -321,6 +420,19 @@ class IntuitiveInterface:
         """Interactive mode for guided setup"""
         print(f"\n{Colors.BOLD}{Colors.CYAN}🧙‍♂️ ProjectMeats Interactive Setup Wizard{Colors.END}")
         print(f"{Colors.CYAN}This wizard will guide you through deployment step by step.{Colors.END}")
+        
+        # Platform compatibility check
+        if PlatformUtils.is_windows() and not PlatformUtils.is_wsl_available():
+            print(f"\n{Colors.YELLOW}⚠️ Windows detected without WSL{Colors.END}")
+            print(f"{Colors.CYAN}For full deployment functionality on Windows:{Colors.END}")
+            print(f"  1. Install WSL: wsl --install")
+            print(f"  2. Restart your computer")
+            print(f"  3. Run this tool from WSL")
+            print(f"\n{Colors.GREEN}Alternative: Use setup_windows.bat for local development{Colors.END}")
+            
+            continue_anyway = input(f"\n{Colors.CYAN}Continue with limited functionality? (y/N): {Colors.END}")
+            if continue_anyway.lower() != 'y':
+                return False
         
         # Quick system check
         state, recommendations = self.analyzer.analyze_system()
@@ -361,8 +473,23 @@ class IntuitiveInterface:
     
     def show_smart_help(self):
         """Show context-aware help"""
+        platform_info = ""
+        if PlatformUtils.is_windows():
+            if PlatformUtils.is_wsl_available():
+                platform_info = f"\n{Colors.GREEN}✅ Windows with WSL detected - Full functionality available{Colors.END}\n"
+            else:
+                platform_info = f"""
+{Colors.YELLOW}⚠️ Windows detected without WSL{Colors.END}
+{Colors.CYAN}For full deployment functionality:{Colors.END}
+  1. Install WSL: wsl --install
+  2. Restart your computer  
+  3. Run this tool from WSL
+
+{Colors.GREEN}Alternative for local development: Use setup_windows.bat{Colors.END}
+"""
+        
         print(f"""
-{Colors.BOLD}{Colors.BLUE}🚀 ProjectMeats Unified Deployment Tool{Colors.END}
+{Colors.BOLD}{Colors.BLUE}🚀 ProjectMeats Unified Deployment Tool{Colors.END}{platform_info}
 
 {Colors.BOLD}🎯 QUICK COMMANDS:{Colors.END}
   {Colors.GREEN}python3 unified_deployment_tool.py{Colors.END}
@@ -397,13 +524,13 @@ class IntuitiveInterface:
 
 {Colors.BOLD}💡 EXAMPLES:{Colors.END}
   # Interactive setup (recommended)
-  sudo python3 unified_deployment_tool.py
+  python3 unified_deployment_tool.py
 
-  # One-command deployment
+  # One-command deployment (Linux/WSL)
   sudo python3 unified_deployment_tool.py --auto --domain=mysite.com
 
   # Fix issues automatically
-  sudo python3 unified_deployment_tool.py --fix
+  python3 unified_deployment_tool.py --fix
 
   # Check what's wrong
   python3 unified_deployment_tool.py --diagnose
@@ -501,8 +628,20 @@ def main():
             # Clean environment
             cleanup_script = Path(__file__).parent / "cleanup_deprecated_scripts.sh"
             if cleanup_script.exists():
-                result = subprocess.run(["bash", str(cleanup_script)], check=False)
-                return result.returncode
+                if PlatformUtils.can_run_unix_scripts():
+                    executor, _ = PlatformUtils.get_shell_executor()
+                    if executor == "wsl":
+                        wsl_script_path = str(cleanup_script).replace('\\', '/')
+                        if wsl_script_path.startswith('C:'):
+                            wsl_script_path = '/mnt/c' + wsl_script_path[2:]
+                        result = subprocess.run([executor, "bash", wsl_script_path], check=False)
+                    else:
+                        result = subprocess.run([executor, str(cleanup_script)], check=False)
+                    return result.returncode
+                else:
+                    print(f"{Colors.YELLOW}⚠️ Cleanup script requires Unix environment{Colors.END}")
+                    if PlatformUtils.is_windows():
+                        print(f"{Colors.CYAN}For Windows: Use setup_windows.bat for local development setup{Colors.END}")
             return 0
         else:
             # Default to deployment
