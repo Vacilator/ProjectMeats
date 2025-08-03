@@ -2,21 +2,37 @@
 
 A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
-## 🚀 ONE-CLICK PRODUCTION DEPLOYMENT
+## 🚀 UNIFIED DEPLOYMENT TOOL - THE ONLY TOOL YOU NEED
 
-**Deploy ProjectMeats to production in minutes with one command:**
+**Deploy, diagnose, fix, and manage ProjectMeats with one powerful tool:**
 
 ```bash
-# Fully automated deployment (Ubuntu 20.04+):
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_click_deploy.sh | sudo bash
+# 🎯 One-command production deployment
+sudo python3 unified_deployment_tool.py --production --domain=yourdomain.com --auto
+
+# 🧙‍♂️ Interactive setup wizard
+sudo python3 unified_deployment_tool.py --production --interactive
+
+# 🔍 Diagnose any issues (like meatscentral.com problems)
+python3 unified_deployment_tool.py --diagnose --domain=yourdomain.com --server=SERVER_IP
+
+# 🛠️ Auto-fix all problems
+sudo python3 unified_deployment_tool.py --fix
+
+# 📊 Check system health
+python3 unified_deployment_tool.py --status
 ```
 
-**Having Node.js conflicts?** Fix them first:
-```bash
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/fix_nodejs.sh | sudo bash
-```
+### ✅ **REPLACES ALL PREVIOUS DEPLOYMENT SCRIPTS**
+The unified tool consolidates **ALL** deployment functionality:
+- `ai_deployment_orchestrator.py` → AI-driven deployment with error recovery
+- `master_deploy.py` → Comprehensive deployment system  
+- `deploy_production.py` → Interactive production setup
+- `fix_meatscentral_access.py` → Domain access diagnostics and fixes
+- `diagnose_deployment_issue.py` → Issue diagnosis
+- All configuration and management scripts
 
-**📖 Complete deployment guide:** [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)
+**📖 Complete guide:** [UNIFIED_DEPLOYMENT_COMPLETE_GUIDE.md](UNIFIED_DEPLOYMENT_COMPLETE_GUIDE.md)
 
 ### ✨ What You Get
 - ✅ **Professional UI** at your domain with SSL

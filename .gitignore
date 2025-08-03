@@ -20,6 +20,17 @@ yarn-error.log*
 dist/
 build/
 
+# Temporary deployment files
+deployment_state.json
+deployment_log.json
+unified_deployment_config.json
+cookies.txt
+
+# Temporary test and configuration files
+test_deployment_*.py
+temp_*.py
+*.tmp
+
 # Environment files
 .env
 .env.local
