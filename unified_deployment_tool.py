@@ -165,7 +165,7 @@ class SystemAnalyzer:
 # AUTONOMOUS OPERATION EXECUTOR
 # ============================================================================
 
-class AutomousExecutor:
+class AutonomousExecutor:
     """Handles autonomous execution of operations"""
     
     def __init__(self):
