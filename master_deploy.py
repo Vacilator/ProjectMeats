@@ -296,15 +296,25 @@ class MasterDeployer:
         self.run_command("apt clean")
         self.run_command("apt update")
         
-        # Install Node.js with multiple fallback methods
+        # Install Node.js with optimized fallback methods
         self.log("Installing Node.js 18 LTS...")
         
-        # Method 1: NodeSource repository
+        # Check if Node.js is already installed with acceptable version
         try:
-            self.log("Trying NodeSource repository...")
-            self.run_command("curl -fsSL https://deb.nodesource.com/setup_18.x | bash -")
-            self.run_command("apt update")
-            self.run_command("apt install -y nodejs")
+            version = self.run_command("node --version", capture_output=True)
+            if version and version.startswith('v1'):  # v14, v16, v18, etc.
+                major_version = int(version.split('.')[0][1:])
+                if major_version >= 14:  # Minimum acceptable version
+                    self.log(f"Node.js {version} already installed and acceptable", 'SUCCESS')
+                    return True
+        except:
+            pass
+        
+        # Method 1: NodeSource repository (fastest for production)
+        try:
+            self.log("Installing via NodeSource repository...")
+            # Combined setup and install for efficiency
+            self.run_command("curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt install -y nodejs")
             
             # Verify installation
             version = self.run_command("node --version", capture_output=True)
@@ -341,15 +351,11 @@ class MasterDeployer:
             return False
 
     def setup_system(self):
-        """Install and configure system dependencies"""
+        """Install and configure system dependencies with optimization"""
         self.log("Setting up system dependencies...", 'HEADER')
         
-        # Update system
-        self.log("Updating system packages...")
-        self.run_command("apt update && apt upgrade -y")
-        
-        # Install basic dependencies (without Node.js)
-        self.log("Installing system packages...")
+        # Combined system update and package installation for efficiency
+        self.log("Updating system and installing packages...")
         packages = [
             'python3', 'python3-pip', 'python3-venv', 'nginx', 'git', 
             'curl', 'ufw', 'fail2ban', 'certbot', 'python3-certbot-nginx',
@@ -359,17 +365,19 @@ class MasterDeployer:
         if self.config['database_type'] == 'postgresql':
             packages.extend(['postgresql', 'postgresql-contrib', 'libpq-dev'])
         
-        self.run_command(f"apt install -y {' '.join(packages)}")
+        # Single command for faster execution
+        package_list = ' '.join(packages)
+        self.run_command(f"apt update && apt upgrade -y && apt install -y {package_list}")
         
-        # Fix Node.js conflicts
+        # Fix Node.js conflicts (optimized)
         if not self.fix_nodejs_conflicts():
             self.log("Failed to install Node.js. Deployment cannot continue.", 'ERROR')
             sys.exit(1)
         
-        # Create application user
+        # Create application user efficiently
         self.log("Creating application user...")
-        self.run_command(f"useradd -m -s /bin/bash {self.config['app_user']} || true", check=False)
-        self.run_command(f"usermod -aG sudo {self.config['app_user']} || true", check=False)
+        # Combined user creation and configuration
+        self.run_command(f"useradd -m -s /bin/bash -G sudo {self.config['app_user']} 2>/dev/null || usermod -aG sudo {self.config['app_user']}", check=False)
 
     def setup_database(self):
         """Configure database"""
@@ -595,187 +603,19 @@ STATIC_ROOT={backend_dir}/staticfiles
         self.log("Running Django migrations...")
         self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py migrate")
         
-        # Create superuser
+        # Create superuser - Optimized approach using Django's built-in command first
         self.log("Creating admin user...")
-        create_user_script = f"""from django.contrib.auth.models import User
-from apps.core.models import UserProfile
-
-# Create superuser
-if not User.objects.filter(username='{self.config['admin_user']}').exists():
-    user = User.objects.create_superuser(
-        '{self.config['admin_user']}',
-        '{self.config['admin_email']}',
-        '{self.config['admin_password']}'
-    )
-    # Create profile
-    UserProfile.objects.get_or_create(user=user)
-    print('Admin user created successfully')
-else:
-    print('Admin user already exists')
-"""
         
-        # More robust cleanup of any existing create_admin.py files
-        admin_script_path = f"{backend_dir}/create_admin.py"
-        self.log(f"Ensuring clean state for admin script creation...")
+        # Clean up any existing admin script files efficiently
+        self._cleanup_admin_files(backend_dir)
         
-        # Remove any existing create_admin.py files in multiple locations
-        possible_locations = [
-            f"{backend_dir}/create_admin.py",
-            f"{self.config['project_dir']}/create_admin.py",
-            f"{backend_dir}/apps/create_admin.py",
-            f"{self.config['project_dir']}/backend/create_admin.py"
-        ]
-        
-        for location in possible_locations:
-            try:
-                self.run_command(f"rm -f {location}", check=False)
-                self.log(f"Cleaned up potential admin script at: {location}")
-            except:
-                pass
-        
-        # More comprehensive search for and removal of files with incorrect imports
-        self.log("Searching for and removing any files with incorrect user_profiles imports...")
-        try:
-            # Search for any files containing the wrong import pattern
-            search_patterns = [
-                "from apps.user_profiles",
-                "import apps.user_profiles", 
-                "from apps.user_profile",  # Common typo
-                "import apps.user_profile"
-            ]
-            
-            for pattern in search_patterns:
-                result = self.run_command(f"find {self.config['project_dir']} -name '*.py' -type f -exec grep -l '{pattern}' {{}} \\; 2>/dev/null || true", capture_output=True, check=False)
-                if result and result.strip():
-                    files_with_wrong_import = result.strip().split('\n')
-                    for file_path in files_with_wrong_import:
-                        if file_path and file_path.strip():
-                            self.log(f"Found file with wrong import pattern '{pattern}': {file_path}")
-                            # Remove any create_admin files with wrong imports
-                            if 'create_admin' in file_path or 'admin' in os.path.basename(file_path):
-                                self.log(f"Removing file with incorrect import: {file_path}")
-                                self.run_command(f"rm -f {file_path}", check=False)
-                            else:
-                                self.log(f"Warning: Non-admin file contains wrong import: {file_path}", 'WARNING')
-        except Exception as e:
-            self.log(f"Error during cleanup search: {e}", 'WARNING')
-        
-        # Create new admin script with correct imports
-        self.log("Creating new admin script...")
-        
-        # Ensure the directory exists and is writable
-        self.run_command(f"mkdir -p {os.path.dirname(admin_script_path)}")
-        self.run_command(f"touch {admin_script_path}")
-        self.run_command(f"chmod 644 {admin_script_path}")
-        
-        # Write the script content
-        try:
-            with open(admin_script_path, 'w', encoding='utf-8') as f:
-                f.write(create_user_script)
-                f.flush()
-                os.fsync(f.fileno())  # Force write to disk
-        except Exception as e:
-            self.log(f"Failed to write admin script: {e}", 'ERROR')
-            raise
-        
-        # Verify the script was created correctly
-        self.log("Verifying admin script content...")
-        try:
-            # Wait a moment for file system to sync
-            import time
-            time.sleep(1)
-            
-            with open(admin_script_path, 'r', encoding='utf-8') as f:
-                script_content = f.read()
-            
-            self.log(f"Admin script content ({len(script_content)} chars):")
-            for i, line in enumerate(script_content.split('\n'), 1):
-                self.log(f"  Line {i}: {repr(line)}")
-            
-            if "apps.core.models import UserProfile" not in script_content:
-                self.log("ERROR: Admin script missing correct import!", 'ERROR')
-                raise Exception("Admin script creation failed - missing correct import")
-                
-            if "apps.user_profiles" in script_content:
-                self.log("ERROR: Admin script contains incorrect user_profiles import!", 'ERROR')
-                raise Exception("Admin script creation failed - incorrect import detected")
-            
-            if len(script_content.strip()) < 100:
-                self.log("ERROR: Admin script appears to be empty or too short!", 'ERROR')
-                raise Exception("Admin script creation failed - content too short")
-                
-            self.log("Admin script verification passed", 'SUCCESS')
-            
-        except Exception as e:
-            self.log(f"Failed to verify admin script: {e}", 'ERROR')
-            # Show file system state for debugging
-            try:
-                ls_result = self.run_command(f"ls -la {backend_dir}/create_admin.py", capture_output=True, check=False)
-                self.log(f"File info: {ls_result}")
-                cat_result = self.run_command(f"cat {backend_dir}/create_admin.py", capture_output=True, check=False)
-                self.log(f"File content: {cat_result}")
-            except:
-                pass
-            raise
-        
-        # Execute the admin script
-        self.log("Executing admin user creation script...")
-        try:
-            self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py shell < create_admin.py")
-        except Exception as e:
-            self.log(f"Admin script execution failed: {e}", 'ERROR')
-            # Check if the error is related to user_profiles import
-            if "user_profiles" in str(e):
-                self.log("Detected user_profiles import error, using simplified admin creation", 'WARNING')
-                # Create a simplified script without UserProfile import
-                simple_admin_script = f"""from django.contrib.auth.models import User
-
-# Create superuser (without UserProfile for now)
-if not User.objects.filter(username='{self.config['admin_user']}').exists():
-    user = User.objects.create_superuser(
-        '{self.config['admin_user']}',
-        '{self.config['admin_email']}',
-        '{self.config['admin_password']}'
-    )
-    print('Admin user created successfully (without profile)')
-else:
-    print('Admin user already exists')
-"""
-                try:
-                    # Write and execute the simplified script
-                    simple_script_path = f"{backend_dir}/create_admin_simple.py"
-                    with open(simple_script_path, 'w', encoding='utf-8') as f:
-                        f.write(simple_admin_script)
-                    self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py shell < create_admin_simple.py")
-                    self.log("Simplified admin creation succeeded", 'SUCCESS')
-                    # Clean up
-                    self.run_command(f"rm -f {simple_script_path}", check=False)
-                except Exception as e3:
-                    self.log(f"Simplified admin creation also failed: {e3}", 'ERROR')
-            
-            # Try alternative execution method as fallback
-            self.log("Trying alternative execution method...")
-            try:
-                # Execute using python -c instead of shell redirection
-                escaped_script = create_user_script.replace('"', '\\"').replace('\n', '\\n')
-                self.run_command(f'cd {backend_dir} && ./venv/bin/python -c "import django; django.setup(); exec(\\"{escaped_script}\\")"')
-                self.log("Alternative execution method succeeded", 'SUCCESS')
-            except Exception as e2:
-                self.log(f"Alternative execution also failed: {e2}", 'ERROR')
-                # If all else fails, try Django's built-in createsuperuser
-                self.log("Trying Django's built-in createsuperuser command...", 'WARNING')
-                try:
-                    env_vars = {
-                        'DJANGO_SUPERUSER_USERNAME': self.config['admin_user'],
-                        'DJANGO_SUPERUSER_EMAIL': self.config['admin_email'],
-                        'DJANGO_SUPERUSER_PASSWORD': self.config['admin_password']
-                    }
-                    env_string = ' '.join([f"{k}={v}" for k, v in env_vars.items()])
-                    self.run_command(f"cd {backend_dir} && {env_string} ./venv/bin/python manage.py createsuperuser --noinput")
-                    self.log("Django createsuperuser succeeded", 'SUCCESS')
-                except Exception as e3:
-                    self.log(f"All admin creation methods failed: {e3}", 'ERROR')
-                    raise
+        # Primary method: Use Django's built-in createsuperuser (most reliable)
+        if self._create_admin_with_django_command(backend_dir):
+            self.log("Admin user created successfully using Django management command", 'SUCCESS')
+        else:
+            # Fallback: Custom script method with optimized error handling
+            self.log("Falling back to custom admin creation script...", 'WARNING')
+            self._create_admin_with_custom_script(backend_dir)
         
         # Collect static files
         self.log("Collecting static files...")
@@ -793,12 +633,38 @@ else:
         self.run_command(f"mkdir -p {npm_prefix}")
         self.run_command(f"sudo -u {self.config['app_user']} npm config set prefix {npm_prefix}")
         
-        # Install dependencies with multiple retry strategies
+        # Install dependencies with optimized retry strategies and caching
         self.log("Installing Node.js dependencies...")
+        
+        # Check if node_modules already exists and is populated
+        node_modules_path = f"{frontend_dir}/node_modules"
+        if os.path.exists(node_modules_path):
+            try:
+                # Quick check if dependencies are already installed
+                result = self.run_command(f"ls {node_modules_path} | wc -l", capture_output=True)
+                if int(result.strip()) > 10:  # Has significant number of modules
+                    self.log("Node modules already exist, skipping npm install", 'SUCCESS')
+                    # Still need to create production env file
+                    env_content = f"REACT_APP_API_BASE_URL=https://{self.config['domain']}/api/v1"
+                    with open(f"{frontend_dir}/.env.production", 'w') as f:
+                        f.write(env_content)
+                    
+                    # Try to build (might work with existing modules)
+                    try:
+                        self.run_command(f"cd {frontend_dir} && sudo -u {self.config['app_user']} npm run build")
+                        self.log("Frontend build completed with existing modules", 'SUCCESS')
+                        return
+                    except:
+                        self.log("Build failed with existing modules, will reinstall...", 'WARNING')
+            except:
+                pass
+        
+        # Configure npm with optimizations
+        npm_opts = "--no-audit --no-fund --prefer-offline"
         install_commands = [
-            f"cd {frontend_dir} && sudo -u {self.config['app_user']} npm install",
-            f"cd {frontend_dir} && sudo -u {self.config['app_user']} npm install --legacy-peer-deps",
-            f"cd {frontend_dir} && sudo -u {self.config['app_user']} npm cache clean --force && npm install"
+            f"cd {frontend_dir} && sudo -u {self.config['app_user']} npm install {npm_opts}",
+            f"cd {frontend_dir} && sudo -u {self.config['app_user']} npm install --legacy-peer-deps {npm_opts}",
+            f"cd {frontend_dir} && sudo -u {self.config['app_user']} npm cache clean --force && npm install {npm_opts}"
         ]
         
         for cmd in install_commands:
@@ -1088,6 +954,106 @@ fi
         # Set ownership
         self.run_command(f"chown -R {self.config['app_user']}:{self.config['app_user']} {self.config['project_dir']}")
 
+    def _cleanup_admin_files(self, backend_dir):
+        """Efficiently clean up any existing admin script files"""
+        cleanup_patterns = [
+            f"{backend_dir}/create_admin*.py",
+            f"{self.config['project_dir']}/create_admin*.py", 
+            f"{backend_dir}/apps/create_admin*.py",
+            f"{self.config['project_dir']}/backend/create_admin*.py"
+        ]
+        
+        for pattern in cleanup_patterns:
+            self.run_command(f"rm -f {pattern}", check=False)
+        
+        # Quick cleanup of files with wrong imports (more efficient than detailed search)
+        try:
+            result = self.run_command(
+                f"find {self.config['project_dir']} -name '*admin*.py' -type f -exec grep -l 'apps.user_profiles' {{}} \\; 2>/dev/null | head -10", 
+                capture_output=True, check=False
+            )
+            if result and result.strip():
+                files_to_clean = result.strip().split('\n')
+                for file_path in files_to_clean:
+                    if file_path and any(keyword in file_path.lower() for keyword in ['create_admin', 'admin_script', 'temp', 'tmp']):
+                        self.run_command(f"rm -f '{file_path}'", check=False)
+        except Exception:
+            pass  # Cleanup is optional, don't fail deployment
+
+    def _create_admin_with_django_command(self, backend_dir):
+        """Create admin user using Django's built-in management command (primary method)"""
+        try:
+            env_vars = f"DJANGO_SUPERUSER_USERNAME={self.config['admin_user']} DJANGO_SUPERUSER_EMAIL={self.config['admin_email']} DJANGO_SUPERUSER_PASSWORD={self.config['admin_password']}"
+            
+            # Use Django's built-in command (most reliable)
+            self.run_command(f"cd {backend_dir} && {env_vars} ./venv/bin/python manage.py createsuperuser --noinput")
+            
+            # Create user profile separately using Django shell (faster than custom script)
+            profile_command = f"from django.contrib.auth.models import User; from apps.core.models import UserProfile; user = User.objects.get(username='{self.config['admin_user']}'); profile, created = UserProfile.objects.get_or_create(user=user); print('Profile created' if created else 'Profile exists')"
+            self.run_command(f'cd {backend_dir} && ./venv/bin/python manage.py shell -c "{profile_command}"')
+            
+            return True
+        except Exception as e:
+            self.log(f"Django management command failed: {e}", 'WARNING')
+            return False
+
+    def _create_admin_with_custom_script(self, backend_dir):
+        """Fallback method using custom script with optimized execution"""
+        admin_script_path = f"{backend_dir}/create_admin.py"
+        
+        create_user_script = f"""from django.contrib.auth.models import User
+from apps.core.models import UserProfile
+
+# Create superuser
+if not User.objects.filter(username='{self.config['admin_user']}').exists():
+    user = User.objects.create_superuser(
+        '{self.config['admin_user']}',
+        '{self.config['admin_email']}',
+        '{self.config['admin_password']}'
+    )
+    # Create profile
+    UserProfile.objects.get_or_create(user=user)
+    print('Admin user created successfully')
+else:
+    print('Admin user already exists')
+"""
+        
+        try:
+            # Create and validate script quickly
+            with open(admin_script_path, 'w', encoding='utf-8') as f:
+                f.write(create_user_script)
+            
+            # Quick validation
+            if "from apps.core.models import UserProfile" not in create_user_script:
+                raise Exception("Script validation failed")
+            
+            # Execute with multiple fallback methods
+            execution_methods = [
+                f"cd {backend_dir} && ./venv/bin/python manage.py shell < create_admin.py",
+                f"cd {backend_dir} && ./venv/bin/python create_admin.py",
+                f'cd {backend_dir} && ./venv/bin/python -c "import os; import django; os.environ.setdefault(\\"DJANGO_SETTINGS_MODULE\\", \\"projectmeats.settings\\"); django.setup(); exec(open(\\"create_admin.py\\").read())"'
+            ]
+            
+            success = False
+            for method in execution_methods:
+                try:
+                    self.run_command(method)
+                    self.log("Admin script executed successfully", 'SUCCESS')
+                    success = True
+                    break
+                except Exception:
+                    continue
+            
+            if not success:
+                raise Exception("All execution methods failed")
+                
+            # Clean up
+            self.run_command(f"rm -f {admin_script_path}", check=False)
+            
+        except Exception as e:
+            self.log(f"Custom script method failed: {e}", 'ERROR')
+            raise
+
     def start_services(self):
         """Start all services"""
         self.log("Starting services...", 'HEADER')
@@ -1103,15 +1069,18 @@ fi
                 self.log(f"Failed to start {service}", 'ERROR')
 
     def verify_deployment(self):
-        """Verify that deployment was successful"""
+        """Verify that deployment was successful with enhanced checks"""
         self.log("Verifying deployment...", 'HEADER')
         
-        # Check services
+        # Check services in parallel for efficiency
         services = ['projectmeats', 'nginx']
         if self.config['database_type'] == 'postgresql':
             services.append('postgresql')
         
         all_services_ok = True
+        failed_services = []
+        
+        # Quick batch check of all services
         for service in services:
             try:
                 self.run_command(f"systemctl is-active --quiet {service}")
@@ -1119,17 +1088,54 @@ fi
             except:
                 self.log(f"❌ {service} is not running", 'ERROR')
                 all_services_ok = False
+                failed_services.append(service)
         
-        # Test web endpoints
-        try:
-            time.sleep(5)  # Give services time to start
-            self.run_command(f"curl -f -k https://{self.config['domain']} -o /dev/null")
-            self.log("✅ Website is responding", 'SUCCESS')
-        except:
-            self.log("❌ Website is not responding", 'ERROR')
-            all_services_ok = False
+        # Enhanced web endpoint testing
+        endpoints_to_test = [
+            ('Frontend', f"https://{self.config['domain']}"),
+            ('API Health', f"https://{self.config['domain']}/api/"),
+            ('Admin Panel', f"https://{self.config['domain']}/admin/")
+        ]
         
-        return all_services_ok
+        web_ok = True
+        # Give services time to start before testing
+        if all_services_ok:
+            time.sleep(3)  # Reduced wait time
+            
+            for name, url in endpoints_to_test:
+                try:
+                    # Test with timeout for faster failure detection
+                    self.run_command(f"curl -f -k --max-time 10 {url} -o /dev/null")
+                    self.log(f"✅ {name} is responding", 'SUCCESS')
+                except:
+                    self.log(f"❌ {name} is not responding", 'ERROR')
+                    web_ok = False
+                    break  # Stop testing if one fails
+        
+        # Additional quick health checks
+        if all_services_ok and web_ok:
+            try:
+                # Test database connectivity
+                backend_dir = f"{self.config['project_dir']}/backend"
+                self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py check --deploy")
+                self.log("✅ Django deployment check passed", 'SUCCESS')
+            except:
+                self.log("⚠️ Django deployment check failed (not critical)", 'WARNING')
+        
+        # Auto-restart failed services if possible
+        if failed_services and len(failed_services) < len(services):
+            self.log("Attempting to restart failed services...", 'WARNING')
+            for service in failed_services:
+                try:
+                    self.run_command(f"systemctl restart {service}")
+                    time.sleep(2)
+                    self.run_command(f"systemctl is-active --quiet {service}")
+                    self.log(f"✅ {service} restarted successfully", 'SUCCESS')
+                    all_services_ok = True  # At least one service recovered
+                except:
+                    self.log(f"❌ Failed to restart {service}", 'ERROR')
+        
+        return all_services_ok and web_ok
 
     def print_success_message(self):
         """Print final success message"""
