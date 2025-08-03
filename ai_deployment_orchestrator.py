@@ -1402,7 +1402,17 @@ class AIDeploymentOrchestrator:
         
         # Update system
         exit_code, stdout, stderr = self.execute_command("apt update")
-        return exit_code == 0
+        if exit_code != 0:
+            return False
+        
+        # Create projectmeats user if it doesn't exist
+        self.log("Creating projectmeats user...", "INFO")
+        exit_code, stdout, stderr = self.execute_command("useradd -m -s /bin/bash projectmeats")
+        if exit_code != 0 and "already exists" not in stderr:
+            self.log(f"Failed to create projectmeats user: {stderr}", "ERROR")
+            return False
+        
+        return True
     
     def deploy_install_dependencies(self) -> bool:
         """Install system dependencies"""
@@ -1759,10 +1769,25 @@ WantedBy=multi-user.target
         """Configure frontend"""
         self.log("Configuring frontend...", "INFO")
         
+        # Configure npm for projectmeats user to avoid permission issues
+        self.log("Configuring npm...", "INFO")
+        npm_config_commands = [
+            "mkdir -p /opt/projectmeats/.npm-global",
+            "chown -R projectmeats:projectmeats /opt/projectmeats/.npm-global",
+            "sudo -u projectmeats npm config set prefix /opt/projectmeats/.npm-global"
+        ]
+        
+        for cmd in npm_config_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"npm configuration failed: {cmd}", "ERROR")
+                self.log(f"Error output: {stderr}", "ERROR")
+                return False
+        
         # Install dependencies and build frontend
         commands = [
-            "cd /opt/projectmeats/frontend && npm install",
-            "cd /opt/projectmeats/frontend && npm run build"
+            "cd /opt/projectmeats/frontend && sudo -u projectmeats bash -c 'export PATH=$PATH:/opt/projectmeats/.npm-global/bin; npm install'",
+            "cd /opt/projectmeats/frontend && sudo -u projectmeats bash -c 'export PATH=$PATH:/opt/projectmeats/.npm-global/bin; npm run build'"
         ]
         
         for cmd in commands:
