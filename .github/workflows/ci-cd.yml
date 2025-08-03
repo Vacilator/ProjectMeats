@@ -445,34 +445,94 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Validate unified deployment system
+    - name: Validate consolidated deployment system
       run: |
-        echo "🔍 Validating deployment system..."
-        # Check if unified deployment script exists and is valid
+        # Check if AI deployment orchestrator exists and is valid
+        if [ -f "ai_deployment_orchestrator.py" ]; then
+          echo "✅ AI Deployment Orchestrator (PRIMARY) exists"
+          python3 -m py_compile ai_deployment_orchestrator.py
+          echo "✅ AI orchestrator syntax is valid"
+        else
+          echo "❌ ai_deployment_orchestrator.py not found"
+          exit 1
+        fi
+        
+        # Check unified deployment script
         if [ -f "master_deploy.py" ]; then
-          echo "✅ Unified deployment script exists"
+          echo "✅ Master Deploy System (SECONDARY) exists"
           python3 -m py_compile master_deploy.py
-          echo "✅ Deployment script syntax is valid"
+          echo "✅ Master deploy syntax is valid"
         else
           echo "❌ master_deploy.py not found"
           exit 1
         fi
-
-    - name: Validate deployment documentation
-      run: |
-        echo "📚 Checking deployment documentation..."
-        # Check unified deployment guide
-        if [ -f "UNIFIED_DEPLOYMENT_GUIDE.md" ]; then
-          echo "✅ Unified deployment guide exists"
+        
+        # Check setup wizard
+        if [ -f "setup_ai_deployment.py" ]; then
+          echo "✅ AI Setup Wizard exists"
+          python3 -m py_compile setup_ai_deployment.py
+          echo "✅ Setup wizard syntax is valid"
         else
-          echo "❌ UNIFIED_DEPLOYMENT_GUIDE.md not found"
+          echo "❌ setup_ai_deployment.py not found"
           exit 1
         fi
 
-    - name: Test deployment configurations
+    - name: Validate consolidated deployment documentation
       run: |
-        echo "⚙️ Testing deployment configuration generation..."
-        # Test Docker configuration generation
+        # Check master deployment guide
+        if [ -f "DEPLOYMENT_MASTER_GUIDE.md" ]; then
+          echo "✅ Master deployment guide exists"
+        else
+          echo "❌ DEPLOYMENT_MASTER_GUIDE.md not found"
+          exit 1
+        fi
+        
+        # Check consolidation guide
+        if [ -f "DEPLOYMENT_CONSOLIDATION_GUIDE.md" ]; then
+          echo "✅ Consolidation guide exists"
+        else
+          echo "❌ DEPLOYMENT_CONSOLIDATION_GUIDE.md not found"
+          exit 1
+        fi
+        
+        # Verify deprecated files are archived
+        if [ -d "deprecated" ]; then
+          echo "✅ Deprecated files properly archived"
+          echo "   Scripts: $(ls deprecated/scripts/ 2>/dev/null | wc -l)"
+          echo "   Docs: $(ls deprecated/docs/ 2>/dev/null | wc -l)"
+        else
+          echo "⚠️ Deprecated directory not found (cleanup may not have run)"
+        fi
+
+    - name: Test AI deployment orchestrator configuration
+      run: |
+        # Test AI orchestrator configuration loading
+        python3 -c "
+        import sys
+        sys.path.append('.')
+        try:
+            from ai_deployment_orchestrator import AIDeploymentOrchestrator, AIIntelligenceEngine
+            
+            # Test AI engine initialization
+            ai_engine = AIIntelligenceEngine()
+            print('✅ AI Intelligence Engine initializes successfully')
+            
+            # Test orchestrator initialization
+            orchestrator = AIDeploymentOrchestrator()
+            print('✅ AI Deployment Orchestrator initializes successfully')
+            
+            # Test enhanced configuration
+            if 'ai_features' in orchestrator.config:
+                print('✅ Enhanced AI configuration detected')
+            else:
+                print('⚠️ Using basic configuration (enhanced config recommended)')
+                
+        except Exception as e:
+            print(f'❌ AI orchestrator initialization failed: {e}')
+            sys.exit(1)
+        "
+        
+        # Test master deploy fallback
         python3 -c "
         import sys
         sys.path.append('.')
@@ -482,19 +542,24 @@ jobs:
         deployer.config['project_dir'] = '/tmp/test'
         try:
             deployer.create_docker_compose_file()
-            print('✅ Docker configuration generation works')
+            print('✅ Master deploy Docker configuration generation works')
         except Exception as e:
-            print(f'❌ Docker configuration failed: {e}')
+            print(f'❌ Master deploy configuration failed: {e}')
             sys.exit(1)
         "
 
-    - name: Generate deployment artifacts
+    - name: Generate consolidated deployment artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: deployment-ready
+        name: deployment-ready-consolidated
         path: |
+          ai_deployment_orchestrator.py
           master_deploy.py
-          UNIFIED_DEPLOYMENT_GUIDE.md
+          setup_ai_deployment.py
+          DEPLOYMENT_MASTER_GUIDE.md
+          DEPLOYMENT_CONSOLIDATION_GUIDE.md
+          ai_deployment_config.enhanced.json
+          ai_deployment_config.json
           backend/
           frontend/build/
           docs/
@@ -515,53 +580,52 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup deployment environment
+    - name: Setup AI deployment environment
       run: |
-        echo "⚙️ Setting up deployment environment..."
-        # Install deployment dependencies
-        sudo apt-get update -qq
-        sudo apt-get install -y python3 python3-pip curl
-        pip3 install --user requests
+        # Install AI deployment dependencies
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip
+        pip3 install --user -r ai_deployment_requirements.txt
 
-    - name: Trigger staging deployment
+    - name: Trigger AI-powered staging deployment
       env:
         STAGING_DEPLOY_WEBHOOK: ${{ secrets.STAGING_DEPLOY_WEBHOOK }}
         DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         if [ -n "$STAGING_DEPLOY_WEBHOOK" ]; then
-          echo "🚀 Triggering staging deployment..."
+          echo "🤖 Triggering AI-powered staging deployment..."
           
-          # Create deployment payload
+          # Create enhanced deployment payload
           PAYLOAD=$(cat <<EOF
         {
           "ref": "${{ github.ref }}",
           "sha": "${{ github.sha }}",
           "repository": "${{ github.repository }}",
           "environment": "staging",
-          "deployment_mode": "auto",
-          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-          "security_scan_passed": true,
-          "gunicorn_version": "23.0.0"
+          "deployment_mode": "ai_orchestrator",
+          "ai_features": {
+            "intelligent_error_detection": true,
+            "predictive_analysis": true,
+            "autonomous_recovery": true
+          },
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         }
         EOF
           )
           
-          # Send webhook with retry logic
-          for i in {1..3}; do
-            if curl -X POST "$STAGING_DEPLOY_WEBHOOK" \
-              -H "Content-Type: application/json" \
-              -H "X-Deploy-Secret: $DEPLOY_SECRET" \
-              -d "$PAYLOAD" \
-              --max-time 30; then
-              echo "✅ Staging deployment triggered successfully"
-              break
-            else
-              echo "⚠️ Deployment attempt $i failed, retrying..."
-              sleep 10
-            fi
-          done
+          # Send webhook with AI orchestrator info
+          curl -X POST "$STAGING_DEPLOY_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -H "X-Deploy-Secret: $DEPLOY_SECRET" \
+            -H "X-AI-Deployment: true" \
+            -d "$PAYLOAD"
+          
+          echo "✅ AI-powered staging deployment triggered"
         else
-          echo "⚠️ No staging webhook configured, skipping deployment"
+          echo "⚠️ No staging webhook configured, using direct AI deployment"
+          echo "📋 Manual AI deployment command:"
+          echo "python3 ai_deployment_orchestrator.py --profile=staging --ci-cd-mode --github-token=\$GITHUB_TOKEN"
         fi
 
     - name: Wait for deployment completion
@@ -596,38 +660,53 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Trigger production deployment
+    - name: Trigger AI-powered production deployment
       env:
         PRODUCTION_DEPLOY_WEBHOOK: ${{ secrets.PRODUCTION_DEPLOY_WEBHOOK }}
         DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         if [ -n "$PRODUCTION_DEPLOY_WEBHOOK" ]; then
-          echo "🚀 Triggering production deployment..."
+          echo "🤖 Triggering AI-powered production deployment..."
           
-          # Create deployment payload
+          # Create enhanced production deployment payload
           PAYLOAD=$(cat <<EOF
         {
           "ref": "${{ github.ref }}",
           "sha": "${{ github.sha }}",
           "repository": "${{ github.repository }}",
           "environment": "production",
-          "deployment_mode": "auto",
+          "deployment_mode": "ai_orchestrator_production",
+          "ai_features": {
+            "intelligent_error_detection": true,
+            "predictive_analysis": true,
+            "autonomous_recovery": true,
+            "performance_optimization": true,
+            "production_security": true
+          },
+          "backup_enabled": true,
+          "monitoring_enabled": true,
           "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         }
         EOF
           )
           
-          # Send webhook
+          # Send webhook with enhanced AI orchestrator configuration
           curl -X POST "$PRODUCTION_DEPLOY_WEBHOOK" \
             -H "Content-Type: application/json" \
             -H "X-Deploy-Secret: $DEPLOY_SECRET" \
+            -H "X-AI-Deployment: production" \
+            -H "X-Deployment-Version: 2.0" \
             -d "$PAYLOAD"
           
-          echo "✅ Production deployment triggered"
+          echo "✅ AI-powered production deployment triggered"
         else
-          echo "⚠️ No production webhook configured, manual deployment required"
-          echo "📋 Manual deployment command:"
-          echo "sudo python3 master_deploy.py --ci-cd --auto --domain=yourdomain.com"
+          echo "⚠️ No production webhook configured, manual AI deployment required"
+          echo "📋 AI deployment commands:"
+          echo "# Primary (AI-powered):"
+          echo "python3 ai_deployment_orchestrator.py --profile=production --ci-cd --github-token=\$GITHUB_TOKEN"
+          echo "# Secondary (traditional):"
+          echo "python3 master_deploy.py --ci-cd --auto --domain=yourdomain.com"
         fi
 
     - name: Verify production deployment
