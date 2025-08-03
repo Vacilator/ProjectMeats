@@ -895,19 +895,136 @@ class AIDeploymentOrchestrator:
         return True
     
     def deploy_download_application(self) -> bool:
-        """Download application"""
+        """Download application with proper validation and backup handling"""
         self.log("Downloading ProjectMeats...", "INFO")
         
-        commands = [
-            "mkdir -p /opt/projectmeats",
-            "cd /opt/projectmeats && git clone https://github.com/Vacilator/ProjectMeats.git . || curl -L https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip && unzip project.zip && mv ProjectMeats-main/* . && rm project.zip"
-        ]
+        project_dir = "/opt/projectmeats"
         
-        for cmd in commands:
-            exit_code, stdout, stderr = self.execute_command(cmd)
+        # Create project directory
+        exit_code, stdout, stderr = self.execute_command(f"mkdir -p {project_dir}")
+        if exit_code != 0:
+            self.log("Failed to create project directory", "ERROR")
+            return False
+        
+        # Check if directory already has content and handle it
+        exit_code, stdout, stderr = self.execute_command(f"ls -la {project_dir}")
+        if exit_code == 0 and stdout and len(stdout.strip().split('\n')) > 3:  # More than just . and ..
+            self.log("Project directory already contains files", "WARNING")
+            
+            # Create backup of existing content
+            backup_dir = f"{project_dir}_backup_{int(time.time())}"
+            self.log(f"Creating backup at {backup_dir}", "INFO")
+            exit_code, stdout, stderr = self.execute_command(f"mv {project_dir} {backup_dir}")
             if exit_code != 0:
+                self.log("Failed to backup existing directory", "ERROR")
+                return False
+            
+            # Recreate empty directory
+            exit_code, stdout, stderr = self.execute_command(f"mkdir -p {project_dir}")
+            if exit_code != 0:
+                self.log("Failed to recreate project directory", "ERROR")
                 return False
         
+        # Download from GitHub (multiple methods with validation)
+        project_downloaded = False
+        
+        # Method 1: Basic git clone (public access)
+        if not project_downloaded:
+            self.log("Attempting git clone (public access)...", "INFO")
+            exit_code, stdout, stderr = self.execute_command(
+                f"cd {project_dir} && git clone https://github.com/Vacilator/ProjectMeats.git ."
+            )
+            if exit_code == 0:
+                project_downloaded = True
+                self.log("Successfully downloaded using git clone", "SUCCESS")
+        
+        # Method 2: Direct zip download with validation
+        if not project_downloaded:
+            self.log("Attempting direct zip download...", "INFO")
+            
+            # Download
+            exit_code, stdout, stderr = self.execute_command(
+                f"cd {project_dir} && curl -L https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip"
+            )
+            if exit_code == 0:
+                # Validate download size
+                exit_code, stdout, stderr = self.execute_command(
+                    f"stat -c%s {project_dir}/project.zip 2>/dev/null || echo 0"
+                )
+                if exit_code == 0 and stdout:
+                    zip_size = int(stdout.strip())
+                    if zip_size < 1000:  # Less than 1KB indicates error response
+                        self.log(f"Download failed - file too small ({zip_size} bytes)", "ERROR")
+                    else:
+                        # Check if it's actually a zip file
+                        exit_code, stdout, stderr = self.execute_command(
+                            f"cd {project_dir} && file project.zip"
+                        )
+                        if exit_code == 0 and "zip" in stdout.lower():
+                            # Extract
+                            exit_code, stdout, stderr = self.execute_command(
+                                f"cd {project_dir} && unzip -q project.zip && mv ProjectMeats-main/* . && mv ProjectMeats-main/.* . 2>/dev/null || true && rm -rf ProjectMeats-main project.zip"
+                            )
+                            if exit_code == 0:
+                                project_downloaded = True
+                                self.log("Successfully downloaded via direct zip download", "SUCCESS")
+                            else:
+                                self.log("Failed to extract zip file", "ERROR")
+                        else:
+                            self.log("Downloaded file is not a valid zip archive", "ERROR")
+                            # Clean up invalid file
+                            self.execute_command(f"rm -f {project_dir}/project.zip")
+        
+        # Method 3: Try tarball download as alternative
+        if not project_downloaded:
+            self.log("Attempting tarball download...", "INFO")
+            
+            # Download
+            exit_code, stdout, stderr = self.execute_command(
+                f"cd {project_dir} && curl -L https://github.com/Vacilator/ProjectMeats/archive/refs/heads/main.tar.gz -o project.tar.gz"
+            )
+            if exit_code == 0:
+                # Validate tarball size
+                exit_code, stdout, stderr = self.execute_command(
+                    f"stat -c%s {project_dir}/project.tar.gz 2>/dev/null || echo 0"
+                )
+                if exit_code == 0 and stdout:
+                    tar_size = int(stdout.strip())
+                    if tar_size < 1000:  # Less than 1KB indicates error response
+                        self.log(f"Tarball download failed - file too small ({tar_size} bytes)", "ERROR")
+                    else:
+                        # Check if it's actually a tar.gz file
+                        exit_code, stdout, stderr = self.execute_command(
+                            f"cd {project_dir} && file project.tar.gz"
+                        )
+                        if exit_code == 0 and "gzip compressed" in stdout.lower():
+                            # Extract
+                            exit_code, stdout, stderr = self.execute_command(
+                                f"cd {project_dir} && tar -xzf project.tar.gz && mv ProjectMeats-main/* . && mv ProjectMeats-main/.* . 2>/dev/null || true && rm -rf ProjectMeats-main project.tar.gz"
+                            )
+                            if exit_code == 0:
+                                project_downloaded = True
+                                self.log("Successfully downloaded via tarball", "SUCCESS")
+                            else:
+                                self.log("Failed to extract tarball", "ERROR")
+                        else:
+                            self.log("Downloaded file is not a valid gzip archive", "ERROR")
+                            # Clean up invalid file
+                            self.execute_command(f"rm -f {project_dir}/project.tar.gz")
+        
+        if not project_downloaded:
+            self.log("All download methods failed", "ERROR")
+            return False
+        
+        # Verify that essential files exist
+        exit_code, stdout, stderr = self.execute_command(
+            f"ls -la {project_dir}/backend {project_dir}/frontend {project_dir}/README.md"
+        )
+        if exit_code != 0:
+            self.log("Downloaded project appears incomplete - missing essential directories", "ERROR")
+            return False
+        
+        self.log("ProjectMeats application downloaded and validated successfully", "SUCCESS")
         return True
     
     def deploy_configure_backend(self) -> bool:
