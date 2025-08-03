@@ -89,16 +89,11 @@ class OrchestrationEngine:
         
         # Get or create system user for automated tasks
         from django.contrib.auth.models import User
-        system_user, created = User.objects.get_or_create(
-            username='orchestration_system',
-            defaults={
-                'email': 'orchestration@projectmeats.com',
-                'first_name': 'Orchestration',
-                'last_name': 'System',
-                'is_staff': False,
-                'is_active': True
-            }
-        )
+        try:
+            system_user = User.objects.get(username='orchestration_system')
+        except User.DoesNotExist:
+            self.logger.error("System user 'orchestration_system' does not exist. Please create it using the dedicated management command or service.")
+            raise
         
         # Determine priority based on error severity
         priority = TaskPriority.CRITICAL
