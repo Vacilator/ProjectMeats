@@ -314,7 +314,7 @@ class IntuitiveInterface:
     """Provides an intuitive user interface"""
     
     def __init__(self):
-        self.executor = AutomousExecutor()
+        self.executor = AutonomousExecutor()
         self.analyzer = SystemAnalyzer()
     
     def interactive_mode(self) -> bool:
