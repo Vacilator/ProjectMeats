@@ -381,13 +381,13 @@ class MasterDeployer:
             # Generate random password
             db_password = secrets.token_urlsafe(16)
             
-            # Create database and user
+            # Create database and user - run from /tmp to avoid permission issues
             commands = [
-                f"sudo -u postgres createdb projectmeats || true",
-                f"sudo -u postgres createuser {self.config['app_user']} || true",
-                f"sudo -u postgres psql -c \"ALTER USER {self.config['app_user']} PASSWORD '{db_password}';\"",
-                f"sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE projectmeats TO {self.config['app_user']};\"",
-                f"sudo -u postgres psql -c \"ALTER USER {self.config['app_user']} CREATEDB;\""
+                f"cd /tmp && sudo -u postgres createdb projectmeats || true",
+                f"cd /tmp && sudo -u postgres createuser {self.config['app_user']} || true",
+                f"cd /tmp && sudo -u postgres psql -c \"ALTER USER {self.config['app_user']} PASSWORD '{db_password}';\"",
+                f"cd /tmp && sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE projectmeats TO {self.config['app_user']};\"",
+                f"cd /tmp && sudo -u postgres psql -c \"ALTER USER {self.config['app_user']} CREATEDB;\""
             ]
             
             for cmd in commands:
@@ -408,6 +408,25 @@ class MasterDeployer:
         
         # Create project directory
         self.run_command(f"mkdir -p {self.config['project_dir']}")
+        
+        # Check if directory already has content and handle it
+        try:
+            result = self.run_command(f"ls -la {self.config['project_dir']}", capture_output=True)
+            if result and len(result.strip().split('\n')) > 3:  # More than just . and ..
+                self.log("Project directory already contains files", 'WARNING')
+                if not self.is_auto_mode:
+                    backup_choice = input("Backup existing files and proceed? [Y/n]: ").lower()
+                    if backup_choice == 'n':
+                        self.log("Deployment cancelled due to existing files", 'ERROR')
+                        sys.exit(1)
+                
+                # Create backup of existing content
+                backup_dir = f"{self.config['project_dir']}_backup_{int(time.time())}"
+                self.log(f"Creating backup at {backup_dir}")
+                self.run_command(f"mv {self.config['project_dir']} {backup_dir}")
+                self.run_command(f"mkdir -p {self.config['project_dir']}")
+        except:
+            pass  # Directory is empty or doesn't exist, which is fine
         
         # Download from GitHub (multiple methods)
         project_downloaded = False
@@ -433,18 +452,57 @@ class MasterDeployer:
             except:
                 self.log("Public git clone failed, trying download...", 'WARNING')
         
-        # Method 3: Direct download
+        # Method 3: Direct download with validation
         if not project_downloaded:
             try:
                 self.log("Downloading via direct download...")
-                self.run_command(f"cd {self.config['project_dir']} && curl -L https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip")
-                self.run_command(f"cd {self.config['project_dir']} && unzip -q project.zip && mv ProjectMeats-main/* . && rm -rf ProjectMeats-main project.zip")
+                download_cmd = f"cd {self.config['project_dir']} && curl -L https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip"
+                self.run_command(download_cmd)
+                
+                # Validate download
+                zip_size = self.run_command(f"stat -c%s {self.config['project_dir']}/project.zip 2>/dev/null || echo 0", capture_output=True)
+                if int(zip_size) < 1000:  # Less than 1KB indicates error response
+                    raise Exception(f"Download failed - file too small ({zip_size} bytes)")
+                
+                # Check if it's actually a zip file
+                file_result = self.run_command(f"cd {self.config['project_dir']} && file project.zip", capture_output=True)
+                if "zip" not in file_result.lower():
+                    raise Exception("Downloaded file is not a valid zip archive")
+                
+                # Extract
+                extract_cmd = f"cd {self.config['project_dir']} && unzip -q project.zip && mv ProjectMeats-main/* . && mv ProjectMeats-main/.* . 2>/dev/null || true && rm -rf ProjectMeats-main project.zip"
+                self.run_command(extract_cmd)
                 project_downloaded = True
                 self.log("Successfully downloaded via direct download", 'SUCCESS')
-            except:
-                self.log("Direct download failed!", 'ERROR')
+            except Exception as e:
+                self.log(f"Direct download failed: {e}", 'ERROR')
         
-        # Method 4: Fallback with detailed instructions
+        # Method 4: Try tarball download as alternative
+        if not project_downloaded:
+            try:
+                self.log("Downloading via tarball...")
+                download_cmd = f"cd {self.config['project_dir']} && curl -L https://github.com/Vacilator/ProjectMeats/archive/refs/heads/main.tar.gz -o project.tar.gz"
+                self.run_command(download_cmd)
+                
+                # Validate tarball
+                tar_size = self.run_command(f"stat -c%s {self.config['project_dir']}/project.tar.gz 2>/dev/null || echo 0", capture_output=True)
+                if int(tar_size) < 1000:  # Less than 1KB indicates error response
+                    raise Exception(f"Tarball download failed - file too small ({tar_size} bytes)")
+                
+                # Check if it's actually a tar.gz file
+                file_result = self.run_command(f"cd {self.config['project_dir']} && file project.tar.gz", capture_output=True)
+                if "gzip compressed" not in file_result.lower():
+                    raise Exception("Downloaded file is not a valid gzip archive")
+                
+                # Extract
+                extract_cmd = f"cd {self.config['project_dir']} && tar -xzf project.tar.gz && mv ProjectMeats-main/* . && mv ProjectMeats-main/.* . 2>/dev/null || true && rm -rf ProjectMeats-main project.tar.gz"
+                self.run_command(extract_cmd)
+                project_downloaded = True
+                self.log("Successfully downloaded via tarball", 'SUCCESS')
+            except Exception as e:
+                self.log(f"Tarball download failed: {e}", 'ERROR')
+        
+        # Method 5: Fallback with detailed instructions
         if not project_downloaded:
             self.log("All automatic download methods failed!", 'ERROR')
             self.print_github_auth_help()
