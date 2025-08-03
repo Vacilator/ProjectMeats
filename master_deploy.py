@@ -633,18 +633,32 @@ else:
             except:
                 pass
         
-        # Also search for and remove any files with the wrong import
+        # More comprehensive search for and removal of files with incorrect imports
         self.log("Searching for and removing any files with incorrect user_profiles imports...")
         try:
-            result = self.run_command(f"find {self.config['project_dir']} -name '*.py' -type f -exec grep -l 'from apps.user_profiles' {{}} \\; 2>/dev/null || true", capture_output=True, check=False)
-            if result and result.strip():
-                files_with_wrong_import = result.strip().split('\n')
-                for file_path in files_with_wrong_import:
-                    if file_path and 'create_admin' in file_path:
-                        self.log(f"Found and removing file with wrong import: {file_path}")
-                        self.run_command(f"rm -f {file_path}", check=False)
-        except:
-            pass
+            # Search for any files containing the wrong import pattern
+            search_patterns = [
+                "from apps.user_profiles",
+                "import apps.user_profiles", 
+                "from apps.user_profile",  # Common typo
+                "import apps.user_profile"
+            ]
+            
+            for pattern in search_patterns:
+                result = self.run_command(f"find {self.config['project_dir']} -name '*.py' -type f -exec grep -l '{pattern}' {{}} \\; 2>/dev/null || true", capture_output=True, check=False)
+                if result and result.strip():
+                    files_with_wrong_import = result.strip().split('\n')
+                    for file_path in files_with_wrong_import:
+                        if file_path and file_path.strip():
+                            self.log(f"Found file with wrong import pattern '{pattern}': {file_path}")
+                            # Remove any create_admin files with wrong imports
+                            if 'create_admin' in file_path or 'admin' in os.path.basename(file_path):
+                                self.log(f"Removing file with incorrect import: {file_path}")
+                                self.run_command(f"rm -f {file_path}", check=False)
+                            else:
+                                self.log(f"Warning: Non-admin file contains wrong import: {file_path}", 'WARNING')
+        except Exception as e:
+            self.log(f"Error during cleanup search: {e}", 'WARNING')
         
         # Create new admin script with correct imports
         self.log("Creating new admin script...")
@@ -710,6 +724,35 @@ else:
             self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py shell < create_admin.py")
         except Exception as e:
             self.log(f"Admin script execution failed: {e}", 'ERROR')
+            # Check if the error is related to user_profiles import
+            if "user_profiles" in str(e):
+                self.log("Detected user_profiles import error, using simplified admin creation", 'WARNING')
+                # Create a simplified script without UserProfile import
+                simple_admin_script = f"""from django.contrib.auth.models import User
+
+# Create superuser (without UserProfile for now)
+if not User.objects.filter(username='{self.config['admin_user']}').exists():
+    user = User.objects.create_superuser(
+        '{self.config['admin_user']}',
+        '{self.config['admin_email']}',
+        '{self.config['admin_password']}'
+    )
+    print('Admin user created successfully (without profile)')
+else:
+    print('Admin user already exists')
+"""
+                try:
+                    # Write and execute the simplified script
+                    simple_script_path = f"{backend_dir}/create_admin_simple.py"
+                    with open(simple_script_path, 'w', encoding='utf-8') as f:
+                        f.write(simple_admin_script)
+                    self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py shell < create_admin_simple.py")
+                    self.log("Simplified admin creation succeeded", 'SUCCESS')
+                    # Clean up
+                    self.run_command(f"rm -f {simple_script_path}", check=False)
+                except Exception as e3:
+                    self.log(f"Simplified admin creation also failed: {e3}", 'ERROR')
+            
             # Try alternative execution method as fallback
             self.log("Trying alternative execution method...")
             try:
@@ -719,7 +762,20 @@ else:
                 self.log("Alternative execution method succeeded", 'SUCCESS')
             except Exception as e2:
                 self.log(f"Alternative execution also failed: {e2}", 'ERROR')
-                raise
+                # If all else fails, try Django's built-in createsuperuser
+                self.log("Trying Django's built-in createsuperuser command...", 'WARNING')
+                try:
+                    env_vars = {
+                        'DJANGO_SUPERUSER_USERNAME': self.config['admin_user'],
+                        'DJANGO_SUPERUSER_EMAIL': self.config['admin_email'],
+                        'DJANGO_SUPERUSER_PASSWORD': self.config['admin_password']
+                    }
+                    env_string = ' '.join([f"{k}={v}" for k, v in env_vars.items()])
+                    self.run_command(f"cd {backend_dir} && {env_string} ./venv/bin/python manage.py createsuperuser --noinput")
+                    self.log("Django createsuperuser succeeded", 'SUCCESS')
+                except Exception as e3:
+                    self.log(f"All admin creation methods failed: {e3}", 'ERROR')
+                    raise
         
         # Collect static files
         self.log("Collecting static files...")
