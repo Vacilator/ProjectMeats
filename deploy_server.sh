@@ -52,16 +52,42 @@ apt update && apt upgrade -y
 log_info "Installing system dependencies..."
 apt install -y python3 python3-pip python3-venv nginx git curl ufw fail2ban
 
-# Remove existing Node.js packages that might conflict
-log_info "Removing conflicting Node.js packages..."
-apt remove -y nodejs npm libnode-dev libnode72 || true
-apt autoremove -y || true
+# Check if Node.js is already available and adequate
+NODE_VERSION=""
+NODE_AVAILABLE=false
 
-# Install Node.js 18 LTS from NodeSource
-log_info "Installing Node.js 18 LTS..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-apt update
-apt install -y nodejs
+if command -v node >/dev/null 2>&1; then
+    NODE_VERSION=$(node -v 2>/dev/null || echo "")
+    if [[ "$NODE_VERSION" =~ ^v([0-9]+) ]]; then
+        NODE_MAJOR=${BASH_REMATCH[1]}
+        if [ "$NODE_MAJOR" -ge 16 ]; then
+            NODE_AVAILABLE=true
+            log_info "Found adequate Node.js version: $NODE_VERSION"
+        fi
+    fi
+fi
+
+if [ "$NODE_AVAILABLE" = false ]; then
+    # Remove existing Node.js packages that might conflict
+    log_info "Removing conflicting Node.js packages..."
+    apt remove -y nodejs npm libnode-dev libnode72 || true
+    apt autoremove -y || true
+
+    # Install Node.js 18 LTS from NodeSource
+    log_info "Installing Node.js 18 LTS..."
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    apt update
+    apt install -y nodejs
+else
+    log_info "Using existing Node.js installation: $NODE_VERSION"
+    # Ensure npm is available
+    if ! command -v npm >/dev/null 2>&1; then
+        log_error "Node.js found but npm is missing. Please ensure npm is installed."
+        exit 1
+    fi
+    NPM_VERSION=$(npm -v 2>/dev/null || echo "unknown")
+    log_info "Using npm version: $NPM_VERSION"
+fi
 
 # Create application user
 log_info "Creating application user..."
@@ -145,6 +171,31 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 # Setup frontend
 log_info "Setting up React frontend..."
 cd /home/projectmeats/app/frontend
+
+# Verify Node.js and npm are accessible to projectmeats user
+log_info "Verifying Node.js access for projectmeats user..."
+sudo -u projectmeats bash -c 'node -v && npm -v' || {
+    log_error "Node.js or npm not accessible to projectmeats user"
+    # Try to add Node.js to PATH for the user
+    NODE_PATH=$(which node 2>/dev/null || echo "")
+    NPM_PATH=$(which npm 2>/dev/null || echo "")
+    if [ -n "$NODE_PATH" ] && [ -n "$NPM_PATH" ]; then
+        NODE_DIR=$(dirname "$NODE_PATH")
+        log_info "Adding Node.js path ($NODE_DIR) to projectmeats user environment"
+        sudo -u projectmeats bash -c "echo 'export PATH=$NODE_DIR:\$PATH' >> ~/.bashrc"
+        # Test again with updated PATH
+        sudo -u projectmeats bash -c "export PATH=$NODE_DIR:\$PATH && node -v && npm -v" || {
+            log_error "Still cannot access Node.js/npm. Manual intervention required."
+            exit 1
+        }
+        # Set PATH for subsequent npm commands
+        export PATH="$NODE_DIR:$PATH"
+    else
+        log_error "Cannot find Node.js/npm paths"
+        exit 1
+    fi
+}
+
 sudo -u projectmeats npm install
 sudo -u projectmeats npm run build
 
