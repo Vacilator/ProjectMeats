@@ -20,5 +20,5 @@ router.register(r'status', OrchestrationStatusViewSet, basename='status')
 app_name = 'task_orchestration'
 
 urlpatterns = [
-    path('api/orchestration/', include(router.urls)),
+    path('orchestration/', include(router.urls)),
 ]
