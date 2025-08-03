@@ -17,7 +17,17 @@ curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_n
 ### 2. 🔑 Personal Access Token
 1. GitHub.com → Settings → Developer settings → Personal access tokens → Tokens (classic)
 2. Generate new token with `repo` scope
-3. Use token instead of password:
+3. **Option A - Environment Variables (Recommended):**
+```bash
+export GITHUB_USER=your_username
+export GITHUB_TOKEN=your_token
+sudo -E ./master_deploy.py
+```
+4. **Option B - Command Line:**
+```bash
+sudo ./master_deploy.py --github-user=your_username --github-token=your_token
+```
+5. **Option C - Direct Git Clone:**
 ```bash
 git clone https://USERNAME:TOKEN@github.com/Vacilator/ProjectMeats.git
 ```

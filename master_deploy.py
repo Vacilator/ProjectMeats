@@ -17,6 +17,9 @@ Usage:
     # Fully automated deployment:
     python3 master_deploy.py --auto --domain=yourdomain.com
 
+    # With GitHub authentication:
+    python3 master_deploy.py --auto --domain=yourdomain.com --github-user=USERNAME --github-token=TOKEN
+
     # Interactive setup:
     python3 master_deploy.py
 
@@ -59,6 +62,10 @@ class MasterDeployer:
         for arg in sys.argv:
             if arg.startswith('--domain='):
                 self.config['domain'] = arg.split('=', 1)[1]
+            elif arg.startswith('--github-user='):
+                self.config['github_user'] = arg.split('=', 1)[1]
+            elif arg.startswith('--github-token='):
+                self.config['github_token'] = arg.split('=', 1)[1]
 
     def log(self, message, level='INFO'):
         """Enhanced logging with colors"""
@@ -170,6 +177,50 @@ class MasterDeployer:
             if confirm == 'n':
                 self.log("Deployment cancelled by user", 'WARNING')
                 sys.exit(0)
+
+    def get_github_authentication(self):
+        """Get GitHub authentication credentials for downloading"""
+        # Check for environment variables first
+        github_user = os.environ.get('GITHUB_USER') or os.environ.get('GITHUB_USERNAME')
+        github_token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_PAT')
+        
+        if github_user and github_token:
+            self.config['github_user'] = github_user
+            self.config['github_token'] = github_token
+            self.log("GitHub authentication loaded from environment variables", 'SUCCESS')
+            return
+        
+        if self.is_auto_mode and 'github_user' in self.config and 'github_token' in self.config:
+            return  # Already configured via command line
+            
+        self.log("GitHub Authentication Setup", 'HEADER')
+        print("\nTo download ProjectMeats from GitHub, authentication may be required.")
+        print("GitHub has deprecated password authentication for git operations.")
+        print("\nYou can:")
+        print("1. Skip authentication (try public download methods)")
+        print("2. Provide Personal Access Token (PAT) - Recommended")
+        print("3. Configure SSH key authentication later")
+        
+        auth_choice = input("\nChoose authentication method (1-3) [1]: ").strip() or "1"
+        
+        if auth_choice == "2":
+            print("\nPersonal Access Token Setup:")
+            print("1. Go to GitHub.com -> Settings -> Developer settings -> Personal access tokens")
+            print("2. Generate a new token with 'repo' scope")
+            print("3. Copy the token (it won't be shown again)")
+            
+            self.config['github_user'] = input("\nGitHub username: ").strip()
+            if self.config['github_user']:
+                self.config['github_token'] = getpass.getpass("GitHub Personal Access Token: ").strip()
+                if self.config['github_token']:
+                    self.log("GitHub authentication configured", 'SUCCESS')
+                else:
+                    self.log("No token provided, will try public methods", 'WARNING')
+                    self.config.pop('github_user', None)
+            else:
+                self.log("No username provided, will try public methods", 'WARNING')
+        else:
+            self.log("Will attempt public download methods", 'INFO')
 
     def fix_nodejs_conflicts(self):
         """Handle Node.js installation conflicts robustly"""
@@ -361,30 +412,78 @@ class MasterDeployer:
         # Download from GitHub (multiple methods)
         project_downloaded = False
         
-        # Method 1: Git clone
-        try:
-            self.log("Downloading via git clone...")
-            self.run_command(f"cd {self.config['project_dir']} && git clone https://github.com/Vacilator/ProjectMeats.git .")
-            project_downloaded = True
-        except:
-            self.log("Git clone failed, trying download...", 'WARNING')
+        # Method 1: Git clone with PAT authentication (if configured)
+        if 'github_user' in self.config and 'github_token' in self.config:
+            try:
+                self.log("Downloading via git clone with Personal Access Token...")
+                github_url = f"https://{self.config['github_user']}:{self.config['github_token']}@github.com/Vacilator/ProjectMeats.git"
+                self.run_command(f"cd {self.config['project_dir']} && git clone {github_url} .")
+                project_downloaded = True
+                self.log("Successfully downloaded using PAT authentication", 'SUCCESS')
+            except:
+                self.log("PAT authentication failed, trying other methods...", 'WARNING')
         
-        # Method 2: Direct download
+        # Method 2: Basic git clone (public access)
+        if not project_downloaded:
+            try:
+                self.log("Downloading via git clone (public access)...")
+                self.run_command(f"cd {self.config['project_dir']} && git clone https://github.com/Vacilator/ProjectMeats.git .")
+                project_downloaded = True
+                self.log("Successfully downloaded using public access", 'SUCCESS')
+            except:
+                self.log("Public git clone failed, trying download...", 'WARNING')
+        
+        # Method 3: Direct download
         if not project_downloaded:
             try:
                 self.log("Downloading via direct download...")
                 self.run_command(f"cd {self.config['project_dir']} && curl -L https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip")
                 self.run_command(f"cd {self.config['project_dir']} && unzip -q project.zip && mv ProjectMeats-main/* . && rm -rf ProjectMeats-main project.zip")
                 project_downloaded = True
+                self.log("Successfully downloaded via direct download", 'SUCCESS')
             except:
                 self.log("Direct download failed!", 'ERROR')
         
+        # Method 4: Fallback with detailed instructions
         if not project_downloaded:
-            self.log("Failed to download ProjectMeats. Deployment cannot continue.", 'ERROR')
+            self.log("All automatic download methods failed!", 'ERROR')
+            self.print_github_auth_help()
             sys.exit(1)
         
         # Set ownership
         self.run_command(f"chown -R {self.config['app_user']}:{self.config['app_user']} {self.config['project_dir']}")
+
+    def print_github_auth_help(self):
+        """Print detailed GitHub authentication help"""
+        print("\n" + "="*60)
+        print("🔒 GitHub Authentication Required")
+        print("="*60)
+        print("\nGitHub has deprecated password authentication for git operations.")
+        print("To download ProjectMeats, you need to use one of these methods:")
+        
+        print("\n1. 🔑 Personal Access Token (Recommended):")
+        print("   • Go to GitHub.com → Settings → Developer settings → Personal access tokens")
+        print("   • Generate a new token with 'repo' scope")
+        print("   • Re-run this script and provide the token when prompted")
+        print("   • Or use command line: --github-user=USERNAME --github-token=TOKEN")
+        
+        print("\n2. 🗝️  SSH Key Authentication:")
+        print("   • Generate SSH key: ssh-keygen -t ed25519 -C 'your_email@example.com'")
+        print("   • Add public key to GitHub → Settings → SSH and GPG keys")
+        print("   • Clone manually: git clone git@github.com:Vacilator/ProjectMeats.git")
+        
+        print("\n3. 📦 Manual Transfer:")
+        print("   • Download on a machine with GitHub access")
+        print("   • Transfer to this server via SCP/SFTP")
+        print("   • Extract to:", self.config['project_dir'])
+        
+        print("\n4. 🌐 Alternative Deployment:")
+        print("   • Use the no-authentication script:")
+        print("   • curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash")
+        
+        print("\nFor detailed instructions, see:")
+        print("https://github.com/Vacilator/ProjectMeats/blob/main/docs/deployment_authentication_guide.md")
+        print("="*60)
 
     def setup_backend(self):
         """Configure Django backend"""
@@ -860,6 +959,9 @@ fi
             
             # Interactive setup if needed
             self.interactive_setup()
+            
+            # GitHub authentication setup
+            self.get_github_authentication()
             
             # Main deployment steps
             self.setup_system()
