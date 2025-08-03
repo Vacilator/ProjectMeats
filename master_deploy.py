@@ -599,7 +599,7 @@ STATIC_ROOT={backend_dir}/staticfiles
         self.log("Creating admin user...")
         create_user_script = f"""
 from django.contrib.auth.models import User
-from apps.user_profiles.models import UserProfile
+from apps.core.models import UserProfile
 
 # Create superuser
 if not User.objects.filter(username='{self.config['admin_user']}').exists():
