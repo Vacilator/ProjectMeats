@@ -296,7 +296,7 @@ jobs:
         REACT_APP_API_BASE_URL=http://localhost:8000/api/v1 npm run build
         echo "✅ Frontend builds successfully with API integration"
 
-  # Deployment validation (for main branch)
+  # Deployment validation and automation
   deployment-validation:
     name: Deployment Validation
     runs-on: ubuntu-latest
@@ -307,33 +307,184 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Validate deployment scripts
+    - name: Validate unified deployment system
       run: |
-        # Check if deployment scripts exist and are executable
-        if [ -f "deploy_production.sh" ]; then
-          echo "✅ Production deployment script exists"
-          chmod +x deploy_production.sh
+        # Check if unified deployment script exists and is valid
+        if [ -f "master_deploy.py" ]; then
+          echo "✅ Unified deployment script exists"
+          python3 -m py_compile master_deploy.py
+          echo "✅ Deployment script syntax is valid"
+        else
+          echo "❌ master_deploy.py not found"
+          exit 1
         fi
 
-    - name: Validate production configuration
+    - name: Validate deployment documentation
       run: |
-        # Check production configuration templates
-        if [ -f "backend/.env.production.template" ]; then
-          echo "✅ Backend production config template exists"
+        # Check unified deployment guide
+        if [ -f "UNIFIED_DEPLOYMENT_GUIDE.md" ]; then
+          echo "✅ Unified deployment guide exists"
+        else
+          echo "❌ UNIFIED_DEPLOYMENT_GUIDE.md not found"
+          exit 1
         fi
-        if [ -f "frontend/.env.production.template" ]; then
-          echo "✅ Frontend production config template exists"
-        fi
+
+    - name: Test deployment configurations
+      run: |
+        # Test Docker configuration generation
+        python3 -c "
+        import sys
+        sys.path.append('.')
+        from master_deploy import MasterDeployer
+        deployer = MasterDeployer()
+        deployer.config['domain'] = 'test.example.com'
+        deployer.config['project_dir'] = '/tmp/test'
+        try:
+            deployer.create_docker_compose_file()
+            print('✅ Docker configuration generation works')
+        except Exception as e:
+            print(f'❌ Docker configuration failed: {e}')
+            sys.exit(1)
+        "
 
     - name: Generate deployment artifacts
       uses: actions/upload-artifact@v3
       with:
         name: deployment-ready
         path: |
-          deploy_production.sh
+          master_deploy.py
+          UNIFIED_DEPLOYMENT_GUIDE.md
           backend/
           frontend/build/
           docs/
+          .github/workflows/
+
+  # Automated staging deployment
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [deployment-validation]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.projectmeats.com
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup deployment environment
+      run: |
+        # Install deployment dependencies
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip
+        pip3 install --user requests
+
+    - name: Trigger staging deployment
+      env:
+        STAGING_DEPLOY_WEBHOOK: ${{ secrets.STAGING_DEPLOY_WEBHOOK }}
+        DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+      run: |
+        if [ -n "$STAGING_DEPLOY_WEBHOOK" ]; then
+          echo "🚀 Triggering staging deployment..."
+          
+          # Create deployment payload
+          PAYLOAD=$(cat <<EOF
+        {
+          "ref": "${{ github.ref }}",
+          "sha": "${{ github.sha }}",
+          "repository": "${{ github.repository }}",
+          "environment": "staging",
+          "deployment_mode": "auto",
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        }
+        EOF
+          )
+          
+          # Send webhook
+          curl -X POST "$STAGING_DEPLOY_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -H "X-Deploy-Secret: $DEPLOY_SECRET" \
+            -d "$PAYLOAD"
+          
+          echo "✅ Staging deployment triggered"
+        else
+          echo "⚠️ No staging webhook configured, skipping deployment"
+        fi
+
+    - name: Wait for deployment completion
+      run: |
+        echo "⏳ Waiting for deployment to complete..."
+        sleep 60
+        
+        # Test staging deployment
+        if curl -f https://staging.projectmeats.com/health > /dev/null 2>&1; then
+          echo "✅ Staging deployment successful"
+        else
+          echo "❌ Staging deployment failed"
+          exit 1
+        fi
+
+  # Production deployment (manual approval required)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://projectmeats.com
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Trigger production deployment
+      env:
+        PRODUCTION_DEPLOY_WEBHOOK: ${{ secrets.PRODUCTION_DEPLOY_WEBHOOK }}
+        DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+      run: |
+        if [ -n "$PRODUCTION_DEPLOY_WEBHOOK" ]; then
+          echo "🚀 Triggering production deployment..."
+          
+          # Create deployment payload
+          PAYLOAD=$(cat <<EOF
+        {
+          "ref": "${{ github.ref }}",
+          "sha": "${{ github.sha }}",
+          "repository": "${{ github.repository }}",
+          "environment": "production",
+          "deployment_mode": "auto",
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        }
+        EOF
+          )
+          
+          # Send webhook
+          curl -X POST "$PRODUCTION_DEPLOY_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -H "X-Deploy-Secret: $DEPLOY_SECRET" \
+            -d "$PAYLOAD"
+          
+          echo "✅ Production deployment triggered"
+        else
+          echo "⚠️ No production webhook configured, manual deployment required"
+          echo "📋 Manual deployment command:"
+          echo "sudo python3 master_deploy.py --ci-cd --auto --domain=yourdomain.com"
+        fi
+
+    - name: Verify production deployment
+      run: |
+        echo "⏳ Waiting for production deployment to complete..."
+        sleep 120
+        
+        # Test production deployment
+        if curl -f https://projectmeats.com/health > /dev/null 2>&1; then
+          echo "✅ Production deployment successful"
+        else
+          echo "❌ Production deployment failed"
+          exit 1
+        fi
 
   # Notification job
   notify-completion:
