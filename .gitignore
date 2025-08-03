@@ -35,6 +35,8 @@ env/
 backend/venv/
 backend/test_env/
 backend/venv_temp/
+backend/test_venv/
+**/test_venv/
 
 # IDE
 .idea/
