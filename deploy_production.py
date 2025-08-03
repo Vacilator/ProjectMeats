@@ -707,30 +707,72 @@ chown -R projectmeats:projectmeats /home/projectmeats/
 # Clone or update application
 log_info "Setting up application code..."
 if [ ! -d "/home/projectmeats/app" ]; then
-    # Try git clone with error handling
-    if ! sudo -u projectmeats git clone https://github.com/Vacilator/ProjectMeats.git /home/projectmeats/app 2>/dev/null; then
-        log_error "Git clone failed due to authentication issues."
+    # Try multiple git clone methods with authentication
+    clone_success=false
+    
+    # Method 1: Try PAT authentication if credentials are available
+    if [ -n "\\$GITHUB_USER" ] && [ -n "\\$GITHUB_TOKEN" ]; then
+        log_info "Attempting git clone with Personal Access Token..."
+        if sudo -u projectmeats git clone "https://\\$GITHUB_USER:\\$GITHUB_TOKEN@github.com/Vacilator/ProjectMeats.git" /home/projectmeats/app 2>/dev/null; then
+            log_success "Successfully cloned with PAT authentication"
+            clone_success=true
+        else
+            log_warning "PAT authentication failed, trying other methods..."
+        fi
+    fi
+    
+    # Method 2: Try public access
+    if [ "\\$clone_success" = false ]; then
+        log_info "Attempting public git clone..."
+        if sudo -u projectmeats git clone https://github.com/Vacilator/ProjectMeats.git /home/projectmeats/app 2>/dev/null; then
+            log_success "Successfully cloned with public access"
+            clone_success=true
+        else
+            log_warning "Public git clone failed"
+        fi
+    fi
+    
+    # Method 3: Try SSH if available
+    if [ "\\$clone_success" = false ] && sudo -u projectmeats ssh -T git@github.com 2>/dev/null; then
+        log_info "Attempting SSH git clone..."
+        if sudo -u projectmeats git clone git@github.com:Vacilator/ProjectMeats.git /home/projectmeats/app 2>/dev/null; then
+            log_success "Successfully cloned with SSH"
+            clone_success=true
+        else
+            log_warning "SSH git clone failed"
+        fi
+    fi
+    
+    # If all methods failed, show detailed error message
+    if [ "\\$clone_success" = false ]; then
+        log_error "All git clone methods failed due to authentication issues."
         echo ""
-        echo "GitHub authentication error detected!"
-        echo "This is because GitHub no longer supports password authentication."
+        echo "🔒 GitHub Authentication Required"
+        echo "================================"
+        echo "GitHub has deprecated password authentication for git operations."
         echo ""
         echo "Solutions:"
-        echo "1. Use the no-authentication deployment script:"
+        echo ""
+        echo "1. 🔑 Use Personal Access Token (Recommended):"
+        echo "   Set environment variables before running this script:"
+        echo "   export GITHUB_USER=your_username"
+        echo "   export GITHUB_TOKEN=your_personal_access_token"
+        echo "   Then re-run this deployment script"
+        echo ""
+        echo "2. 🌐 Use the no-authentication deployment script:"
         echo "   curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash"
         echo ""
-        echo "2. Setup Personal Access Token (PAT):"
-        echo "   - Go to GitHub.com -> Settings -> Developer settings -> Personal access tokens"
-        echo "   - Generate a new token with 'repo' scope"
-        echo "   - Use: git clone https://USERNAME:TOKEN@github.com/Vacilator/ProjectMeats.git"
+        echo "3. 🗝️  Setup SSH keys:"
+        echo "   - Generate: ssh-keygen -t ed25519 -C 'your_email@example.com'"
+        echo "   - Add public key to GitHub → Settings → SSH and GPG keys"
+        echo "   - Test: ssh -T git@github.com"
+        echo "   - Then re-run this script"
         echo ""
-        echo "3. Setup SSH keys:"
-        echo "   - Generate: ssh-keygen -t ed25519"
-        echo "   - Add public key to GitHub -> Settings -> SSH keys"
-        echo "   - Use: git clone git@github.com:Vacilator/ProjectMeats.git"
-        echo ""
-        echo "4. Manual transfer:"
-        echo "   - Download the project on a machine with GitHub access"
-        echo "   - Transfer to this server via SCP"
+        echo "4. 📦 Manual transfer:"
+        echo "   - Download on a machine with GitHub access:"
+        echo "     git clone https://github.com/Vacilator/ProjectMeats.git"
+        echo "   - Transfer to this server:"
+        echo "     scp -r ProjectMeats/ user@SERVER_IP:/home/projectmeats/app"
         echo ""
         echo "For detailed instructions, see:"
         echo "https://github.com/Vacilator/ProjectMeats/blob/main/docs/deployment_authentication_guide.md"
@@ -739,11 +781,31 @@ if [ ! -d "/home/projectmeats/app" ]; then
     fi
 else
     cd /home/projectmeats/app
-    if ! sudo -u projectmeats git pull origin main 2>/dev/null; then
-        log_warning "Git pull failed, continuing with existing code..."
-        echo "Note: Unable to update code from GitHub. Using existing installation."
-        echo "If you need the latest version, see the authentication guide:"
-        echo "https://github.com/Vacilator/ProjectMeats/blob/main/docs/deployment_authentication_guide.md"
+    
+    # Try to update existing installation
+    update_success=false
+    
+    # Try PAT authentication for updates
+    if [ -n "\\$GITHUB_USER" ] && [ -n "\\$GITHUB_TOKEN" ]; then
+        log_info "Updating with PAT authentication..."
+        if sudo -u projectmeats git pull origin main 2>/dev/null; then
+            log_success "Successfully updated with PAT authentication"
+            update_success=true
+        fi
+    fi
+    
+    # Try public or SSH for updates
+    if [ "\\$update_success" = false ]; then
+        log_info "Attempting to update existing installation..."
+        if sudo -u projectmeats git pull origin main 2>/dev/null; then
+            log_success "Successfully updated"
+            update_success=true
+        else
+            log_warning "Git pull failed, continuing with existing code..."
+            echo "Note: Unable to update code from GitHub. Using existing installation."
+            echo "If you need the latest version, see the authentication guide:"
+            echo "https://github.com/Vacilator/ProjectMeats/blob/main/docs/deployment_authentication_guide.md"
+        fi
     fi
 fi
 
