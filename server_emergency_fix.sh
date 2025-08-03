@@ -75,15 +75,16 @@ echo -e "${BLUE}[STEP 3]${NC} Copying deployment files to expected location..."
 
 # Determine where we are (likely in ~/ProjectMeats based on your log)
 CURRENT_DIR=$(pwd)
-if [[ -f "$CURRENT_DIR/deploy_server.sh" ]]; then
+# Check for any deployment file (deploy_*.sh or deploy_*.py) in candidate directories
+if ls "$CURRENT_DIR"/deploy_*.sh "$CURRENT_DIR"/deploy_*.py 1>/dev/null 2>&1; then
     SOURCE_DIR="$CURRENT_DIR"
-elif [[ -f "$HOME/ProjectMeats/deploy_server.sh" ]]; then
+elif ls "$HOME/ProjectMeats"/deploy_*.sh "$HOME/ProjectMeats"/deploy_*.py 1>/dev/null 2>&1; then
     SOURCE_DIR="$HOME/ProjectMeats"
-elif [[ -f "/root/ProjectMeats/deploy_server.sh" ]]; then
+elif ls "/root/ProjectMeats"/deploy_*.sh "/root/ProjectMeats"/deploy_*.py 1>/dev/null 2>&1; then
     SOURCE_DIR="/root/ProjectMeats"
 else
-    echo -e "${RED}ERROR: Cannot find deploy_server.sh in expected locations${NC}"
-    echo "Make sure you're running this from the ProjectMeats directory"
+    echo -e "${RED}ERROR: Cannot find any deployment files (deploy_*.sh or deploy_*.py) in expected locations${NC}"
+    echo "Make sure you're running this from the ProjectMeats directory and that deployment files are present"
     exit 1
 fi
 
