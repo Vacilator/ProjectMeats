@@ -357,7 +357,7 @@ python3 unified_deployment_tool.py --status
 
 ---
 
-**Generated on:** 2024-12-19  
+**Generated on:** {GENERATION_DATE}  
 **Tool Version:** 1.0 - Unified Deployment System  
 **Author:** ProjectMeats AI Assistant
 
