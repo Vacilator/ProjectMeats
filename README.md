@@ -2,33 +2,29 @@
 
 A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
-## 🚨 Production Deployment - Authentication Issues?
+## 🚀 ONE-CLICK PRODUCTION DEPLOYMENT
 
-**Getting "Invalid username or token" errors during deployment?** GitHub no longer supports password authentication.
-
-### Quick Solutions:
-
-1. **🚀 No-Authentication Deployment (Recommended):**
-   ```bash
-   curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash
-   ```
-
-2. **🔑 Need help with authentication?**
-   ```bash
-   curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/auth_helper.sh | bash
-   ```
-
-3. **📖 Full authentication guide:** [docs/deployment_authentication_guide.md](docs/deployment_authentication_guide.md)
-
-## ⚠️ Quick Fix: "Authentication credentials were not provided"
-
-**Having authentication issues?** Run this one command:
+**Deploy ProjectMeats to production in minutes with one command:**
 
 ```bash
-python setup_ai_assistant.py
+# Fully automated deployment (Ubuntu 20.04+):
+curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_click_deploy.sh | sudo bash
 ```
 
-This interactive wizard will configure everything needed including authentication, database, and AI features. See [QUICK_SETUP.md](QUICK_SETUP.md) for more details.
+**Having Node.js conflicts?** Fix them first:
+```bash
+curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/fix_nodejs.sh | sudo bash
+```
+
+**📖 Complete deployment guide:** [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)
+
+### ✨ What You Get
+- ✅ **Professional UI** at your domain with SSL
+- ✅ **Complete API** with Swagger documentation
+- ✅ **Admin interface** for business management
+- ✅ **Automated backups** and monitoring
+- ✅ **Enterprise security** (firewall, fail2ban, SSL)
+- ✅ **15-30 minute setup** on recommended hosting ($15-25/month)
 
 ## 🏗️ Technology Stack
 
