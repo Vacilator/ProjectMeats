@@ -3,6 +3,7 @@ URL configuration for Core app.
 
 Provides API endpoints for user profiles and core functionality.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
