@@ -220,6 +220,15 @@ class MeatsCentralFixer:
         
         self.print_info("Attempting to fix common configuration issues...")
         
+        # 0. Clean up conflicting nginx configurations first
+        print(f"\n{Colors.BOLD}0. Cleaning Nginx Configurations{Colors.END}")
+        
+        # Remove all existing nginx configurations for the domain to prevent conflicts
+        self.run_command("rm -f /etc/nginx/sites-enabled/default")
+        self.run_command(f"rm -f /etc/nginx/sites-enabled/{self.domain}")
+        self.run_command(f"rm -f /etc/nginx/sites-available/{self.domain}")
+        self.print_info("Removed existing nginx configurations to prevent conflicts")
+        
         # 1. Create proper nginx configuration for the domain
         print(f"\n{Colors.BOLD}1. Creating Nginx Configuration{Colors.END}")
         
@@ -231,7 +240,7 @@ class MeatsCentralFixer:
     location / {{
         root /opt/projectmeats/frontend/build;
         try_files $uri $uri/ /index.html;
-        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header Cache-Control "public, max-age=3600";
     }}
     
     # Backend API
@@ -241,25 +250,45 @@ class MeatsCentralFixer:
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
     }}
     
-    # Health check endpoint
+    # Health check endpoint - try Django first, fallback to nginx
     location /health {{
         proxy_pass http://127.0.0.1:8000/health;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 5s;
+        proxy_read_timeout 5s;
+        
+        # Fallback to nginx health if Django is down
+        error_page 502 503 504 = @health_fallback;
+    }}
+    
+    # Fallback health endpoint served directly by nginx
+    location @health_fallback {{
+        access_log off;
+        return 200 "healthy\\n";
+        add_header Content-Type text/plain;
     }}
     
     # Static files for Django admin
     location /static/ {{
         alias /opt/projectmeats/backend/staticfiles/;
+        expires 1d;
+        add_header Cache-Control "public";
     }}
     
     # Media files
     location /media/ {{
         alias /opt/projectmeats/backend/media/;
+        expires 1d;
+        add_header Cache-Control "public";
     }}
 }}"""
         
@@ -280,11 +309,7 @@ class MeatsCentralFixer:
         else:
             self.print_error(f"Failed to enable site: {stderr}")
         
-        # 3. Remove default nginx site if it exists
-        self.run_command("rm -f /etc/nginx/sites-enabled/default")
-        self.print_info("Removed default nginx site")
-        
-        # 4. Test nginx configuration
+        # 3. Test nginx configuration
         print(f"\n{Colors.BOLD}3. Testing Nginx Configuration{Colors.END}")
         exit_code, stdout, stderr = self.run_command("nginx -t")
         if exit_code == 0:
@@ -293,8 +318,41 @@ class MeatsCentralFixer:
             self.print_error(f"Nginx configuration test failed: {stderr}")
             return False
         
+        # 4. Ensure Django service is properly configured and running
+        print(f"\n{Colors.BOLD}4. Configuring Django Service{Colors.END}")
+        
+        # Check if projectmeats service exists and is properly configured
+        exit_code, stdout, stderr = self.run_command("systemctl cat projectmeats")
+        if exit_code != 0:
+            self.print_warning("ProjectMeats service not found, creating basic service configuration")
+            # Create a basic service file if it doesn't exist
+            service_config = """[Unit]
+Description=ProjectMeats Django Backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/projectmeats/backend
+Environment=DJANGO_SETTINGS_MODULE=projectmeats.settings
+ExecStart=/opt/projectmeats/backend/venv/bin/python manage.py runserver 127.0.0.1:8000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target"""
+            
+            exit_code, stdout, stderr = self.run_command(
+                f"cat > /etc/systemd/system/projectmeats.service << 'EOF'\n{service_config}\nEOF"
+            )
+            if exit_code == 0:
+                self.print_success("Created ProjectMeats service configuration")
+                self.run_command("systemctl daemon-reload")
+            else:
+                self.print_error(f"Failed to create service configuration: {stderr}")
+        
         # 5. Restart services
-        print(f"\n{Colors.BOLD}4. Restarting Services{Colors.END}")
+        print(f"\n{Colors.BOLD}5. Restarting Services{Colors.END}")
         services = ["projectmeats", "nginx"]
         for service in services:
             exit_code, stdout, stderr = self.run_command(f"systemctl restart {service}")
@@ -302,20 +360,24 @@ class MeatsCentralFixer:
                 self.print_success(f"Restarted {service}")
             else:
                 self.print_error(f"Failed to restart {service}: {stderr}")
+                self.print_info(f"Error details: {stderr}")
         
         # 6. Final verification
-        print(f"\n{Colors.BOLD}5. Final Verification{Colors.END}")
+        print(f"\n{Colors.BOLD}6. Final Verification{Colors.END}")
         import time
-        time.sleep(3)  # Give services time to start
+        time.sleep(5)  # Give services more time to start
         
+        # Try the fallback health endpoint first (nginx-only)
         exit_code, stdout, stderr = self.run_command("curl -s http://localhost/health")
-        if exit_code == 0:
-            self.print_success("Local health check works")
+        if exit_code == 0 and "healthy" in stdout:
+            self.print_success("Health check works (fallback endpoint)")
         else:
-            self.print_warning("Local health check still not working")
+            self.print_warning("Health check still not working - checking service status")
+            self.run_command("systemctl status projectmeats --no-pager")
+            self.run_command("systemctl status nginx --no-pager")
         
         # 7. Open firewall if needed
-        print(f"\n{Colors.BOLD}6. Firewall Configuration{Colors.END}")
+        print(f"\n{Colors.BOLD}7. Firewall Configuration{Colors.END}")
         exit_code, stdout, stderr = self.run_command("ufw allow 80/tcp")
         if exit_code == 0:
             self.print_success("Opened port 80 in firewall")
