@@ -58,3 +58,6 @@ coverage/
 # Temporary files
 tmp/
 temp/
+# Deprecated deployment files (archived)
+# Use ai_deployment_orchestrator.py for new deployments
+deprecated/

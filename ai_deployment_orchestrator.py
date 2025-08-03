@@ -70,12 +70,18 @@ import re
 import socket
 import hashlib
 import platform
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 from enum import Enum
-import paramiko
+try:
+    import paramiko
+except ImportError:
+    paramiko = None
 import logging
 import secrets
 import hashlib
@@ -2154,9 +2160,22 @@ def main():
             success = orchestrator.run_deployment(server_config)
             return 0 if success else 1
         
-
         elif server:
             # Direct deployment (either from --server or --profile)
+            server_config = {
+                'hostname': server,
+                'username': username,
+                'key_file': key_file,
+                'password': args.password,
+                'domain': domain
+            }
+            
+            if domain:
+                orchestrator.config['domain'] = domain
+            
+            success = orchestrator.run_deployment(server_config)
+            return 0 if success else 1
+            
         elif args.profile:
             # Use predefined server profile
             profiles = orchestrator.config.get('server_profiles', {})
