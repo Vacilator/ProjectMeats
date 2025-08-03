@@ -313,9 +313,9 @@ def run_integration_tests():
     try:
         import urllib.request
         response = urllib.request.urlopen("https://github.com/Vacilator/ProjectMeats", timeout=10)
-        print("✓ GitHub connectivity test passed")
+        print("[OK] GitHub connectivity test passed")
     except Exception as e:
-        print(f"✗ GitHub connectivity test failed: {e}")
+        print(f"[FAIL] GitHub connectivity test failed: {e}")
     
     # Test SSH key generation (if ssh-keygen is available)
     try:
@@ -323,19 +323,19 @@ def run_integration_tests():
         result = subprocess.run(["ssh-keygen", "-t", "ed25519", "-f", "/tmp/test_key", "-N", ""], 
                                capture_output=True, timeout=10)
         if result.returncode == 0:
-            print("✓ SSH key generation test passed")
+            print("[OK] SSH key generation test passed")
             # Cleanup
             os.remove("/tmp/test_key")
             os.remove("/tmp/test_key.pub")
         else:
-            print("✗ SSH key generation test failed")
+            print("[FAIL] SSH key generation test failed")
     except Exception as e:
-        print(f"✗ SSH key generation test failed: {e}")
+        print(f"[FAIL] SSH key generation test failed: {e}")
 
 
 def main():
     """Main test runner"""
-    print("🧪 AI Deployment Orchestrator Test Suite")
+    print("[TEST] AI Deployment Orchestrator Test Suite")
     print("=" * 50)
     
     # Run unit tests
@@ -350,7 +350,7 @@ def main():
     print("Test suite completed!")
     
     # Provide usage examples
-    print("\n📋 Usage Examples:")
+    print("\n[INFO] Usage Examples:")
     print("python ai_deployment_orchestrator.py --test-connection --server example.com")
     print("python setup_ai_deployment.py")
     print("./ai_deploy.sh --interactive")
