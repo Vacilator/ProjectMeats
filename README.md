@@ -112,7 +112,14 @@ python setup_ai_assistant.py
 
 **Windows Users:**
 ```cmd
-setup_windows.bat
+# Quick deployment with batch launcher
+setup_windows_production.bat
+
+# Or PowerShell deployment
+.\deploy_windows_production.ps1 -Interactive
+
+# Or unified tool
+python unified_deployment_tool.py --production --interactive
 ```
 
 **Linux/macOS:**
@@ -147,13 +154,26 @@ curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_n
 
 ### Alternative Deployment Methods
 
-**If you have GitHub authentication set up:**
+**Windows Production Deployment:**
+
+```powershell
+# Download Windows deployment script
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_windows_production.ps1" -OutFile "deploy_windows_production.ps1"
+
+# Interactive deployment (recommended)
+.\deploy_windows_production.ps1 -Interactive
+
+# Automatic deployment
+.\deploy_windows_production.ps1 -Domain "yourdomain.com" -Auto
+```
+
+**Linux/Unix Production Deployment:**
 
 ```bash
 # Traditional git clone method
 git clone https://github.com/Vacilator/ProjectMeats.git
 cd ProjectMeats
-sudo python3 deploy_production.py
+sudo python3 unified_deployment_tool.py --production --interactive
 ```
 
 **Having authentication issues?** See [DEPLOYMENT_AUTH_QUICKREF.md](DEPLOYMENT_AUTH_QUICKREF.md)

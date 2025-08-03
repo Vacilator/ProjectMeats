@@ -21,6 +21,7 @@ import json
 import subprocess
 import argparse
 import logging
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
@@ -101,8 +102,14 @@ class SystemAnalyzer:
         state = SystemState()
         recommendations = []
         
-        # Check core dependencies
-        state.python_installed = self._check_command("python3", "--version")
+        # Check core dependencies (Windows compatible)
+        if platform.system() == "Windows":
+            state.python_installed = (self._check_command("python", "--version") or 
+                                    self._check_command("py", "--version"))
+        else:
+            state.python_installed = (self._check_command("python3", "--version") or 
+                                    self._check_command("python", "--version"))
+        
         state.node_installed = self._check_command("node", "--version")
         state.git_installed = self._check_command("git", "--version")
         
@@ -112,13 +119,25 @@ class SystemAnalyzer:
         # Check services
         state.services_running = self._get_running_services()
         
-        # Generate recommendations
+        # Generate platform-specific recommendations
         if not state.python_installed:
-            recommendations.append("Install Python 3")
+            if platform.system() == "Windows":
+                recommendations.append("Install Python 3 from python.org or Microsoft Store")
+            else:
+                recommendations.append("Install Python 3")
+        
         if not state.node_installed:
-            recommendations.append("Install Node.js (or fix conflicts)")
+            if platform.system() == "Windows":
+                recommendations.append("Install Node.js from nodejs.org or use Chocolatey")
+            else:
+                recommendations.append("Install Node.js (or fix conflicts)")
+        
         if not state.git_installed:
-            recommendations.append("Install Git")
+            if platform.system() == "Windows":
+                recommendations.append("Install Git from git-scm.com or use Chocolatey")
+            else:
+                recommendations.append("Install Git")
+        
         if not state.deployment_exists:
             recommendations.append("Deploy ProjectMeats")
         elif len(state.services_running) < 2:
@@ -127,7 +146,7 @@ class SystemAnalyzer:
         return state, recommendations
     
     def _check_command(self, command: str, *args) -> bool:
-        """Check if a command exists and works"""
+        """Check if a command exists and works (Windows compatible)"""
         try:
             result = subprocess.run([command] + list(args), 
                                   capture_output=True, timeout=5)
@@ -136,25 +155,44 @@ class SystemAnalyzer:
             return False
     
     def _check_deployment_exists(self) -> bool:
-        """Check if ProjectMeats is already deployed"""
-        common_paths = [
-            "/opt/projectmeats",
-            "/var/www/projectmeats", 
-            "/home/projectmeats"
-        ]
+        """Check if ProjectMeats is already deployed (Windows compatible)"""
+        if platform.system() == "Windows":
+            common_paths = [
+                "C:\\ProjectMeats",
+                "C:\\inetpub\\wwwroot\\projectmeats",
+                "C:\\Program Files\\ProjectMeats"
+            ]
+        else:
+            common_paths = [
+                "/opt/projectmeats",
+                "/var/www/projectmeats", 
+                "/home/projectmeats"
+            ]
         return any(Path(p).exists() for p in common_paths)
     
     def _get_running_services(self) -> List[str]:
-        """Get list of running ProjectMeats-related services"""
-        services = ["nginx", "postgresql", "projectmeats"]
+        """Get list of running ProjectMeats-related services (Windows compatible)"""
+        if platform.system() == "Windows":
+            services = ["nginx", "postgresql-x64-13", "ProjectMeats-Django"]
+        else:
+            services = ["nginx", "postgresql", "projectmeats"]
+        
         running = []
         
         for service in services:
             try:
-                result = subprocess.run(["systemctl", "is-active", service],
-                                      capture_output=True, timeout=3)
-                if result.returncode == 0 and b"active" in result.stdout:
-                    running.append(service)
+                if platform.system() == "Windows":
+                    # Use Windows service commands
+                    result = subprocess.run(["sc", "query", service],
+                                          capture_output=True, timeout=3)
+                    if result.returncode == 0 and b"RUNNING" in result.stdout:
+                        running.append(service)
+                else:
+                    # Use systemctl for Linux
+                    result = subprocess.run(["systemctl", "is-active", service],
+                                          capture_output=True, timeout=3)
+                    if result.returncode == 0 and b"active" in result.stdout:
+                        running.append(service)
             except:
                 pass
         
@@ -253,7 +291,7 @@ class AutonomousExecutor:
         return fixes_applied > 0
     
     def _execute_deployment(self, config: DeploymentConfig) -> bool:
-        """Execute the actual deployment"""
+        """Execute the actual deployment (Windows and Linux compatible)"""
         print(f"\n{Colors.YELLOW}📋 Executing deployment script...{Colors.END}")
         
         # Set environment variables
@@ -267,43 +305,118 @@ class AutonomousExecutor:
         if config.github_token:
             env['GITHUB_TOKEN'] = config.github_token
         
-        # Execute deployment script
-        script_path = self.script_dir / "one_click_deploy.sh"
-        if not script_path.exists():
-            print(f"{Colors.RED}❌ Deployment script not found{Colors.END}")
-            return False
+        # Choose deployment script based on platform
+        if platform.system() == "Windows":
+            # Use PowerShell script for Windows
+            script_path = self.script_dir / "deploy_windows_production.ps1"
+            if not script_path.exists():
+                print(f"{Colors.RED}❌ Windows deployment script not found{Colors.END}")
+                return False
+            
+            # Build PowerShell command
+            ps_args = ["-ExecutionPolicy", "Bypass", "-File", str(script_path)]
+            if config.domain:
+                ps_args.extend(["-Domain", config.domain])
+            if config.auto_mode:
+                ps_args.append("-Auto")
+            if config.interactive:
+                ps_args.append("-Interactive")
+            
+            try:
+                result = subprocess.run(["powershell"] + ps_args, env=env, check=False)
+                success = result.returncode == 0
+            except Exception as e:
+                print(f"{Colors.RED}❌ PowerShell deployment error: {e}{Colors.END}")
+                return False
+        else:
+            # Use shell script for Linux/Unix
+            script_path = self.script_dir / "one_click_deploy.sh"
+            if not script_path.exists():
+                print(f"{Colors.RED}❌ Linux deployment script not found{Colors.END}")
+                return False
+            
+            try:
+                result = subprocess.run(["bash", str(script_path)], env=env, check=False)
+                success = result.returncode == 0
+            except Exception as e:
+                print(f"{Colors.RED}❌ Deployment error: {e}{Colors.END}")
+                return False
         
-        try:
-            result = subprocess.run([str(script_path)], env=env, check=False)
-            success = result.returncode == 0
-            
-            if success:
-                print(f"\n{Colors.BOLD}{Colors.GREEN}✅ Deployment completed successfully!{Colors.END}")
-            else:
-                print(f"\n{Colors.BOLD}{Colors.RED}❌ Deployment failed{Colors.END}")
-            
-            return success
-            
-        except Exception as e:
-            print(f"{Colors.RED}❌ Deployment error: {e}{Colors.END}")
-            return False
+        if success:
+            print(f"\n{Colors.BOLD}{Colors.GREEN}✅ Deployment completed successfully!{Colors.END}")
+        else:
+            print(f"\n{Colors.BOLD}{Colors.RED}❌ Deployment failed{Colors.END}")
+        
+        return success
     
     def _run_script(self, script_name: str, timeout: int = 120) -> bool:
-        """Run a script with timeout and error handling"""
+        """Run a script with timeout and error handling (Windows compatible)"""
         script_path = self.script_dir / script_name
         if not script_path.exists():
             return False
         
         try:
+            # Determine script type and execution method
             if script_name.endswith('.sh'):
-                result = subprocess.run(["bash", str(script_path)], 
-                                      capture_output=True, timeout=timeout)
+                if platform.system() == "Windows":
+                    # On Windows, try to run with Git Bash or WSL
+                    bash_paths = [
+                        "C:\\Program Files\\Git\\bin\\bash.exe",
+                        "bash",  # If WSL is available
+                        "C:\\Windows\\System32\\bash.exe"  # WSL
+                    ]
+                    
+                    for bash_path in bash_paths:
+                        if shutil.which(bash_path):
+                            result = subprocess.run([bash_path, str(script_path)], 
+                                                  capture_output=True, timeout=timeout)
+                            return result.returncode == 0
+                    
+                    # If no bash available, skip shell scripts on Windows
+                    print(f"{Colors.YELLOW}⚠️ Skipping shell script {script_name} (no bash found on Windows){Colors.END}")
+                    return True
+                else:
+                    result = subprocess.run(["bash", str(script_path)], 
+                                          capture_output=True, timeout=timeout)
+            elif script_name.endswith('.ps1'):
+                # PowerShell script (Windows)
+                if platform.system() == "Windows":
+                    result = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script_path)], 
+                                          capture_output=True, timeout=timeout)
+                else:
+                    # Skip PowerShell scripts on non-Windows
+                    print(f"{Colors.YELLOW}⚠️ Skipping PowerShell script {script_name} (not on Windows){Colors.END}")
+                    return True
+            elif script_name.endswith('.bat'):
+                # Batch script (Windows)
+                if platform.system() == "Windows":
+                    result = subprocess.run([str(script_path)], 
+                                          capture_output=True, timeout=timeout, shell=True)
+                else:
+                    # Skip batch scripts on non-Windows
+                    print(f"{Colors.YELLOW}⚠️ Skipping batch script {script_name} (not on Windows){Colors.END}")
+                    return True
             else:
-                result = subprocess.run(["python3", str(script_path)], 
+                # Python script - use appropriate Python command
+                python_cmd = self._get_python_command()
+                result = subprocess.run([python_cmd, str(script_path)], 
                                       capture_output=True, timeout=timeout)
+            
             return result.returncode == 0
         except:
             return False
+    
+    def _get_python_command(self) -> str:
+        """Get the correct Python command for the current platform"""
+        # Try different Python commands in order of preference
+        python_commands = ["python3", "python", "py"]
+        
+        for cmd in python_commands:
+            if shutil.which(cmd):
+                return cmd
+        
+        # Fallback
+        return "python"
 
 
 # ============================================================================
