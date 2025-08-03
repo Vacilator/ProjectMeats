@@ -149,3 +149,117 @@
 {"timestamp": "2025-08-03 13:11:09", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_131109.log", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-03 15:14:50", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_151450.log", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-03 15:17:24", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_151724.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:06:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_150658.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:06:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_150658.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:06:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_150658.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:08:21", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_150821.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:08:21", "level": "ERROR", "message": "Profile 'nonexistent' not found in configuration", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:08:21", "level": "INFO", "message": "Available profiles: example", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_150958.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Connecting to 167.99.155.140 as root...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Successfully connected to 167.99.155.140", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Setting up ProjectMeats application...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "GitHub authentication already configured", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: mkdir -p /opt/projectmeats", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: ls -la /opt/projectmeats/backend /opt/projectmeats/frontend /opt/projectmeats/README.md 2>/dev/null", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "ProjectMeats application already exists - skipping download", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Validating server environment...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: cat /etc/os-release", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "WARNING", "message": "Warning: Non-Ubuntu OS detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: whoami", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "ERROR", "message": "Root access required", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Setting up authentication...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: apt update", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Installing dependencies...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: apt install -y python3 python3-pip python3-venv nginx git curl ufw fail2ban certbot python3-certbot-nginx postgresql postgresql-contrib libpq-dev", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Setting up Node.js...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Fixing Node.js conflicts...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: apt remove -y nodejs npm libnode-dev || true", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: apt purge -y nodejs npm libnode-dev || true", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: apt autoremove -y", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: apt clean", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: curl -fsSL https://deb.nodesource.com/setup_18.x | bash -", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: apt update", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: apt install -y nodejs", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: node --version", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Node.js fixed successfully: ", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Setting up database...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: systemctl start postgresql", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: systemctl enable postgresql", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: sudo -u postgres createdb projectmeats || true", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: sudo -u postgres createuser projectmeats || true", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Setting up ProjectMeats application...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "GitHub authentication already configured", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: mkdir -p /opt/projectmeats", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: ls -la /opt/projectmeats/backend /opt/projectmeats/frontend /opt/projectmeats/README.md 2>/dev/null", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "ProjectMeats application already exists - skipping download", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Configuring backend...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: cd /opt/projectmeats/backend && python3 -m venv venv", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: cd /opt/projectmeats/backend && ./venv/bin/pip install -r requirements.txt", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: cd /opt/projectmeats/backend && ./venv/bin/python manage.py migrate", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Configuring frontend...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: cd /opt/projectmeats/frontend && npm install", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: cd /opt/projectmeats/frontend && npm run build", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Setting up web server...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: systemctl start nginx", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: systemctl enable nginx", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Setting up services...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: systemctl daemon-reload", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: ufw --force enable", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: ufw allow ssh", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: ufw allow 'Nginx Full'", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Running final verification...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: systemctl is-active nginx", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "DEBUG", "message": "Executing: systemctl is-active postgresql", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "Final verification completed", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Disconnected from server", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_150958.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Setting up ProjectMeats application...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "WARNING", "message": "GitHub authentication not configured", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "For private repository access, set environment variables:", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "  export GITHUB_USER=your_username", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "  export GITHUB_TOKEN=your_personal_access_token", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "SUCCESS", "message": "ProjectMeats application already exists - skipping download", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_150958.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_150958.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "WARNING", "message": "Error detected: Node.js package conflicts detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "WARNING", "message": "Error detected: Package repository needs update", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "WARNING", "message": "Error detected: Permission issues detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:09:58", "level": "WARNING", "message": "Error detected: Database connection issues", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:11:14", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_151114.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:11:14", "level": "ERROR", "message": "Profile 'nonexistent' not found in configuration", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:11:14", "level": "INFO", "message": "Available profiles: example", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 15:11:15", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_151115.log", "deployment_id": null, "step": null}
