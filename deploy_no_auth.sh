@@ -276,10 +276,30 @@ else
         print_status "Created projectmeats user"
     fi
     
-    # Install basic dependencies
+    # Install basic dependencies (excluding nodejs/npm due to conflicts)
     apt update
-    apt install -y python3 python3-pip python3-venv nodejs npm postgresql postgresql-contrib nginx git
+    apt install -y python3 python3-pip python3-venv postgresql postgresql-contrib nginx git curl
     print_status "Installed basic dependencies"
+    
+    # Install Node.js via NVM to avoid package conflicts
+    if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+        print_status "Installing Node.js 18 via NVM..."
+        # Remove conflicting packages
+        apt remove -y nodejs npm libnode-dev libnode72 2>/dev/null || true
+        apt autoremove -y || true
+        
+        # Install NVM and Node.js
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        nvm install 18
+        nvm use 18
+        nvm alias default 18
+        npm install -g yarn pm2
+        print_status "Node.js 18 installed via NVM"
+    else
+        print_status "Node.js and npm already available"
+    fi
     
     # Move project to correct location
     mkdir -p /home/projectmeats
