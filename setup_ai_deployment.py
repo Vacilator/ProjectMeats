@@ -257,7 +257,7 @@ class AIDeploymentSetup:
             }
         }
         
-        with open(templates_dir / "quick_deployment.json", 'w') as f:
+        with open(templates_dir / "quick_deployment.json", 'w', encoding='utf-8') as f:
             json.dump(quick_template, f, indent=2)
         
         # Full deployment template
@@ -286,7 +286,7 @@ class AIDeploymentSetup:
             }
         }
         
-        with open(templates_dir / "full_deployment.json", 'w') as f:
+        with open(templates_dir / "full_deployment.json", 'w', encoding='utf-8') as f:
             json.dump(full_template, f, indent=2)
         
         self.log("Deployment templates generated", "SUCCESS")
@@ -314,7 +314,7 @@ class AIDeploymentSetup:
         }
         
         try:
-            with open(config_file, 'w') as f:
+            with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(full_config, f, indent=2)
             
             self.log(f"Configuration saved: {config_file}", "SUCCESS")
@@ -334,7 +334,7 @@ echo "=========================================="
 
 # Check if configuration exists
 if [ ! -f "ai_deployment_config.json" ]; then
-    echo "❌ Configuration file not found!"
+    echo "[ERROR] Configuration file not found!"
     echo "Please run: python setup_ai_deployment.py"
     exit 1
 fi
@@ -360,7 +360,7 @@ python3 ai_deployment_orchestrator.py "$@"
 '''
         
         script_file = self.project_root / "ai_deploy.sh"
-        with open(script_file, 'w') as f:
+        with open(script_file, 'w', encoding='utf-8') as f:
             f.write(script_content)
         
         os.chmod(script_file, 0o755)
