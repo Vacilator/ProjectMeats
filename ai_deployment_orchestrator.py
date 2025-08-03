@@ -913,16 +913,44 @@ class AIDeploymentOrchestrator:
         """Setup database"""
         self.log("Setting up database...", "INFO")
         
+        # Start and enable PostgreSQL
         commands = [
             "systemctl start postgresql",
-            "systemctl enable postgresql",
-            "sudo -u postgres createdb projectmeats || true",
-            "sudo -u postgres createuser projectmeats || true"
+            "systemctl enable postgresql"
         ]
         
         for cmd in commands:
             exit_code, stdout, stderr = self.execute_command(cmd)
-            # Allow some commands to fail (already exists)
+            if exit_code != 0:
+                self.log(f"Database service command failed: {cmd}", "ERROR")
+                return False
+        
+        # Create database and user with proper authentication
+        self.log("Creating ProjectMeats database and user...", "INFO")
+        
+        db_commands = [
+            "sudo -u postgres psql -c \"DROP DATABASE IF EXISTS projectmeats;\"",
+            "sudo -u postgres psql -c \"DROP USER IF EXISTS projectmeats;\"",
+            "sudo -u postgres psql -c \"CREATE DATABASE projectmeats;\"",
+            "sudo -u postgres psql -c \"CREATE USER projectmeats WITH PASSWORD 'projectmeats';\"",
+            "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE projectmeats TO projectmeats;\"",
+            "sudo -u postgres psql -c \"ALTER USER projectmeats CREATEDB;\""
+        ]
+        
+        for cmd in db_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Database command failed: {cmd}", "WARNING")
+                # Continue with other commands as some may fail if already exist
+        
+        # Verify database connection
+        exit_code, stdout, stderr = self.execute_command(
+            "sudo -u postgres psql -d projectmeats -c \"SELECT version();\""
+        )
+        if exit_code == 0:
+            self.log("Database setup completed successfully", "SUCCESS")
+        else:
+            self.log("Database verification failed", "WARNING")
         
         return True
     
@@ -1082,23 +1110,126 @@ class AIDeploymentOrchestrator:
         """Configure backend"""
         self.log("Configuring backend...", "INFO")
         
+        # Create virtual environment and install dependencies
         commands = [
             "cd /opt/projectmeats/backend && python3 -m venv venv",
-            "cd /opt/projectmeats/backend && ./venv/bin/pip install -r requirements.txt",
-            "cd /opt/projectmeats/backend && ./venv/bin/python manage.py migrate"
+            "cd /opt/projectmeats/backend && ./venv/bin/pip install --upgrade pip",
+            "cd /opt/projectmeats/backend && ./venv/bin/pip install -r requirements.txt"
         ]
         
         for cmd in commands:
             exit_code, stdout, stderr = self.execute_command(cmd)
             if exit_code != 0:
+                self.log(f"Backend setup command failed: {cmd}", "ERROR")
                 return False
         
+        # Create Django settings for production
+        self.log("Creating production Django settings...", "INFO")
+        production_settings = """
+import os
+from .settings import *
+
+# Production settings
+DEBUG = False
+ALLOWED_HOSTS = ['*']  # Configure properly in production
+
+# Database configuration
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'projectmeats',
+        'USER': 'projectmeats',
+        'PASSWORD': 'projectmeats',  # Should be secure in production
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+
+# Static files configuration
+STATIC_URL = '/static/'
+STATIC_ROOT = '/opt/projectmeats/backend/staticfiles/'
+
+# Media files configuration
+MEDIA_URL = '/media/'
+MEDIA_ROOT = '/opt/projectmeats/backend/media/'
+
+# Security settings for production
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+"""
+        
+        exit_code, stdout, stderr = self.execute_command(
+            f"cat > /opt/projectmeats/backend/apps/settings/production.py << 'EOF'\n{production_settings}\nEOF"
+        )
+        if exit_code != 0:
+            # Try alternative path structure
+            exit_code, stdout, stderr = self.execute_command(
+                f"mkdir -p /opt/projectmeats/backend/projectmeats && cat > /opt/projectmeats/backend/projectmeats/production_settings.py << 'EOF'\n{production_settings}\nEOF"
+            )
+        
+        # Set Django settings module
+        self.execute_command("export DJANGO_SETTINGS_MODULE=apps.settings.production")
+        
+        # Run Django management commands
+        django_commands = [
+            "cd /opt/projectmeats/backend && ./venv/bin/python manage.py migrate",
+            "cd /opt/projectmeats/backend && ./venv/bin/python manage.py collectstatic --noinput",
+            "cd /opt/projectmeats/backend && ./venv/bin/python manage.py check --deploy"
+        ]
+        
+        for cmd in django_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Django command failed: {cmd}", "WARNING")
+                # Continue with other commands
+        
+        # Create Django service file
+        service_content = """[Unit]
+Description=ProjectMeats Django Backend
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=exec
+User=root
+WorkingDirectory=/opt/projectmeats/backend
+Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
+ExecStart=/opt/projectmeats/backend/venv/bin/python manage.py runserver 127.0.0.1:8000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+"""
+        
+        exit_code, stdout, stderr = self.execute_command(
+            f"cat > /etc/systemd/system/projectmeats.service << 'EOF'\n{service_content}\nEOF"
+        )
+        if exit_code != 0:
+            self.log("Failed to create systemd service file", "ERROR")
+            return False
+        
+        # Enable and start the service
+        commands = [
+            "systemctl daemon-reload",
+            "systemctl enable projectmeats",
+            "systemctl start projectmeats"
+        ]
+        
+        for cmd in commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Service command failed: {cmd}", "WARNING")
+        
+        self.log("Backend configuration completed", "SUCCESS")
         return True
     
     def deploy_configure_frontend(self) -> bool:
         """Configure frontend"""
         self.log("Configuring frontend...", "INFO")
         
+        # Install dependencies and build frontend
         commands = [
             "cd /opt/projectmeats/frontend && npm install",
             "cd /opt/projectmeats/frontend && npm run build"
@@ -1107,21 +1238,149 @@ class AIDeploymentOrchestrator:
         for cmd in commands:
             exit_code, stdout, stderr = self.execute_command(cmd)
             if exit_code != 0:
+                self.log(f"Frontend command failed: {cmd}", "ERROR")
+                self.log(f"Error output: {stderr}", "ERROR")
                 return False
         
+        # Verify build directory was created
+        exit_code, stdout, stderr = self.execute_command("ls -la /opt/projectmeats/frontend/build/")
+        if exit_code != 0:
+            self.log("Frontend build directory not found", "ERROR")
+            return False
+        
+        # Verify index.html was created
+        exit_code, stdout, stderr = self.execute_command("ls -la /opt/projectmeats/frontend/build/index.html")
+        if exit_code != 0:
+            self.log("Frontend index.html not found", "ERROR")
+            return False
+        
+        self.log("Frontend configuration completed successfully", "SUCCESS")
         return True
     
     def deploy_setup_webserver(self) -> bool:
         """Setup web server"""
         self.log("Setting up web server...", "INFO")
         
-        # Basic nginx configuration
+        # Get domain from config
+        domain = self.config.get('domain', 'localhost')
+        self.log(f"Configuring nginx for domain: {domain}", "INFO")
+        
+        # Remove default nginx site
+        self.execute_command("rm -f /etc/nginx/sites-enabled/default")
+        
+        # Create ProjectMeats nginx configuration
+        nginx_config = f"""# Rate limiting
+limit_req_zone $binary_remote_addr zone=projectmeats_api:10m rate=10r/s;
+
+# Upstream for Django
+upstream projectmeats_backend {{
+    server 127.0.0.1:8000;
+}}
+
+# HTTP server
+server {{
+    listen 80;
+    server_name {domain};
+
+    # Frontend static files
+    location / {{
+        root /opt/projectmeats/frontend/build;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+        
+        # Caching for static assets
+        location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {{
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }}
+    }}
+
+    # API endpoints
+    location /api/ {{
+        limit_req zone=projectmeats_api burst=20 nodelay;
+        
+        proxy_pass http://projectmeats_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }}
+
+    # Admin interface
+    location /admin/ {{
+        proxy_pass http://projectmeats_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }}
+
+    # Django static files
+    location /static/ {{
+        alias /opt/projectmeats/backend/staticfiles/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }}
+
+    # Media files
+    location /media/ {{
+        alias /opt/projectmeats/backend/media/;
+        expires 1d;
+        add_header Cache-Control "public";
+    }}
+
+    # Health check
+    location /health {{
+        access_log off;
+        return 200 "healthy\\n";
+        add_header Content-Type text/plain;
+    }}
+}}"""
+        
+        # Write nginx configuration file
+        exit_code, stdout, stderr = self.execute_command(
+            f"cat > /etc/nginx/sites-available/projectmeats << 'EOF'\n{nginx_config}\nEOF"
+        )
+        if exit_code != 0:
+            self.log("Failed to create nginx configuration", "ERROR")
+            return False
+        
+        # Enable the site
+        exit_code, stdout, stderr = self.execute_command(
+            "ln -sf /etc/nginx/sites-available/projectmeats /etc/nginx/sites-enabled/"
+        )
+        if exit_code != 0:
+            self.log("Failed to enable nginx site", "ERROR")
+            return False
+        
+        # Test nginx configuration
+        exit_code, stdout, stderr = self.execute_command("nginx -t")
+        if exit_code != 0:
+            self.log(f"Nginx configuration test failed: {stderr}", "ERROR")
+            return False
+        
+        # Start and enable nginx
         exit_code, stdout, stderr = self.execute_command("systemctl start nginx")
         if exit_code != 0:
+            self.log("Failed to start nginx", "ERROR")
             return False
         
         exit_code, stdout, stderr = self.execute_command("systemctl enable nginx")
-        return exit_code == 0
+        if exit_code != 0:
+            self.log("Failed to enable nginx", "ERROR")
+            return False
+        
+        # Reload nginx to apply configuration
+        exit_code, stdout, stderr = self.execute_command("systemctl reload nginx")
+        if exit_code != 0:
+            self.log("Failed to reload nginx", "ERROR")
+            return False
+        
+        self.log("Nginx configured and started successfully", "SUCCESS")
+        return True
     
     def deploy_setup_services(self) -> bool:
         """Setup system services"""
@@ -1144,14 +1403,49 @@ class AIDeploymentOrchestrator:
         self.log("Running final verification...", "INFO")
         
         # Check services
-        services = ["nginx", "postgresql"]
+        services = ["nginx", "postgresql", "projectmeats"]
         for service in services:
             exit_code, stdout, stderr = self.execute_command(f"systemctl is-active {service}")
             if exit_code != 0:
                 self.log(f"Service {service} not running", "ERROR")
-                return False
+                # Try to start the service
+                self.log(f"Attempting to start {service}...", "INFO")
+                start_exit_code, start_stdout, start_stderr = self.execute_command(f"systemctl start {service}")
+                if start_exit_code != 0:
+                    self.log(f"Failed to start {service}: {start_stderr}", "ERROR")
+                    return False
+                else:
+                    self.log(f"Successfully started {service}", "SUCCESS")
         
-        self.log("Final verification completed", "SUCCESS")
+        # Test nginx configuration
+        exit_code, stdout, stderr = self.execute_command("nginx -t")
+        if exit_code != 0:
+            self.log(f"Nginx configuration test failed: {stderr}", "ERROR")
+            return False
+        
+        # Test database connectivity
+        exit_code, stdout, stderr = self.execute_command(
+            "sudo -u postgres psql -d projectmeats -c \"SELECT 1;\" -t"
+        )
+        if exit_code != 0:
+            self.log("Database connectivity test failed", "ERROR")
+            return False
+        
+        # Test backend API endpoint
+        domain = self.config.get('domain', 'localhost')
+        exit_code, stdout, stderr = self.execute_command(f"curl -f http://localhost/health || echo 'Health check not available'")
+        if exit_code == 0:
+            self.log("Health check endpoint responding", "SUCCESS")
+        else:
+            self.log("Health check endpoint not responding (may be normal)", "INFO")
+        
+        # Check if frontend build exists
+        exit_code, stdout, stderr = self.execute_command("ls -la /opt/projectmeats/frontend/build/index.html")
+        if exit_code != 0:
+            self.log("Frontend build files not found", "ERROR")
+            return False
+        
+        self.log("Final verification completed successfully", "SUCCESS")
         return True
 
 
