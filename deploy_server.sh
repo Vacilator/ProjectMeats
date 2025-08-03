@@ -52,6 +52,7 @@ apt update && apt upgrade -y
 log_info "Installing system dependencies..."
 apt install -y python3 python3-pip python3-venv nginx git curl ufw fail2ban
 
+
 # Comprehensive Node.js cleanup
 log_info "Removing conflicting Node.js packages..."
 # Stop any running Node.js processes
@@ -120,6 +121,55 @@ if command -v npm >/dev/null 2>&1; then
 else
     log_error "npm installation failed"
     exit 1
+
+# Check if Node.js is already available
+log_info "Checking Node.js installation..."
+if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    NODE_VERSION=$(node --version)
+    NPM_VERSION=$(npm --version)
+    log_success "Node.js $NODE_VERSION and npm $NPM_VERSION are already installed"
+    
+    # Check if it's a compatible version (Node 16+)
+    NODE_MAJOR_VERSION=$(echo $NODE_VERSION | cut -d'.' -f1 | sed 's/v//')
+    if [ "$NODE_MAJOR_VERSION" -ge 16 ]; then
+        log_success "Node.js version is compatible (v16+)"
+    else
+        log_warning "Node.js version is older than v16, installing Node.js 18 via NVM..."
+        INSTALL_NODE=true
+    fi
+else
+    log_info "Node.js not found, installing Node.js 18 via NVM..."
+    INSTALL_NODE=true
+fi
+
+# Install Node.js via NVM if needed
+if [ "$INSTALL_NODE" = true ]; then
+    # Remove existing Node.js packages that might conflict
+    log_info "Removing conflicting Node.js packages..."
+    apt remove -y nodejs npm libnode-dev libnode72 || true
+    apt autoremove -y || true
+    
+    # Install NVM
+    log_info "Installing NVM (Node Version Manager)..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    
+    # Load NVM for this session
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    
+    # Install Node.js 18 LTS
+    log_info "Installing Node.js 18 LTS via NVM..."
+    nvm install 18
+    nvm use 18
+    nvm alias default 18
+    
+    # Install global packages
+    log_info "Installing global Node.js packages..."
+    npm install -g yarn pm2
+    
+    log_success "Node.js 18 installed successfully via NVM"
+
 fi
 
 # Create application user
@@ -209,6 +259,7 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 log_info "Setting up React frontend..."
 cd /home/projectmeats/app/frontend
 
+
 # Configure npm for projectmeats user to avoid permission issues
 log_info "Configuring npm for projectmeats user..."
 sudo -u projectmeats mkdir -p /home/projectmeats/.npm-global
@@ -243,6 +294,28 @@ if ! sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-glo
 fi
 
 log_success "Frontend build completed successfully"
+
+# Ensure NVM is available for projectmeats user
+if [ -d "/root/.nvm" ]; then
+    log_info "Setting up NVM for projectmeats user..."
+    # Copy NVM to projectmeats user
+    cp -r /root/.nvm /home/projectmeats/.nvm
+    chown -R projectmeats:projectmeats /home/projectmeats/.nvm
+    
+    # Add NVM to projectmeats user's bashrc
+    echo 'export NVM_DIR="$HOME/.nvm"' >> /home/projectmeats/.bashrc
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /home/projectmeats/.bashrc
+    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> /home/projectmeats/.bashrc
+    
+    # Run npm commands with NVM environment
+    sudo -u projectmeats bash -c 'source ~/.bashrc && npm install'
+    sudo -u projectmeats bash -c 'source ~/.bashrc && npm run build'
+else
+    # Fallback to system npm if available
+    sudo -u projectmeats npm install
+    sudo -u projectmeats npm run build
+fi
+
 
 # Create Gunicorn configuration
 log_info "Creating Gunicorn configuration..."
