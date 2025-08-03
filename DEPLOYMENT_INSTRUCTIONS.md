@@ -114,6 +114,34 @@ Use the no-authentication deployment:
 curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash
 ```
 
+#### If Node.js/npm Installation Fails:
+
+The deployment script includes robust handling for Node.js installation conflicts. If you encounter package dependency errors like:
+```
+nodejs : Conflicts: npm
+npm : Depends: node-cacache but it is not going to be installed
+```
+
+The script automatically:
+1. **Cleans up conflicting packages** (nodejs, npm, libnode72, libnode108, nodejs-doc)
+2. **Tries NodeSource repository** for Node.js 18 LTS
+3. **Falls back to snap installation** if NodeSource fails
+4. **Uses Ubuntu repositories** as final fallback
+
+**Manual fix if needed:**
+```bash
+# Clean up existing installations
+sudo apt remove -y nodejs npm libnode-dev libnode72 libnode108 nodejs-doc
+sudo apt purge -y nodejs npm libnode-dev libnode72 libnode108 nodejs-doc
+sudo apt autoremove -y && sudo apt clean
+
+# Install using snap (alternative method)
+sudo snap install node --classic
+
+# Or install from Ubuntu repositories
+sudo apt update && sudo apt install -y nodejs npm
+```
+
 ### Management Commands 📋
 
 After deployment, use these commands:
