@@ -18,11 +18,16 @@ def test_orchestrator_improvements():
         content = f.read()
     
     tests = [
+        ("GitHub PAT authentication support", "https://{self.config['github']['user']}:{self.config['github']['token']}@github.com"),
+        ("GitHub config section", '"github": {'),
+        ("setup_github_auth method", "def setup_github_auth"),
+        ("GitHub command line args", "--github-user"),
+        ("PAT environment variables", "GITHUB_TOKEN"),
         ("Backup directory creation", "backup_dir = f\"{project_dir}_backup_{int(time.time())}\""),
         ("Download size validation", "zip_size = int(stdout.strip())"),
         ("File type validation", "file project.zip"),
-        ("Multiple download methods", "Method 1: Basic git clone"),
-        ("Tarball fallback", "Method 3: Try tarball download"),
+        ("Multiple download methods", "Method 1: Git clone with PAT authentication"),
+        ("Tarball fallback", "Method 4: Try tarball download"),
         ("Essential files verification", "ls -la {project_dir}/backend {project_dir}/frontend"),
         ("Error cleanup", "rm -f {project_dir}/project.zip"),
     ]
@@ -40,7 +45,10 @@ def test_orchestrator_improvements():
     
     if all_passed:
         print("🎉 ALL TESTS PASSED!")
-        print("The AI deployment orchestrator has been successfully updated with all PR 71 fixes.")
+        print("The AI deployment orchestrator has been successfully updated with:")
+        print("- GitHub PAT authentication (matching master_deploy.py pattern)")
+        print("- All PR 71 download validation and backup fixes")
+        print("- Environment variable and command line authentication support")
         return True
     else:
         print("❌ SOME TESTS FAILED!")

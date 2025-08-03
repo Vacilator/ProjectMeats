@@ -18,6 +18,7 @@ Features:
 - Real-time monitoring and response
 - State persistence and rollback capabilities
 - Comprehensive logging and reporting
+- GitHub PAT authentication support
 
 Usage:
     # Interactive setup and deployment
@@ -25,6 +26,9 @@ Usage:
     
     # Automated deployment with configuration
     python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --auto
+    
+    # With GitHub authentication (recommended for private repos)
+    python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --github-user=USERNAME --github-token=TOKEN
     
     # Test connection and validate server
     python ai_deployment_orchestrator.py --test-connection --server=myserver.com
@@ -175,6 +179,10 @@ class AIDeploymentOrchestrator:
                 "command_timeout": 300,
                 "auto_approve": False
             },
+            "github": {
+                "user": None,
+                "token": None
+            },
             "logging": {
                 "level": "INFO",
                 "max_log_files": 10,
@@ -212,6 +220,30 @@ class AIDeploymentOrchestrator:
                 json.dump(self.config, f, indent=2)
         except Exception as e:
             self.log(f"Error saving config: {e}", "ERROR")
+    
+    def setup_github_auth(self):
+        """Setup GitHub authentication for private repository access"""
+        # Check for environment variables first
+        github_user = os.environ.get('GITHUB_USER') or os.environ.get('GITHUB_USERNAME')
+        github_token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_PAT')
+        
+        if github_user and github_token:
+            self.config['github']['user'] = github_user
+            self.config['github']['token'] = github_token
+            self.log("GitHub authentication loaded from environment variables", "SUCCESS")
+            return True
+        
+        # Check if already configured in config file
+        if self.config['github'].get('user') and self.config['github'].get('token'):
+            self.log("GitHub authentication already configured", "SUCCESS")
+            return True
+        
+        self.log("GitHub authentication not configured", "WARNING")
+        self.log("For private repository access, set environment variables:", "INFO")
+        self.log("  export GITHUB_USER=your_username", "INFO")
+        self.log("  export GITHUB_TOKEN=your_personal_access_token", "INFO")
+        
+        return False
     
     def _setup_logging(self):
         """Setup comprehensive logging"""
@@ -900,6 +932,9 @@ class AIDeploymentOrchestrator:
         
         project_dir = "/opt/projectmeats"
         
+        # Setup GitHub authentication
+        self.setup_github_auth()
+        
         # Create project directory
         exit_code, stdout, stderr = self.execute_command(f"mkdir -p {project_dir}")
         if exit_code != 0:
@@ -928,7 +963,23 @@ class AIDeploymentOrchestrator:
         # Download from GitHub (multiple methods with validation)
         project_downloaded = False
         
-        # Method 1: Basic git clone (public access)
+        # Method 1: Git clone with PAT authentication (if configured)
+        if self.config['github'].get('user') and self.config['github'].get('token'):
+            self.log("Attempting git clone with Personal Access Token...", "INFO")
+            try:
+                github_url = f"https://{self.config['github']['user']}:{self.config['github']['token']}@github.com/Vacilator/ProjectMeats.git"
+                exit_code, stdout, stderr = self.execute_command(
+                    f"cd {project_dir} && git clone {github_url} ."
+                )
+                if exit_code == 0:
+                    project_downloaded = True
+                    self.log("Successfully downloaded using PAT authentication", "SUCCESS")
+                else:
+                    self.log("PAT authentication failed, trying other methods...", "WARNING")
+            except Exception as e:
+                self.log(f"PAT authentication error: {e}", "WARNING")
+        
+        # Method 2: Basic git clone (public access)
         if not project_downloaded:
             self.log("Attempting git clone (public access)...", "INFO")
             exit_code, stdout, stderr = self.execute_command(
@@ -938,7 +989,7 @@ class AIDeploymentOrchestrator:
                 project_downloaded = True
                 self.log("Successfully downloaded using git clone", "SUCCESS")
         
-        # Method 2: Direct zip download with validation
+        # Method 3: Direct zip download with validation
         if not project_downloaded:
             self.log("Attempting direct zip download...", "INFO")
             
@@ -975,7 +1026,7 @@ class AIDeploymentOrchestrator:
                             # Clean up invalid file
                             self.execute_command(f"rm -f {project_dir}/project.zip")
         
-        # Method 3: Try tarball download as alternative
+        # Method 4: Try tarball download as alternative
         if not project_downloaded:
             self.log("Attempting tarball download...", "INFO")
             
@@ -1114,6 +1165,8 @@ def main():
     parser.add_argument("--username", default="root", help="SSH username")
     parser.add_argument("--key-file", help="SSH private key file")
     parser.add_argument("--password", help="SSH password")
+    parser.add_argument("--github-user", help="GitHub username for authentication")
+    parser.add_argument("--github-token", help="GitHub Personal Access Token")
     parser.add_argument("--auto-approve", action="store_true", help="Automatic deployment without prompts")
     parser.add_argument("--test-connection", action="store_true", help="Test server connection only")
     parser.add_argument("--resume", help="Resume deployment with given ID")
@@ -1123,6 +1176,12 @@ def main():
     
     # Initialize orchestrator
     orchestrator = AIDeploymentOrchestrator(args.config)
+    
+    # Set GitHub authentication if provided
+    if args.github_user and args.github_token:
+        orchestrator.config['github']['user'] = args.github_user
+        orchestrator.config['github']['token'] = args.github_token
+        orchestrator.log("GitHub authentication configured from command line", "SUCCESS")
     
     try:
         if args.resume:
