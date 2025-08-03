@@ -94,8 +94,12 @@ class TaskViewSet(viewsets.ModelViewSet):
             try:
                 orchestration_engine.assign_task_to_best_agent(task)
             except Exception as e:
-                # Log error but don't fail task creation
-                pass
+                logger.error(
+                    "Failed to auto-assign task (id=%s): %s", 
+                    getattr(task, 'id', None), 
+                    str(e), 
+                    exc_info=True
+                )
     
     @action(detail=True, methods=['post'])
     def assign(self, request, pk=None):
