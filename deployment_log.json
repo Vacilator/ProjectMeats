@@ -334,3 +334,4 @@
 {"timestamp": "2025-08-03 15:11:14", "level": "INFO", "message": "Available profiles: example", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-03 15:11:15", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_151115.log", "deployment_id": null, "step": null}
 
+{"timestamp": "2025-08-03 16:54:11", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_165411.log", "deployment_id": null, "step": null}

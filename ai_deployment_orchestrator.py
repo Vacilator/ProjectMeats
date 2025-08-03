@@ -122,6 +122,107 @@ class Colors:
     END = '\033[0m'
 
 
+class AIIntelligenceEngine:
+    """
+    AI Intelligence Engine for deployment analysis and optimization
+    
+    Provides intelligent error detection, predictive analysis, and autonomous
+    recovery capabilities for deployment processes.
+    """
+    
+    def __init__(self):
+        self.error_patterns = self._load_error_patterns()
+        self.fix_strategies = self._load_fix_strategies()
+        self.performance_baselines = {}
+        self.deployment_history = []
+        
+    def _load_error_patterns(self) -> Dict[str, Dict]:
+        """Load error patterns for intelligent detection"""
+        return {
+            "nodejs_conflicts": {
+                "patterns": [
+                    r"npm.*ERR.*EACCES",
+                    r"node.*version.*conflict",
+                    r"npm.*permission.*denied"
+                ],
+                "severity": ErrorSeverity.HIGH,
+                "auto_fix": True,
+                "fix_time": 300  # 5 minutes
+            },
+            "database_connection": {
+                "patterns": [
+                    r"psql.*connection.*refused",
+                    r"postgresql.*authentication.*failed",
+                    r"role.*does not exist"
+                ],
+                "severity": ErrorSeverity.CRITICAL,
+                "auto_fix": True,
+                "fix_time": 180  # 3 minutes
+            },
+            "ssl_certificate": {
+                "patterns": [
+                    r"certbot.*failed",
+                    r"letsencrypt.*error",
+                    r"ssl.*certificate.*invalid"
+                ],
+                "severity": ErrorSeverity.HIGH,
+                "auto_fix": True,
+                "fix_time": 240  # 4 minutes
+            }
+        }
+    
+    def _load_fix_strategies(self) -> Dict[str, Dict]:
+        """Load fix strategies for common issues"""
+        return {
+            "nodejs_conflicts": {
+                "strategy": "comprehensive_nodejs_cleanup_and_reinstall",
+                "steps": [
+                    "Remove all existing Node.js installations",
+                    "Clean package manager caches", 
+                    "Install Node.js 18 LTS via NodeSource repository",
+                    "Verify installation and fix permissions"
+                ]
+            },
+            "database_connection": {
+                "strategy": "postgresql_setup_with_validation",
+                "steps": [
+                    "Ensure PostgreSQL is running",
+                    "Create database and user with proper permissions",
+                    "Test connectivity",
+                    "Apply security configurations"
+                ]
+            }
+        }
+    
+    def analyze_error(self, error_output: str, context: Dict = None):
+        """Analyze error output using AI pattern matching"""
+        best_match = None
+        highest_confidence = 0.0
+        
+        for error_type, pattern_info in self.error_patterns.items():
+            confidence = 0.0
+            matches = 0
+            
+            for pattern in pattern_info["patterns"]:
+                if re.search(pattern, error_output, re.IGNORECASE):
+                    matches += 1
+                    confidence += 0.2  # Each pattern match adds confidence
+            
+            if matches > 0:
+                confidence = min(confidence + (matches * 0.1), 1.0)
+                
+                if confidence > highest_confidence:
+                    highest_confidence = confidence
+                    best_match = error_type
+        
+        return {
+            "error_type": best_match,
+            "confidence": highest_confidence,
+            "auto_fix_available": best_match and self.error_patterns[best_match].get("auto_fix", False),
+            "estimated_fix_time": best_match and self.error_patterns[best_match].get("fix_time", 300)
+        } if best_match else None
+
+
 class AIDeploymentOrchestrator:
     """AI-driven deployment orchestrator for ProjectMeats"""
     
@@ -182,6 +283,12 @@ class AIDeploymentOrchestrator:
             "github": {
                 "user": None,
                 "token": None
+            },
+            "ai_features": {
+                "intelligent_error_detection": True,
+                "predictive_analysis": True,
+                "autonomous_recovery": True,
+                "performance_optimization": True
             },
             "logging": {
                 "level": "INFO",
@@ -1635,9 +1742,22 @@ def main():
             success = orchestrator.run_deployment(server_config)
             return 0 if success else 1
         
-
         elif server:
             # Direct deployment (either from --server or --profile)
+            server_config = {
+                'hostname': server,
+                'username': username,
+                'key_file': key_file,
+                'password': args.password,
+                'domain': domain
+            }
+            
+            if domain:
+                orchestrator.config['domain'] = domain
+            
+            success = orchestrator.run_deployment(server_config)
+            return 0 if success else 1
+            
         elif args.profile:
             # Use predefined server profile
             profiles = orchestrator.config.get('server_profiles', {})
