@@ -48,9 +48,15 @@ log_info "  Database: SQLITE"
 log_info "Updating system packages..."
 apt update && apt upgrade -y
 
-# Install required packages (excluding nodejs for now)
+# Install required packages
 log_info "Installing system dependencies..."
 apt install -y python3 python3-pip python3-venv nginx git curl ufw fail2ban
+
+# Fix potential Node.js conflicts before installation
+log_info "Preparing Node.js installation environment..."
+apt remove -y nodejs npm libnode-dev libnode72 2>/dev/null || true
+apt autoremove -y || true
+apt --fix-broken install -y || true
 
 # Check if Node.js is already available
 log_info "Checking Node.js installation..."

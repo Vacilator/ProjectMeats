@@ -2,23 +2,48 @@
 
 A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
-## 🚨 Production Deployment - Authentication Issues?
+## 🚨 Server Configuration Issues?
 
-**Getting "Invalid username or token" errors during deployment?** GitHub no longer supports password authentication.
+**Having deployment problems like missing directories, Node.js conflicts, or authentication errors?**
 
-### Quick Solutions:
+### 🎯 Emergency Server Fix (Run This First)
 
-1. **🚀 No-Authentication Deployment (Recommended):**
+If you're seeing errors like:
+- `cd: /home/projectmeats/setup: No such file or directory`
+- `sudo: ./deploy_server.sh: command not found`
+- `nodejs : Conflicts: npm`
+- `Authentication failed for 'https://github.com/...'`
+
+**Run this one-command fix:**
+```bash
+sudo ./server_emergency_fix.sh
+```
+
+Or download and run directly:
+```bash
+curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/install_fix.sh | sudo bash
+```
+
+### 🚀 Then Deploy (Choose One)
+
+After running the fix:
+
+1. **No-Authentication Deployment (Recommended):**
    ```bash
-   curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash
+   cd /home/projectmeats/setup && sudo ./deploy_no_git_auth.sh
    ```
 
-2. **🔑 Need help with authentication?**
+2. **Fixed Original Script:**
    ```bash
-   curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/auth_helper.sh | bash
+   cd /home/projectmeats/setup && sudo ./deploy_server.sh
    ```
 
-3. **📖 Full authentication guide:** [docs/deployment_authentication_guide.md](docs/deployment_authentication_guide.md)
+3. **Interactive Setup:**
+   ```bash
+   cd /home/projectmeats/setup && sudo ./deploy_production.py
+   ```
+
+📖 **Detailed fix guide:** [SERVER_FIX_README.md](SERVER_FIX_README.md)
 
 ## ⚠️ Quick Fix: "Authentication credentials were not provided"
 
