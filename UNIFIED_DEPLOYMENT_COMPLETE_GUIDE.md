@@ -473,8 +473,9 @@ python3 unified_deployment_tool.py --docs
 ### GitHub Issues
 
 For bugs, feature requests, or detailed support:
-https://github.com/Vacilator/ProjectMeats/issues
+<GITHUB_REPO_URL>/issues
 
+> **Note:** Replace `<GITHUB_REPO_URL>` with your project's actual GitHub repository URL (e.g., `https://github.com/YourOrg/YourRepo`).
 ### Quick Reference
 
 ```bash
