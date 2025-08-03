@@ -597,8 +597,7 @@ STATIC_ROOT={backend_dir}/staticfiles
         
         # Create superuser
         self.log("Creating admin user...")
-        create_user_script = f"""
-from django.contrib.auth.models import User
+        create_user_script = f"""from django.contrib.auth.models import User
 from apps.core.models import UserProfile
 
 # Create superuser
@@ -615,9 +614,42 @@ else:
     print('Admin user already exists')
 """
         
-        with open(f"{backend_dir}/create_admin.py", 'w') as f:
+        # Remove any existing create_admin.py file to ensure clean state
+        admin_script_path = f"{backend_dir}/create_admin.py"
+        self.log(f"Removing any existing admin script at {admin_script_path}...")
+        self.run_command(f"rm -f {admin_script_path}", check=False)
+        
+        # Create new admin script with correct imports
+        self.log("Creating new admin script...")
+        with open(admin_script_path, 'w') as f:
             f.write(create_user_script)
         
+        # Verify the script was created correctly
+        self.log("Verifying admin script content...")
+        try:
+            with open(admin_script_path, 'r') as f:
+                script_content = f.read()
+            
+            self.log(f"Admin script content ({len(script_content)} chars):")
+            for i, line in enumerate(script_content.split('\n'), 1):
+                self.log(f"  Line {i}: {repr(line)}")
+            
+            if "apps.core.models import UserProfile" not in script_content:
+                self.log("ERROR: Admin script missing correct import!", 'ERROR')
+                raise Exception("Admin script creation failed - missing correct import")
+                
+            if "apps.user_profiles" in script_content:
+                self.log("ERROR: Admin script contains incorrect user_profiles import!", 'ERROR')
+                raise Exception("Admin script creation failed - incorrect import detected")
+                
+            self.log("Admin script verification passed", 'SUCCESS')
+            
+        except Exception as e:
+            self.log(f"Failed to verify admin script: {e}", 'ERROR')
+            raise
+        
+        # Execute the admin script
+        self.log("Executing admin user creation script...")
         self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py shell < create_admin.py")
         
         # Collect static files
