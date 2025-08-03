@@ -479,19 +479,19 @@ jobs:
 
     - name: Validate consolidated deployment documentation
       run: |
-        # Check master deployment guide
-        if [ -f "DEPLOYMENT_MASTER_GUIDE.md" ]; then
-          echo "✅ Master deployment guide exists"
+        # Check unified deployment guide
+        if [ -f "UNIFIED_DEPLOYMENT_GUIDE.md" ]; then
+          echo "✅ Unified deployment guide exists"
         else
-          echo "❌ DEPLOYMENT_MASTER_GUIDE.md not found"
+          echo "❌ UNIFIED_DEPLOYMENT_GUIDE.md not found"
           exit 1
         fi
         
-        # Check consolidation guide
-        if [ -f "DEPLOYMENT_CONSOLIDATION_GUIDE.md" ]; then
-          echo "✅ Consolidation guide exists"
+        # Check AI deployment guide
+        if [ -f "AI_DEPLOYMENT_README.md" ]; then
+          echo "✅ AI deployment guide exists"
         else
-          echo "❌ DEPLOYMENT_CONSOLIDATION_GUIDE.md not found"
+          echo "❌ AI_DEPLOYMENT_README.md not found"
           exit 1
         fi
         
@@ -556,8 +556,8 @@ jobs:
           ai_deployment_orchestrator.py
           master_deploy.py
           setup_ai_deployment.py
-          DEPLOYMENT_MASTER_GUIDE.md
-          DEPLOYMENT_CONSOLIDATION_GUIDE.md
+          UNIFIED_DEPLOYMENT_GUIDE.md
+          AI_DEPLOYMENT_README.md
           ai_deployment_config.enhanced.json
           ai_deployment_config.json
           backend/
