@@ -81,16 +81,16 @@ find_projectmeats_location() {
     )
     
     for location in "${locations[@]}"; do
-        if [[ -d "$location" && -f "$location/deploy_server.sh" && -f "$location/deploy_production.py" ]]; then
+        if [[ -d "$location" && -f "$location/.projectmeats_root" ]]; then
             PROJECTMEATS_SOURCE="$location"
             log_success "Found ProjectMeats at: $PROJECTMEATS_SOURCE"
             return 0
         fi
     done
     
-    log_error "Could not find ProjectMeats installation with deployment scripts"
+    log_error "Could not find ProjectMeats installation (missing .projectmeats_root marker file)"
     log_error "Please ensure this script is run from the ProjectMeats directory"
-    log_error "or that ProjectMeats is installed in a standard location"
+    log_error "or that ProjectMeats is installed in a standard location and contains a .projectmeats_root file"
     exit 1
 }
 
