@@ -334,3 +334,24 @@
 {"timestamp": "2025-08-03 15:11:14", "level": "INFO", "message": "Available profiles: example", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-03 15:11:15", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_151115.log", "deployment_id": null, "step": null}
 
+{"timestamp": "2025-08-03 16:44:37", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_164437.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:44:37", "level": "INFO", "message": "Loading profile 'production'", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:44:37", "level": "DEBUG", "message": "Profile settings: {'server': '167.99.155.140', 'username': 'root', 'domain': 'meatscentral.com', 'key_file': '/home/runner/.ssh/id_ed25519'}", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:44:37", "level": "INFO", "message": "Starting deployment 773d284d", "deployment_id": "773d284d", "step": 0}
+{"timestamp": "2025-08-03 16:44:37", "level": "INFO", "message": "Target server: 167.99.155.140", "deployment_id": "773d284d", "step": 0}
+{"timestamp": "2025-08-03 16:44:37", "level": "INFO", "message": "Connecting to 167.99.155.140 as root...", "deployment_id": "773d284d", "step": 0}
+{"timestamp": "2025-08-03 16:44:37", "level": "ERROR", "message": "Failed to connect to server: 'NoneType' object has no attribute 'SSHClient'", "deployment_id": "773d284d", "step": 0}
+{"timestamp": "2025-08-03 16:44:37", "level": "INFO", "message": "Disconnected from server", "deployment_id": "773d284d", "step": 0}
+{"timestamp": "2025-08-03 16:46:02", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_164602.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:46:02", "level": "INFO", "message": "Loading profile 'production'", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:46:02", "level": "DEBUG", "message": "Profile settings: {'server': '167.99.155.140', 'username': 'root', 'domain': 'meatscentral.com', 'key_file': '/home/runner/.ssh/id_ed25519'}", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:46:02", "level": "INFO", "message": "Connecting to 167.99.155.140 as root...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:46:02", "level": "ERROR", "message": "Failed to connect to server: 'NoneType' object has no attribute 'SSHClient'", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:47:26", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_164726.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:47:26", "level": "INFO", "message": "Loading profile 'production'", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:47:26", "level": "DEBUG", "message": "Profile settings: {'server': '167.99.155.140', 'username': 'root', 'domain': 'meatscentral.com', 'key_file': '/home/runner/.ssh/id_ed25519'}", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:47:26", "level": "ERROR", "message": "paramiko library is not installed. Install it with: pip install paramiko", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:47:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_164758.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:47:58", "level": "INFO", "message": "Loading profile 'production'", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:47:58", "level": "DEBUG", "message": "Profile settings: {'server': '167.99.155.140', 'username': 'root', 'domain': 'meatscentral.com', 'key_file': '/home/runner/.ssh/id_ed25519'}", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 16:47:58", "level": "INFO", "message": "Connecting to 167.99.155.140 as root...", "deployment_id": null, "step": null}

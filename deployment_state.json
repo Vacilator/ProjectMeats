@@ -1,0 +1,17 @@
+{
+  "deployment_id": "773d284d",
+  "status": "failed",
+  "current_step": 0,
+  "total_steps": 13,
+  "server_info": {
+    "hostname": "167.99.155.140",
+    "username": "root",
+    "key_file": "/home/runner/.ssh/id_ed25519",
+    "password": null,
+    "domain": "meatscentral.com"
+  },
+  "error_count": 0,
+  "warnings": null,
+  "start_time": null,
+  "end_time": null
+}

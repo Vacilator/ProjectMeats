@@ -828,10 +828,6 @@ class AIDeploymentOrchestrator:
                          key_file: Optional[str] = None, password: Optional[str] = None) -> bool:
         """Establish SSH connection to remote server"""
         try:
-            if paramiko is None:
-                self.log("paramiko library is not installed. Install it with: pip install paramiko", "ERROR")
-                return False
-                
             self.log(f"Connecting to {hostname} as {username}...", "INFO")
             
             self.ssh_client = paramiko.SSHClient()
