@@ -177,8 +177,46 @@ class MasterDeployer:
         
         # Stop any running Node.js processes
         self.log("Stopping Node.js processes...")
-        self.run_command("pkill -f node || true", check=False)
-        
+        # Find running Node.js processes
+        try:
+            result = subprocess.run(
+                ["ps", "-eo", "pid,comm,args"], capture_output=True, text=True, check=True
+            )
+            node_procs = []
+            for line in result.stdout.strip().split("\n")[1:]:
+                parts = line.split(None, 2)
+                if len(parts) < 3:
+                    continue
+                pid, comm, args = parts
+                # Match only processes where the command is 'node'
+                if comm == "node":
+                    node_procs.append((pid, args))
+            if node_procs:
+                self.log(f"Found {len(node_procs)} running Node.js processes:", "WARNING")
+                for pid, args in node_procs:
+                    self.log(f"  PID {pid}: {args}", "WARNING")
+                if not self.is_auto_mode:
+                    confirm = input("Kill these Node.js processes? [y/N]: ").lower()
+                    if confirm != "y":
+                        self.log("Skipping Node.js process termination.", "WARNING")
+                    else:
+                        for pid, _ in node_procs:
+                            try:
+                                os.kill(int(pid), 9)
+                                self.log(f"Killed Node.js process PID {pid}", "INFO")
+                            except Exception as e:
+                                self.log(f"Failed to kill PID {pid}: {e}", "ERROR")
+                else:
+                    for pid, _ in node_procs:
+                        try:
+                            os.kill(int(pid), 9)
+                            self.log(f"Killed Node.js process PID {pid}", "INFO")
+                        except Exception as e:
+                            self.log(f"Failed to kill PID {pid}: {e}", "ERROR")
+            else:
+                self.log("No running Node.js processes found.", "INFO")
+        except Exception as e:
+            self.log(f"Error checking/killing Node.js processes: {e}", "ERROR")
         # Complete Node.js cleanup
         self.log("Removing all Node.js packages...")
         packages_to_remove = [
