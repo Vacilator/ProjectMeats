@@ -59,26 +59,30 @@ ProjectMeats has been refactored and consolidated for maximum simplicity:
 
 ## 📁 Project Structure
 
+**Streamlined and Clean Repository Structure:**
 ```
-ProjectMeats/
-├── backend/                    # Django REST Framework API
-│   ├── apps/                  # Business entities (9 complete)
+ProjectMeats/                  # 🧹 Just 11 essential files in root
+├── backend/                   # Django REST Framework API
+│   ├── apps/                 # Business entities (9 complete)
 │   │   ├── accounts_receivables/  # Customer payments
-│   │   ├── suppliers/            # Supplier management
-│   │   ├── customers/            # Customer relationships
-│   │   ├── purchase_orders/      # Order processing
-│   │   ├── plants/              # Processing facilities
-│   │   ├── contacts/            # Contact management
-│   │   └── core/                # Shared utilities
+│   │   ├── suppliers/           # Supplier management
+│   │   ├── customers/          # Customer relationships
+│   │   ├── purchase_orders/    # Order processing
+│   │   ├── plants/            # Processing facilities
+│   │   ├── contacts/          # Contact management
+│   │   └── core/             # Shared utilities
 │   └── requirements.txt
-├── frontend/                   # React TypeScript application
+├── frontend/                  # React TypeScript application
 │   ├── src/
-│   │   ├── components/         # Reusable UI components
-│   │   ├── screens/           # Main application screens
-│   │   └── services/         # API communication
+│   │   ├── components/        # Reusable UI components
+│   │   ├── screens/          # Main application screens
+│   │   └── services/        # API communication
 │   └── package.json
-├── docs/                      # Documentation
-└── powerapps_export/          # Original PowerApps solution
+├── docs/                     # 📚 Consolidated documentation (12 files)
+├── scripts/                  # 🛠️ Utility scripts
+├── setup.py                  # 🔧 Cross-platform setup
+├── unified_deployment_tool.py # 🚀 All-in-one deployment
+└── Makefile                  # ⚡ Streamlined dev commands
 ```
 
 ## 🚀 Quick Setup

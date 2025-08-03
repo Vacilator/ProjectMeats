@@ -1,21 +1,20 @@
-# ProjectMeats Development Makefile
-# Provides essential development commands for Django + React application
+# ProjectMeats Development Makefile  
+# Streamlined essential commands for Django + React application
 
 .PHONY: help setup dev test clean docs format lint
 
 # Default target
 help:
-	@echo "ProjectMeats Development Commands"
+	@echo "🥩 ProjectMeats - Streamlined Development Commands"
+	@echo ""
+	@echo "🚀 Quick Start:"
+	@echo "  python setup.py    - Complete setup (recommended)"
+	@echo "  make dev           - Start development servers"
 	@echo ""
 	@echo "Setup Commands:"
-	@echo "  make setup         - Complete project setup (backend + frontend)"
-	@echo "  make setup-backend - Setup Django backend only"
-	@echo "  make setup-frontend- Setup React frontend only"
-	@echo ""
-	@echo "Recommended Setup:"
-	@echo "  python setup.py           - Cross-platform setup (recommended)"
-	@echo "  python setup.py --backend - Backend only"
-	@echo "  python setup.py --frontend- Frontend only"
+	@echo "  make setup         - Complete project setup"
+	@echo "  make setup-backend - Django backend only"
+	@echo "  make setup-frontend- React frontend only"
 	@echo ""
 	@echo "Development Commands:"
 	@echo "  make dev       - Start both backend and frontend servers"
