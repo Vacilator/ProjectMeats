@@ -73,7 +73,7 @@ if [[ -z "$DOMAIN" ]]; then
 fi
 
 # Validate domain format
-if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
+if [[ ! "$DOMAIN" =~ ^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$ ]]; then
     log_warning "Domain format may be invalid: $DOMAIN"
     read -p "Continue anyway? [y/N]: " -n 1 -r
     echo
