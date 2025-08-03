@@ -1,0 +1,7 @@
+{"timestamp": "2025-08-03 10:29:31", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_102931.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 10:29:31", "level": "WARNING", "message": "Error detected: Node.js package conflicts detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 10:31:00", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_103100.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 10:31:00", "level": "WARNING", "message": "Error detected: Node.js package conflicts detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 10:31:00", "level": "WARNING", "message": "Error detected: Package repository needs update", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 10:31:00", "level": "WARNING", "message": "Error detected: Permission issues detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 10:31:00", "level": "WARNING", "message": "Error detected: Port conflicts detected", "deployment_id": null, "step": null}
