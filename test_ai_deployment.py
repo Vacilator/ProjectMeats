@@ -370,19 +370,31 @@ def main():
     
     if config_exists and script_exists and orchestrator_exists:
         print("\n🎉 SYSTEM READY TO DEPLOY!")
+        print("\n📍 EXECUTION CONTEXT:")
+        print("   💻 Run commands from: YOUR LOCAL MACHINE (Windows/Linux/Mac)")
+        print("   🌐 Deploys to:        YOUR REMOTE SERVER (via SSH)")
+        print("   🔗 Connection:        Automatic SSH from local → remote")
+        
         print("\n📋 HOW TO EXECUTE DEPLOYMENT:")
-        print("   Interactive:  ./ai_deploy.sh --interactive")
-        print("   Direct:       ./ai_deploy.sh --server myserver.com --domain mydomain.com")
-        print("   Test only:    ./ai_deploy.sh --test --server myserver.com")
-        print("   Using profile: ./ai_deploy.sh --profile production")
+        print("\n   🖥️ Windows PowerShell:")
+        print("      python ai_deployment_orchestrator.py --interactive")
+        print("\n   🐧 Linux/Mac Terminal:")
+        print("      ./ai_deploy.sh --interactive")
+        print("\n   🔧 Other Options:")
+        print("      ./ai_deploy.sh --server myserver.com --domain mydomain.com")
+        print("      ./ai_deploy.sh --test --server myserver.com")
+        print("      ./ai_deploy.sh --profile production")
+        
+        print("\n📚 DETAILED INSTRUCTIONS:")
+        print("      See EXECUTION_GUIDE.md for step-by-step environment-specific guide")
     elif script_exists and orchestrator_exists:
         print("\n⚠️  Configuration missing, but system partially ready")
-        print("   Run setup first: python setup_ai_deployment.py")
+        print("   💻 Run setup first (LOCAL): python setup_ai_deployment.py")
         print("   Or create minimal config and use: ./ai_deploy.sh --interactive")
     else:
         print("\n⚠️  Setup required before deployment")
         if not config_exists:
-            print("   Run: python setup_ai_deployment.py")
+            print("   💻 Run setup (LOCAL): python setup_ai_deployment.py")
         
     print("\n📚 For more information:")
     print("   Setup guide: python setup_ai_deployment.py")

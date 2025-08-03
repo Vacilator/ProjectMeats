@@ -30,6 +30,12 @@ cd "$SCRIPT_DIR"
 log_header "🤖 ProjectMeats AI Deployment Orchestrator"
 echo -e "${CYAN}Intelligent deployment with autonomous error recovery${NC}"
 echo "==========================================================="
+echo ""
+log_info "📍 EXECUTION CONTEXT:"
+echo -e "  ${BLUE}💻 Running from:${NC} Your LOCAL machine"
+echo -e "  ${BLUE}🌐 Deploying to:${NC} Your REMOTE server (via SSH)"
+echo -e "  ${BLUE}🔗 Connection:${NC}   Automatic SSH authentication"
+echo ""
 
 # Check if configuration exists
 CONFIG_FILE="ai_deployment_config.json"

@@ -1,41 +1,55 @@
 # AI-Driven Production Deployment System
 
+## 🎯 WHERE TO RUN: LOCAL MACHINE → REMOTE SERVER
+
+**Important**: All commands below run on your **LOCAL machine** (Windows/Linux/Mac). The deployment system automatically connects to and configures your **REMOTE server** via SSH.
+
+📋 **For detailed environment-specific instructions**: See [EXECUTION_GUIDE.md](./EXECUTION_GUIDE.md)
+
 ## 🚀 Quick Start - Ready to Deploy!
 
 The AI deployment system is now fully operational! Here's how to execute deployments:
 
-### 1. Complete Setup (Recommended)
+### 1. Complete Setup (Recommended) - LOCAL MACHINE
 ```bash
-# Run the interactive setup wizard
+# Run the interactive setup wizard (LOCAL)
 python setup_ai_deployment.py
 
-# After setup completes, deploy with:
+# After setup completes, deploy to remote server (LOCAL → REMOTE)
 ./ai_deploy.sh --interactive
 ```
 
-### 2. Quick Start (Skip Wizard)
+### 2. Quick Start (Skip Wizard) - LOCAL MACHINE
 ```bash
-# Copy the quickstart template
+# Copy the quickstart template (LOCAL)
 cp ai_deployment_config.quickstart.json ai_deployment_config.json
 
-# Edit with your server details
+# Edit with your server details (LOCAL)
 nano ai_deployment_config.json
 
-# Deploy interactively
+# Deploy to remote server (LOCAL → REMOTE)
 ./ai_deploy.sh --interactive
 ```
 
-### 3. Direct Deployment
+### 3. Direct Deployment - LOCAL MACHINE
 ```bash
-# Deploy to specific server
+# Deploy to specific server (LOCAL → REMOTE)
 ./ai_deploy.sh --server myserver.com --domain mydomain.com
 
-# Test connection first
+# Test connection first (LOCAL → REMOTE)
 ./ai_deploy.sh --test --server myserver.com
 
-# Use a predefined profile
+# Use a predefined profile (LOCAL → REMOTE)
 ./ai_deploy.sh --profile production
 ```
+
+### 🖥️ Environment-Specific Commands
+
+| Environment | Setup Command | Deploy Command |
+|-------------|---------------|----------------|
+| **Windows PowerShell** | `python setup_ai_deployment.py` | `python ai_deployment_orchestrator.py --interactive` |
+| **Linux/Mac Terminal** | `python3 setup_ai_deployment.py` | `./ai_deploy.sh --interactive` |
+| **Git Bash (Windows)** | `python setup_ai_deployment.py` | `./ai_deploy.sh --interactive` |
 
 ## 📋 Deployment Commands
 
@@ -48,17 +62,31 @@ nano ai_deployment_config.json
 | `./ai_deploy.sh --auto` | Auto-approve all prompts (use with caution) |
 | `./ai_deploy.sh --resume --deployment-id ID` | Resume failed deployment |
 
-## 🔧 System Status
+## 🔧 System Status - LOCAL MACHINE
 
-Run tests to check deployment readiness:
+Run tests to check deployment readiness (from your local machine):
 ```bash
+# Windows PowerShell
 python test_ai_deployment.py
+
+# Linux/Mac Terminal  
+python3 test_ai_deployment.py
 ```
 
 This will show:
 - ✅ Configuration status
-- ✅ Required files availability
+- ✅ Required files availability  
+- ✅ SSH connection test to your remote server
 - 📋 Exact commands to execute deployment
+
+## 📍 Execution Summary
+
+| Phase | Location | Commands | Purpose |
+|-------|----------|----------|---------|
+| **Setup** | 💻 Local Machine | `python setup_ai_deployment.py` | Configure deployment system |
+| **Test** | 💻 Local Machine | `python test_ai_deployment.py` | Verify readiness |
+| **Deploy** | 💻 Local → 🌐 Remote | `./ai_deploy.sh --interactive` | Deploy ProjectMeats app |
+| **Verify** | 💻 Local Machine | `curl https://yourdomain.com` | Test deployed app |
 
 ## 🤖 Key Features Implemented
 

@@ -333,7 +333,7 @@ class AIDeploymentSetup:
             self.log("Please ensure ai_deploy.sh exists in the project root", "INFO")
     
     def print_completion_message(self):
-        """Print setup completion message"""
+        """Print setup completion message with clear execution instructions"""
         print(f"\n{Colors.BOLD}{Colors.GREEN}{'='*70}")
         print("[SUCCESS] AI Deployment Orchestrator Setup Complete!")
         print(f"{'='*70}{Colors.END}\n")
@@ -341,26 +341,67 @@ class AIDeploymentSetup:
         self.log("Your AI deployment system is ready to use!", "SUCCESS")
         print()
         
+        # Important execution context
+        print(f"{Colors.BOLD}{Colors.YELLOW}📍 IMPORTANT: WHERE TO RUN COMMANDS{Colors.END}")
+        print(f"  {Colors.CYAN}💻 LOCAL MACHINE{Colors.END}: Run setup and deployment commands from YOUR computer")
+        print(f"  {Colors.CYAN}🌐 REMOTE SERVER{Colors.END}: ProjectMeats will be deployed automatically via SSH")
+        print(f"  {Colors.CYAN}🔗 CONNECTION{Colors.END}: Commands below connect from local → remote automatically")
+        print()
+        
         self.log("🚀 Ready to Deploy! Here's how to start:", "HEADER")
+        print()
+        
+        # Environment-specific instructions
+        print(f"{Colors.BOLD}🖥️ CHOOSE YOUR ENVIRONMENT:{Colors.END}")
         print()
         
         # Check if ai_deploy.sh exists
         ai_deploy_script = self.project_root / "ai_deploy.sh"
         if ai_deploy_script.exists():
-            print(f"  {Colors.CYAN}📋 Interactive deployment (recommended):{Colors.END}")
+            print(f"  {Colors.PURPLE}Windows PowerShell:{Colors.END}")
+            print(f"    python ai_deployment_orchestrator.py --interactive")
+            print()
+            print(f"  {Colors.PURPLE}Linux/Mac Terminal:{Colors.END}")
             print(f"    ./ai_deploy.sh --interactive")
             print()
+            print(f"  {Colors.PURPLE}Git Bash (Windows):{Colors.END}")
+            print(f"    ./ai_deploy.sh --interactive")
+        else:
+            print(f"  {Colors.YELLOW}⚠️  Using Python directly (works on all platforms):{Colors.END}")
+            print(f"    python ai_deployment_orchestrator.py --interactive")
+        
+        print()
+        print(f"{Colors.BOLD}📋 EXECUTION WORKFLOW:{Colors.END}")
+        print(f"  {Colors.GREEN}1. Test readiness (LOCAL):{Colors.END}")
+        print(f"     python test_ai_deployment.py")
+        print()
+        print(f"  {Colors.GREEN}2. Deploy to server (LOCAL → REMOTE):{Colors.END}")
+        if ai_deploy_script.exists():
+            print(f"     ./ai_deploy.sh --interactive          # Linux/Mac")
+            print(f"     python ai_deployment_orchestrator.py --interactive  # Windows")
+        else:
+            print(f"     python ai_deployment_orchestrator.py --interactive")
+        print()
+        print(f"  {Colors.GREEN}3. Verify deployment (LOCAL):{Colors.END}")
+        print(f"     curl https://yourdomain.com")
+        
+        print()
+        print(f"{Colors.BOLD}🔧 OTHER DEPLOYMENT OPTIONS:{Colors.END}")
+        if ai_deploy_script.exists():
             print(f"  {Colors.CYAN}🎯 Direct deployment:{Colors.END}")
             print(f"    ./ai_deploy.sh --server myserver.com --domain mydomain.com")
             print()
-            print(f"  {Colors.CYAN}🔧 Use predefined profile:{Colors.END}")
-            print(f"    ./ai_deploy.sh --profile production")
-            print()
             print(f"  {Colors.CYAN}🧪 Test connection first:{Colors.END}")
             print(f"    ./ai_deploy.sh --test --server myserver.com")
-        else:
-            print(f"  {Colors.YELLOW}⚠️  Quick deploy script not found, using Python directly:{Colors.END}")
-            print(f"    python3 ai_deployment_orchestrator.py --interactive")
+            print()
+            print(f"  {Colors.CYAN}🔧 Use predefined profile:{Colors.END}")
+            print(f"    ./ai_deploy.sh --profile production")
+        
+        print()
+        print(f"{Colors.BOLD}📚 DETAILED INSTRUCTIONS:{Colors.END}")
+        print(f"  {Colors.CYAN}Complete guide:{Colors.END} See EXECUTION_GUIDE.md for step-by-step instructions")
+        print(f"  {Colors.CYAN}Environment help:{Colors.END} Windows PowerShell, Linux, Mac specific commands")
+        print(f"  {Colors.CYAN}Troubleshooting:{Colors.END} Common issues and solutions by platform")
         
         print()
         self.log("Available Command Options:", "INFO")
