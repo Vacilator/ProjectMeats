@@ -597,7 +597,33 @@ STATIC_ROOT={backend_dir}/staticfiles
         
         # Create superuser
         self.log("Creating admin user...")
-        create_user_script = f"""from django.contrib.auth.models import User
+        
+        # Use Django's built-in createsuperuser management command instead of custom script
+        # This is more reliable and handles edge cases better
+        self.log("Using Django's built-in createsuperuser command...")
+        
+        # First, try using the management command with environment variables
+        env_vars = f"DJANGO_SUPERUSER_USERNAME={self.config['admin_user']} DJANGO_SUPERUSER_EMAIL={self.config['admin_email']} DJANGO_SUPERUSER_PASSWORD={self.config['admin_password']}"
+        
+        try:
+            # Use Django's built-in command which is more robust
+            self.run_command(f"cd {backend_dir} && {env_vars} ./venv/bin/python manage.py createsuperuser --noinput")
+            self.log("Admin user created successfully using Django management command", 'SUCCESS')
+            
+            # Create user profile for the admin user
+            self.log("Creating user profile for admin user...")
+            
+            # Execute the profile script using Django's shell
+            profile_command = f"from django.contrib.auth.models import User; from apps.core.models import UserProfile; user = User.objects.get(username='{self.config['admin_user']}'); profile, created = UserProfile.objects.get_or_create(user=user); print('User profile created successfully' if created else 'User profile already exists')"
+            
+            self.run_command(f'cd {backend_dir} && ./venv/bin/python manage.py shell -c "{profile_command}"')
+            
+        except Exception as e:
+            self.log(f"Django management command failed: {e}", 'WARNING')
+            # Fallback to custom script method
+            self.log("Falling back to custom admin creation script...", 'WARNING')
+            
+            create_user_script = f"""from django.contrib.auth.models import User
 from apps.core.models import UserProfile
 
 # Create superuser
@@ -613,112 +639,118 @@ if not User.objects.filter(username='{self.config['admin_user']}').exists():
 else:
     print('Admin user already exists')
 """
-        
-        # More robust cleanup of any existing create_admin.py files
-        admin_script_path = f"{backend_dir}/create_admin.py"
-        self.log(f"Ensuring clean state for admin script creation...")
-        
-        # Remove any existing create_admin.py files in multiple locations
-        possible_locations = [
-            f"{backend_dir}/create_admin.py",
-            f"{self.config['project_dir']}/create_admin.py",
-            f"{backend_dir}/apps/create_admin.py",
-            f"{self.config['project_dir']}/backend/create_admin.py"
-        ]
-        
-        for location in possible_locations:
+            
+            # More robust cleanup of any existing create_admin.py files
+            admin_script_path = f"{backend_dir}/create_admin.py"
+            self.log(f"Ensuring clean state for admin script creation...")
+            
+            # Comprehensive cleanup - remove all potential admin script files
+            cleanup_patterns = [
+                f"{backend_dir}/create_admin*.py",
+                f"{self.config['project_dir']}/create_admin*.py", 
+                f"{backend_dir}/apps/create_admin*.py",
+                f"{self.config['project_dir']}/backend/create_admin*.py"
+            ]
+            
+            for pattern in cleanup_patterns:
+                self.run_command(f"rm -f {pattern}", check=False)
+                self.log(f"Cleaned up files matching: {pattern}")
+            
+            # Search for and remove any files with wrong imports
+            self.log("Comprehensive search for files with incorrect imports...")
             try:
-                self.run_command(f"rm -f {location}", check=False)
-                self.log(f"Cleaned up potential admin script at: {location}")
-            except:
-                pass
-        
-        # Also search for and remove any files with the wrong import
-        self.log("Searching for and removing any files with incorrect user_profiles imports...")
-        try:
-            result = self.run_command(f"find {self.config['project_dir']} -name '*.py' -type f -exec grep -l 'from apps.user_profiles' {{}} \\; 2>/dev/null || true", capture_output=True, check=False)
-            if result and result.strip():
-                files_with_wrong_import = result.strip().split('\n')
-                for file_path in files_with_wrong_import:
-                    if file_path and 'create_admin' in file_path:
-                        self.log(f"Found and removing file with wrong import: {file_path}")
-                        self.run_command(f"rm -f {file_path}", check=False)
-        except:
-            pass
-        
-        # Create new admin script with correct imports
-        self.log("Creating new admin script...")
-        
-        # Ensure the directory exists and is writable
-        self.run_command(f"mkdir -p {os.path.dirname(admin_script_path)}")
-        self.run_command(f"touch {admin_script_path}")
-        self.run_command(f"chmod 644 {admin_script_path}")
-        
-        # Write the script content
-        try:
-            with open(admin_script_path, 'w', encoding='utf-8') as f:
-                f.write(create_user_script)
-                f.flush()
-                os.fsync(f.fileno())  # Force write to disk
-        except Exception as e:
-            self.log(f"Failed to write admin script: {e}", 'ERROR')
-            raise
-        
-        # Verify the script was created correctly
-        self.log("Verifying admin script content...")
-        try:
-            # Wait a moment for file system to sync
-            import time
-            time.sleep(1)
+                # Search for any Python files containing the wrong import
+                result = self.run_command(f"find {self.config['project_dir']} -name '*.py' -type f -exec grep -l 'from apps.user_profiles' {{}} \\; 2>/dev/null || true", capture_output=True, check=False)
+                if result and result.strip():
+                    files_with_wrong_import = result.strip().split('\n')
+                    for file_path in files_with_wrong_import:
+                        if file_path and file_path.strip():
+                            self.log(f"Found file with wrong import: {file_path}")
+                            # Only remove if it's likely a temporary script file
+                            if any(keyword in file_path.lower() for keyword in ['create_admin', 'admin_script', 'temp', 'tmp']):
+                                self.log(f"Removing file with wrong import: {file_path}")
+                                self.run_command(f"rm -f '{file_path}'", check=False)
+            except Exception as cleanup_error:
+                self.log(f"Cleanup search failed: {cleanup_error}", 'WARNING')
             
-            with open(admin_script_path, 'r', encoding='utf-8') as f:
-                script_content = f.read()
+            # Create the admin script with enhanced validation
+            self.log("Creating admin script with enhanced validation...")
             
-            self.log(f"Admin script content ({len(script_content)} chars):")
-            for i, line in enumerate(script_content.split('\n'), 1):
-                self.log(f"  Line {i}: {repr(line)}")
+            # Ensure clean environment
+            self.run_command(f"mkdir -p {os.path.dirname(admin_script_path)}")
             
-            if "apps.core.models import UserProfile" not in script_content:
-                self.log("ERROR: Admin script missing correct import!", 'ERROR')
-                raise Exception("Admin script creation failed - missing correct import")
+            # Create the script with validation
+            try:
+                with open(admin_script_path, 'w', encoding='utf-8') as f:
+                    f.write(create_user_script)
+                    f.flush()
+                    os.fsync(f.fileno())  # Force write to disk
                 
-            if "apps.user_profiles" in script_content:
-                self.log("ERROR: Admin script contains incorrect user_profiles import!", 'ERROR')
-                raise Exception("Admin script creation failed - incorrect import detected")
-            
-            if len(script_content.strip()) < 100:
-                self.log("ERROR: Admin script appears to be empty or too short!", 'ERROR')
-                raise Exception("Admin script creation failed - content too short")
+                # Immediate verification
+                with open(admin_script_path, 'r', encoding='utf-8') as f:
+                    verification_content = f.read()
                 
-            self.log("Admin script verification passed", 'SUCCESS')
-            
-        except Exception as e:
-            self.log(f"Failed to verify admin script: {e}", 'ERROR')
-            # Show file system state for debugging
-            try:
-                ls_result = self.run_command(f"ls -la {backend_dir}/create_admin.py", capture_output=True, check=False)
-                self.log(f"File info: {ls_result}")
-                cat_result = self.run_command(f"cat {backend_dir}/create_admin.py", capture_output=True, check=False)
-                self.log(f"File content: {cat_result}")
-            except:
-                pass
-            raise
-        
-        # Execute the admin script
-        self.log("Executing admin user creation script...")
-        try:
-            self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py shell < create_admin.py")
-        except Exception as e:
-            self.log(f"Admin script execution failed: {e}", 'ERROR')
-            # Try alternative execution method as fallback
-            self.log("Trying alternative execution method...")
-            try:
-                # Execute using python -c instead of shell redirection
-                escaped_script = create_user_script.replace('"', '\\"').replace('\n', '\\n')
-                self.run_command(f'cd {backend_dir} && ./venv/bin/python -c "import django; django.setup(); exec(\\"{escaped_script}\\")"')
-                self.log("Alternative execution method succeeded", 'SUCCESS')
-            except Exception as e2:
-                self.log(f"Alternative execution also failed: {e2}", 'ERROR')
+                # Strict validation
+                if "from apps.core.models import UserProfile" not in verification_content:
+                    raise Exception("Admin script missing correct import after creation")
+                
+                if "apps.user_profiles" in verification_content:
+                    raise Exception("Admin script contains incorrect user_profiles import after creation")
+                
+                if len(verification_content.strip()) < 100:
+                    raise Exception("Admin script appears to be empty or truncated after creation")
+                
+                self.log("Admin script created and verified successfully", 'SUCCESS')
+                
+                # Execute the script with enhanced error handling
+                self.log("Executing admin user creation script...")
+                try:
+                    # Method 1: Shell redirection
+                    self.run_command(f"cd {backend_dir} && ./venv/bin/python manage.py shell < create_admin.py")
+                    self.log("Admin script executed successfully via shell redirection", 'SUCCESS')
+                except Exception as shell_error:
+                    self.log(f"Shell redirection method failed: {shell_error}", 'WARNING')
+                    # Method 2: Python execution
+                    try:
+                        self.log("Trying direct Python execution method...")
+                        self.run_command(f"cd {backend_dir} && ./venv/bin/python create_admin.py")
+                        self.log("Alternative Python execution method succeeded", 'SUCCESS')
+                    except Exception as python_error:
+                        self.log(f"Python execution method failed: {python_error}", 'WARNING')
+                        # Method 3: Inline execution
+                        try:
+                            self.log("Trying inline execution method...")
+                            # Read the script content and execute it directly
+                            with open(admin_script_path, 'r') as f:
+                                script_content = f.read()
+                            
+                            # Escape for shell execution
+                            import shlex
+                            escaped_script = script_content.replace('"', '\\"').replace('\n', '\\n').replace("'", "\\'")
+                            cmd = f'cd {backend_dir} && ./venv/bin/python -c "import os; import django; os.environ.setdefault(\\"DJANGO_SETTINGS_MODULE\\", \\"projectmeats.settings\\"); django.setup(); exec(\\"{escaped_script}\\")"'
+                            
+                            self.run_command(cmd)
+                            self.log("Inline execution method succeeded", 'SUCCESS')
+                        except Exception as inline_error:
+                            self.log(f"All admin creation methods failed: {inline_error}", 'ERROR')
+                            raise
+                
+                # Clean up the script after successful execution
+                self.run_command(f"rm -f {admin_script_path}", check=False)
+                
+            except Exception as script_error:
+                self.log(f"Failed to create or execute admin script: {script_error}", 'ERROR')
+                # Show debugging information
+                try:
+                    self.log("Debug information:")
+                    ls_result = self.run_command(f"ls -la {backend_dir}/", capture_output=True, check=False)
+                    self.log(f"Backend directory listing: {ls_result}")
+                    if os.path.exists(admin_script_path):
+                        with open(admin_script_path, 'r') as f:
+                            content = f.read()
+                        self.log(f"Script content: {content}")
+                except:
+                    pass
                 raise
         
         # Collect static files
