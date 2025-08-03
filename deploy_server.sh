@@ -48,25 +48,88 @@ log_info "  Database: SQLITE"
 log_info "Updating system packages..."
 apt update && apt upgrade -y
 
-# Install required packages (excluding nodejs for now)
+# Install system dependencies (excluding nodejs for now)
 log_info "Installing system dependencies..."
 apt install -y python3 python3-pip python3-venv nginx git curl ufw fail2ban
 
-# Remove existing Node.js packages that might conflict
+# Comprehensive Node.js cleanup
 log_info "Removing conflicting Node.js packages..."
-apt remove -y nodejs npm libnode-dev libnode72 || true
-apt autoremove -y || true
+# Stop any running Node.js processes
+pkill -f node || true
 
-# Install Node.js 18 LTS from NodeSource
-log_info "Installing Node.js 18 LTS..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Remove all Node.js related packages
+apt remove -y nodejs npm libnode-dev libnode72 libnode108 nodejs-doc || true
+apt purge -y nodejs npm libnode-dev libnode72 libnode108 nodejs-doc || true
+
+# Remove any manually installed Node.js
+rm -rf /usr/local/bin/node /usr/local/bin/npm /usr/local/lib/node_modules || true
+rm -rf /usr/bin/node /usr/bin/npm || true
+
+# Clean package cache and dependencies
+apt autoremove -y
+apt autoclean
+apt clean
+
+# Update package database
 apt update
-apt install -y nodejs
+
+# Install Node.js 18 LTS from NodeSource with better error handling
+log_info "Installing Node.js 18 LTS..."
+# Download and install NodeSource setup script
+if curl -fsSL https://deb.nodesource.com/setup_18.x -o /tmp/nodesource_setup.sh; then
+    log_info "NodeSource setup script downloaded successfully"
+    chmod +x /tmp/nodesource_setup.sh
+    bash /tmp/nodesource_setup.sh
+    
+    # Update package list after adding NodeSource repository
+    apt update
+    
+    # Install Node.js with error handling
+    if ! apt install -y nodejs; then
+        log_error "Failed to install Node.js from NodeSource. Trying alternative method..."
+        
+        # Fallback: Install Node.js using snap
+        log_info "Attempting Node.js installation via snap..."
+        if command -v snap >/dev/null 2>&1; then
+            snap install node --classic
+        else
+            # Final fallback: Install from Ubuntu repositories
+            log_warning "Installing Node.js from Ubuntu repositories (may be older version)"
+            apt install -y nodejs npm
+        fi
+    fi
+else
+    log_error "Failed to download NodeSource setup script. Using fallback installation..."
+    # Fallback to Ubuntu repositories
+    apt install -y nodejs npm
+fi
+
+# Verify Node.js installation
+log_info "Verifying Node.js installation..."
+if command -v node >/dev/null 2>&1; then
+    NODE_VERSION=$(node --version)
+    log_success "Node.js installed successfully: $NODE_VERSION"
+else
+    log_error "Node.js installation failed"
+    exit 1
+fi
+
+if command -v npm >/dev/null 2>&1; then
+    NPM_VERSION=$(npm --version)
+    log_success "npm installed successfully: $NPM_VERSION"
+else
+    log_error "npm installation failed"
+    exit 1
+fi
 
 # Create application user
 log_info "Creating application user..."
 useradd -m -s /bin/bash projectmeats || true
 usermod -aG sudo projectmeats || true
+
+# Configure environment for projectmeats user
+log_info "Configuring environment for projectmeats user..."
+sudo -u projectmeats bash -c 'echo "export PATH=$PATH:/home/projectmeats/.npm-global/bin" >> /home/projectmeats/.bashrc'
 
 # Create application directories
 log_info "Creating application directories..."
@@ -145,8 +208,41 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 # Setup frontend
 log_info "Setting up React frontend..."
 cd /home/projectmeats/app/frontend
-sudo -u projectmeats npm install
-sudo -u projectmeats npm run build
+
+# Configure npm for projectmeats user to avoid permission issues
+log_info "Configuring npm for projectmeats user..."
+sudo -u projectmeats mkdir -p /home/projectmeats/.npm-global
+sudo -u projectmeats npm config set prefix '/home/projectmeats/.npm-global'
+
+# Ensure Node.js and npm are available in PATH for projectmeats user
+log_info "Verifying Node.js availability for projectmeats user..."
+sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-global/bin; node --version && npm --version'
+
+# Install frontend dependencies with error handling
+log_info "Installing frontend dependencies..."
+if ! sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-global/bin; npm install'; then
+    log_warning "npm install failed, trying with --legacy-peer-deps..."
+    if ! sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-global/bin; npm install --legacy-peer-deps'; then
+        log_warning "npm install still failing, trying cache clean..."
+        sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-global/bin; npm cache clean --force'
+        sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-global/bin; npm install --legacy-peer-deps'
+    fi
+fi
+
+# Build frontend application
+log_info "Building React frontend application..."
+if ! sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-global/bin; npm run build'; then
+    log_error "Frontend build failed. Checking Node.js and npm versions..."
+    echo "Node.js version: $(node --version)"
+    echo "npm version: $(npm --version)"
+    echo "projectmeats user Node.js: $(sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-global/bin; node --version' 2>/dev/null || echo 'not available')"
+    echo "projectmeats user npm: $(sudo -u projectmeats bash -c 'export PATH=$PATH:/home/projectmeats/.npm-global/bin; npm --version' 2>/dev/null || echo 'not available')"
+    echo "Current directory: $(pwd)"
+    echo "package.json exists: $(test -f package.json && echo 'yes' || echo 'no')"
+    exit 1
+fi
+
+log_success "Frontend build completed successfully"
 
 # Create Gunicorn configuration
 log_info "Creating Gunicorn configuration..."
