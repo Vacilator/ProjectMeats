@@ -1,59 +1,44 @@
 # ProjectMeats
 
-A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
+A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack.
 
-## 🚨 Server Configuration Issues?
+## 🚀 Quick Server Setup
 
-**Having deployment problems like missing directories, Node.js conflicts, or authentication errors?**
+**Having deployment issues? Two simple commands fix everything:**
 
-### 🎯 Emergency Server Fix (Run This First)
-
-If you're seeing errors like:
-- `cd: /home/projectmeats/setup: No such file or directory`
-- `sudo: ./deploy_server.sh: command not found`
-- `nodejs : Conflicts: npm`
-- `Authentication failed for 'https://github.com/...'`
-
-**Run this one-command fix:**
+### Step 1: Fix Server Configuration
 ```bash
-sudo ./server_emergency_fix.sh
+sudo ./fix_server.sh
 ```
 
-Or download and run directly:
+### Step 2: Deploy
 ```bash
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/install_fix.sh | sudo bash
+cd /home/projectmeats/setup && sudo ./deploy.sh
 ```
 
-### 🚀 Then Deploy (Choose One)
+**That's it!** Your server will be running at https://meatscentral.com
 
-After running the fix:
+### 🔑 Default Login
+- **Admin Panel**: https://meatscentral.com/admin/
+- **Username**: admin
+- **Password**: WATERMELON1219
 
-1. **No-Authentication Deployment (Recommended):**
-   ```bash
-   cd /home/projectmeats/setup && sudo ./deploy_no_git_auth.sh
-   ```
+## 🆘 Having Problems?
 
-2. **Fixed Original Script:**
-   ```bash
-   cd /home/projectmeats/setup && sudo ./deploy_server.sh
-   ```
+**Common Issues Fixed by `fix_server.sh`:**
+- ❌ Missing directories (`/home/projectmeats/setup: No such file or directory`)
+- ❌ Node.js conflicts (`nodejs : Conflicts: npm`)  
+- ❌ Missing deployment files (`./deploy_server.sh: command not found`)
+- ❌ Permission issues
 
-3. **Interactive Setup:**
-   ```bash
-   cd /home/projectmeats/setup && sudo ./deploy_production.py
-   ```
-
-📖 **Detailed fix guide:** [SERVER_FIX_README.md](SERVER_FIX_README.md)
-
-## ⚠️ Quick Fix: "Authentication credentials were not provided"
-
-**Having authentication issues?** Run this one command:
-
+**Quick Troubleshooting:**
 ```bash
-python setup_ai_assistant.py
-```
+# Check if fix worked
+sudo ./fix_server.sh
 
-This interactive wizard will configure everything needed including authentication, database, and AI features. See [QUICK_SETUP.md](QUICK_SETUP.md) for more details.
+# Check deployment status  
+cd /home/projectmeats/setup && sudo ./deploy.sh
+```
 
 ## 🏗️ Technology Stack
 
@@ -61,21 +46,17 @@ This interactive wizard will configure everything needed including authenticatio
 - **Frontend**: React 18.2.0 + TypeScript + Styled Components  
 - **Authentication**: Django User system with profile management
 - **API**: RESTful endpoints with OpenAPI documentation
-- **Testing**: 95+ comprehensive backend tests
 
 ## 📁 Project Structure
 
 ```
 ProjectMeats/
 ├── backend/                    # Django REST Framework API
-│   ├── apps/                  # Business entities (9 complete)
+│   ├── apps/                  # Business entities
 │   │   ├── accounts_receivables/  # Customer payments
 │   │   ├── suppliers/            # Supplier management
 │   │   ├── customers/            # Customer relationships
-│   │   ├── purchase_orders/      # Order processing
-│   │   ├── plants/              # Processing facilities
-│   │   ├── contacts/            # Contact management
-│   │   └── core/                # Shared utilities
+│   │   └── purchase_orders/      # Order processing
 │   └── requirements.txt
 ├── frontend/                   # React TypeScript application
 │   ├── src/
@@ -83,239 +64,56 @@ ProjectMeats/
 │   │   ├── screens/           # Main application screens
 │   │   └── services/         # API communication
 │   └── package.json
-├── docs/                      # Documentation
-└── powerapps_export/          # Original PowerApps solution
+└── docs/                      # Documentation
 ```
 
-## 🚀 Quick Setup
+## 🚀 Development Setup
 
-**Prerequisites**: Python 3.9+, Node.js 16+, Git
+**Prerequisites**: Python 3.9+, Node.js 16+
 
-### Option 1: Interactive AI Assistant Setup (Recommended)
 ```bash
 # Clone repository
 git clone https://github.com/Vacilator/ProjectMeats.git
 cd ProjectMeats
 
-# Run comprehensive AI assistant setup wizard
-python setup_ai_assistant.py
-```
-
-This guided setup will configure:
-- ✅ Backend authentication and database
-- ✅ AI provider credentials (OpenAI, Anthropic, Azure OpenAI)
-- ✅ Environment variables and secrets
-- ✅ Frontend integration
-- ✅ Database initialization
-
-### Option 2: Standard Setup
-```bash
-# Clone repository
-git clone https://github.com/Vacilator/ProjectMeats.git
-cd ProjectMeats
-
-# Full setup (backend + frontend)
+# Setup both backend and frontend
 python setup.py
 
-# Configure AI assistant separately
-python setup_ai_assistant.py
-```
-
-### Option 3: Platform-Specific Setup
-
-**Windows Users:**
-```cmd
-setup_windows.bat
-```
-
-**Linux/macOS:**
-```bash
-make setup
-# or
-./setup.sh
-```
-
-### Manual Setup (Advanced Users)
-```bash
-# Backend only
-python setup.py --backend
-
-# Frontend only  
-python setup.py --frontend
-
-# AI assistant only
-python setup.py --ai-only
-```
-
-## 🚀 Production Deployment
-
-### Quick Deployment (No Authentication Required)
-
-**Fastest method - works without GitHub authentication:**
-
-```bash
-# One-command production deployment
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash
-```
-
-### Alternative Deployment Methods
-
-**If you have GitHub authentication set up:**
-
-```bash
-# Traditional git clone method
-git clone https://github.com/Vacilator/ProjectMeats.git
-cd ProjectMeats
-sudo python3 deploy_production.py
-```
-
-**Having authentication issues?** See [DEPLOYMENT_AUTH_QUICKREF.md](DEPLOYMENT_AUTH_QUICKREF.md)
-
-### Deployment Verification
-
-Check if your system is ready for deployment:
-
-```bash
-# Download and run verification
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/verify_deployment_readiness.sh | bash
-
-# Or if you have the project locally
-./verify_deployment_readiness.sh
-```
-
-### Documentation
-
-- 📖 [Complete Production Guide](docs/production_deployment.md)
-- 🔐 [Authentication Solutions](docs/deployment_authentication_guide.md)  
-- ⚡ [Quick Setup Guide](docs/production_setup_guide.md)
-- 📋 [Quick Reference](DEPLOYMENT_AUTH_QUICKREF.md)
-
-## 🔧 Development
-
-### Start Development Servers
-```bash
-# Start both servers (Linux/macOS)
+# Start development servers
 make dev
-
-# Windows users - use separate terminals:
-# Terminal 1: cd backend && python manage.py runserver
-# Terminal 2: cd frontend && npm start
 ```
 
-### Access URLs
-- **Backend API**: http://localhost:8000
-- **Frontend**: http://localhost:3000  
-- **API Documentation**: http://localhost:8000/api/docs/
-- **Admin Panel**: http://localhost:8000/admin/
+## 📝 API Documentation
 
-### AI Assistant Features
-After running `python setup_ai_assistant.py`:
-- **Chat Interface**: Intelligent conversational AI for business operations
-- **Document Processing**: Upload and analyze purchase orders, invoices, contracts
-- **Entity Extraction**: Automatic data extraction and database integration
-- **Business Intelligence**: Natural language queries about your data
-
-### Default Credentials
-- **Username**: admin
-- **Password**: WATERMELON1219
-
-### Development Commands
-```bash
-make test          # Run all tests
-make migrate       # Run Django migrations
-make docs          # Generate API documentation
-make clean         # Clean build artifacts
-```
-
-## 📋 Migration Status
-
-**Completed Entities**:
-- ✅ **Accounts Receivables** - Customer payment tracking
-- ✅ **Suppliers** - Supplier management system  
-- ✅ **Customers** - Customer relationship management
-- ✅ **Purchase Orders** - Order processing workflow
-- ✅ **Plants** - Processing facility management
-- ✅ **Contacts** - Contact information system
-- ✅ **User Profiles** - Authentication and user management
-
-*See [docs/migration_mapping.md](docs/migration_mapping.md) for detailed PowerApps → Django field mappings.*
+- **Swagger UI**: http://localhost:8000/api/schema/swagger-ui/
+- **ReDoc**: http://localhost:8000/api/schema/redoc/
+- **OpenAPI Schema**: http://localhost:8000/api/schema/
 
 ## 🧪 Testing
 
 ```bash
-# Backend tests
+# Run all tests
+make test
+
+# Backend tests only
 cd backend && python manage.py test
 
-# Frontend tests  
+# Frontend tests only
 cd frontend && npm test
-
-# Full test suite
-make test
 ```
 
-**Test Status**: ✅ 95+ backend tests covering all business entities
+## 📋 Migration Status
 
-## 📚 Documentation
+This project migrates from PowerApps/Dataverse to Django + React. See `docs/migration_mapping.md` for detailed entity mapping and migration progress.
 
-### Quick Start Guides
-- **[QUICK_SETUP.md](QUICK_SETUP.md)** - Solve authentication issues in 5 minutes
-- **[AI Assistant Setup](docs/ai_assistant_setup.md)** - Complete AI configuration guide
-- **[Setup & Development Guide](docs/setup-and-development.md)** - Complete setup and development instructions
+## 🤝 Contributing
 
-### Technical Documentation  
-- **[API Reference](docs/api_reference.md)** - Complete API documentation  
-- **[Production Deployment](docs/production_deployment.md)** - Production deployment guide
-- **[Migration Mapping](docs/migration_mapping.md)** - PowerApps to Django mappings
-- **[Architecture Guide](docs/architecture.md)** - System architecture and design decisions
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 🚀 Performance & Production
+## 📄 License
 
-### Recent Optimizations ✅
-- **Database indexes**: Strategic indexes for improved query performance
-- **Query optimization**: Reduced N+1 queries with `select_related()`
-- **Code quality**: Automated formatting and linting
-- **Security review**: Comprehensive security assessment
-
-### Production Deployment
-
-ProjectMeats includes an **interactive production deployment system** with guided setup:
-
-```bash
-# Interactive production setup with server recommendations
-python deploy_production.py
-
-# Or quick server provider comparison
-python server_guide.py
-```
-
-**Features**:
-- 🎯 **Interactive console prompts** for all configuration values
-- 🌟 **Server provider recommendations** with cost comparisons
-- 🔧 **Automated configuration file generation**
-- 🚀 **One-command server deployment**
-- 🔒 **Security best practices** (SSL, firewall, fail2ban)
-- 📊 **Deployment verification** and health checks
-
-**Quick Setup**:
-1. Choose server provider (DigitalOcean, Linode, Vultr, AWS Lightsail)
-2. Run `python deploy_production.py` for guided configuration
-3. Upload and execute generated deployment script on server
-4. Access your production application with SSL/HTTPS
-
-See [docs/production_setup_guide.md](docs/production_setup_guide.md) for the simplified setup guide.
-
-## 👥 Contributing
-
-1. Follow the [Setup & Development Guide](docs/setup-and-development.md)
-2. Use existing patterns from implemented entities
-3. Add tests for new functionality
-4. Update documentation for changes
-
-**Code Standards**:
-- **Backend**: Django/DRF best practices, type hints, comprehensive tests
-- **Frontend**: React functional components with TypeScript
-- **Documentation**: Clear inline comments for PowerApps migrations
-
----
-
-**Need Help?** Check the [docs/](docs/) folder or create an issue for questions.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
