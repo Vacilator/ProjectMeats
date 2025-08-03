@@ -3,10 +3,11 @@ URL configuration for Core app.
 
 Provides API endpoints for user profiles and core functionality.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (UserProfileViewSet, auth_status_view, health_check_view, login_view,
+from .views import (UserProfileViewSet, auth_status_view, login_view,
                     logout_view, signup_view)
 
 # Create router and register viewsets

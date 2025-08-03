@@ -4,6 +4,7 @@ Core views for ProjectMeats.
 Base view classes that provide common functionality for all entities
 migrated from PowerApps/Dataverse.
 """
+
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import User
 from django_filters.rest_framework import DjangoFilterBackend
@@ -453,4 +454,7 @@ def auth_status_view(request):
 @permission_classes([permissions.AllowAny])
 def health_check_view(request):
     """Simple health check endpoint."""
-    return Response({"status": "healthy", "service": "ProjectMeats Backend"}, status=status.HTTP_200_OK)
+    return Response(
+        {"status": "healthy", "service": "ProjectMeats Backend"},
+        status=status.HTTP_200_OK,
+    )
