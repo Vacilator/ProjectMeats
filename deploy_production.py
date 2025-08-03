@@ -370,27 +370,47 @@ class ProductionDeployment:
         """Create the production environment file"""
         self.log("Creating production environment file...", "INFO")
         
-        env_content = self.generate_env_content()
-        env_file = self.backend_dir / ".env"
-        
-        # Backup existing .env if it exists
-        if env_file.exists():
-            backup_file = self.backend_dir / ".env.backup"
-            shutil.copy2(env_file, backup_file)
-            self.log(f"Backed up existing .env to .env.backup", "WARNING")
-        
-        # Write new environment file
-        with open(env_file, 'w', encoding='utf-8') as f:
-            f.write(env_content)
-        
-        self.log("✓ Environment file created successfully", "SUCCESS")
-        
-        # Create production config backup
-        config_backup = self.project_root / "production_config.json"
-        with open(config_backup, 'w', encoding='utf-8') as f:
-            json.dump(self.config, f, indent=2)
-        
-        self.log(f"✓ Configuration saved to production_config.json", "SUCCESS")
+        try:
+            env_content = self.generate_env_content()
+            env_file = self.backend_dir / ".env"
+            
+            # Ensure backend directory exists
+            self.backend_dir.mkdir(exist_ok=True)
+            
+            # Backup existing .env if it exists
+            if env_file.exists():
+                backup_file = self.backend_dir / ".env.backup"
+                shutil.copy2(env_file, backup_file)
+                self.log(f"Backed up existing .env to .env.backup", "WARNING")
+            
+            # Write new environment file
+            with open(env_file, 'w', encoding='utf-8') as f:
+                f.write(env_content)
+            
+            # Verify file was created
+            if env_file.exists():
+                self.log("✓ Environment file created successfully", "SUCCESS")
+            else:
+                self.log("❌ Failed to create environment file", "ERROR")
+                return False
+            
+            # Create production config backup
+            config_backup = self.project_root / "production_config.json"
+            with open(config_backup, 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, indent=2)
+            
+            # Verify config backup was created
+            if config_backup.exists():
+                self.log(f"✓ Configuration saved to production_config.json", "SUCCESS")
+            else:
+                self.log("❌ Failed to create production_config.json", "ERROR")
+                return False
+                
+            return True
+            
+        except Exception as e:
+            self.log(f"❌ Error creating environment file: {e}", "ERROR")
+            return False
     
     def generate_env_content(self):
         """Generate environment file content"""
@@ -524,41 +544,68 @@ class ProductionDeployment:
         """Create frontend environment file"""
         self.log("Creating frontend environment file...", "INFO")
         
-        protocol = 'https' if self.config.get('use_ssl') else 'http'
-        api_url = f"{protocol}://{self.config['domain']}/api/v1"
-        
-        env_content = [
-            "# ProjectMeats Frontend Production Configuration",
-            f"# Generated on: {__import__('datetime').datetime.now().isoformat()}",
-            "",
-            f"REACT_APP_API_BASE_URL={api_url}",
-            "REACT_APP_ENVIRONMENT=production",
-            f"REACT_APP_COMPANY_NAME={self.config.get('company_name', 'ProjectMeats')}",
-        ]
-        
-        frontend_env = self.frontend_dir / ".env.production"
-        with open(frontend_env, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(env_content) + '\n')
-        
-        self.log("✓ Frontend environment file created", "SUCCESS")
+        try:
+            protocol = 'https' if self.config.get('use_ssl') else 'http'
+            api_url = f"{protocol}://{self.config['domain']}/api/v1"
+            
+            env_content = [
+                "# ProjectMeats Frontend Production Configuration",
+                f"# Generated on: {__import__('datetime').datetime.now().isoformat()}",
+                "",
+                f"REACT_APP_API_BASE_URL={api_url}",
+                "REACT_APP_ENVIRONMENT=production",
+                f"REACT_APP_COMPANY_NAME={self.config.get('company_name', 'ProjectMeats')}",
+            ]
+            
+            # Ensure frontend directory exists
+            self.frontend_dir.mkdir(exist_ok=True)
+            
+            frontend_env = self.frontend_dir / ".env.production"
+            with open(frontend_env, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(env_content) + '\n')
+            
+            # Verify file was created
+            if frontend_env.exists():
+                self.log("✓ Frontend environment file created", "SUCCESS")
+                return True
+            else:
+                self.log("❌ Failed to create frontend environment file", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Error creating frontend environment file: {e}", "ERROR")
+            return False
     
     def create_deployment_scripts(self):
         """Create deployment and management scripts"""
         self.log("Creating deployment scripts...", "INFO")
         
-        # Create deployment script
-        deploy_script = self.create_server_deployment_script()
-        deploy_file = self.project_root / "deploy_server.sh"
-        
-        with open(deploy_file, 'w', encoding='utf-8') as f:
-            f.write(deploy_script)
-        
-        os.chmod(deploy_file, 0o755)
-        
-        # Create management scripts
-        self.create_management_scripts()
-        
-        self.log("✓ Deployment scripts created", "SUCCESS")
+        try:
+            # Create deployment script
+            deploy_script = self.create_server_deployment_script()
+            deploy_file = self.project_root / "deploy_server.sh"
+            
+            with open(deploy_file, 'w', encoding='utf-8') as f:
+                f.write(deploy_script)
+            
+            os.chmod(deploy_file, 0o755)
+            
+            # Verify deployment script was created
+            if not deploy_file.exists():
+                self.log("❌ Failed to create deploy_server.sh", "ERROR")
+                return False
+            
+            # Create management scripts
+            if not self.create_management_scripts():
+                self.log("❌ Failed to create management scripts", "ERROR")
+                return False
+            
+            self.log("✓ Deployment scripts created", "SUCCESS")
+            return True
+            
+        except Exception as e:
+            self.log(f"❌ Error creating deployment scripts: {e}", "ERROR")
+            return False
     
     def create_server_deployment_script(self):
         """Generate server deployment script"""
@@ -1092,11 +1139,12 @@ log_success "Deployment completed! 🚀"
     
     def create_management_scripts(self):
         """Create management and maintenance scripts"""
-        scripts_dir = self.project_root / "scripts"
-        scripts_dir.mkdir(exist_ok=True)
-        
-        # Create update script
-        update_script = """#!/bin/bash
+        try:
+            scripts_dir = self.project_root / "scripts"
+            scripts_dir.mkdir(exist_ok=True)
+            
+            # Create update script
+            update_script = """#!/bin/bash
 # ProjectMeats Update Script
 
 echo "🔄 Updating ProjectMeats..."
@@ -1122,13 +1170,14 @@ systemctl reload nginx
 
 echo "✅ Update completed!"
 """
-        
-        with open(scripts_dir / "update.sh", 'w', encoding='utf-8') as f:
-            f.write(update_script)
-        os.chmod(scripts_dir / "update.sh", 0o755)
-        
-        # Create status script
-        status_script = """#!/bin/bash
+            
+            update_file = scripts_dir / "update.sh"
+            with open(update_file, 'w', encoding='utf-8') as f:
+                f.write(update_script)
+            os.chmod(update_file, 0o755)
+            
+            # Create status script
+            status_script = """#!/bin/bash
 # ProjectMeats Status Check
 
 echo "📊 ProjectMeats System Status"
@@ -1141,16 +1190,6 @@ echo ""
 echo "🌐 Nginx Web Server:"
 systemctl status nginx --no-pager -l
 
-"""
-        
-        if self.config['database_type'] == 'postgresql':
-            status_script += """
-echo ""
-echo "🗄️  PostgreSQL Database:"
-systemctl status postgresql --no-pager -l
-"""
-
-        status_script += """
 echo ""
 echo "🔥 Firewall Status:"
 ufw status verbose
@@ -1171,12 +1210,23 @@ echo ""
 echo "📈 Application Logs (last 10 lines):"
 tail -10 /home/projectmeats/logs/gunicorn_error.log
 """
-        
-        with open(scripts_dir / "status.sh", 'w', encoding='utf-8') as f:
-            f.write(status_script)
-        os.chmod(scripts_dir / "status.sh", 0o755)
-        
-        self.log("✓ Management scripts created in scripts/ directory", "SUCCESS")
+            
+            status_file = scripts_dir / "status.sh"
+            with open(status_file, 'w', encoding='utf-8') as f:
+                f.write(status_script)
+            os.chmod(status_file, 0o755)
+            
+            # Verify files were created
+            if update_file.exists() and status_file.exists():
+                self.log("✓ Management scripts created in scripts/ directory", "SUCCESS")
+                return True
+            else:
+                self.log("❌ Failed to create management scripts", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Error creating management scripts: {e}", "ERROR")
+            return False
     
     def show_next_steps(self):
         """Display next steps for deployment"""
@@ -1234,9 +1284,17 @@ tail -10 /home/projectmeats/logs/gunicorn_error.log
                 return 1
             
             # Generate configuration files
-            self.create_environment_file()
-            self.create_frontend_env()
-            self.create_deployment_scripts()
+            if not self.create_environment_file():
+                self.log("Failed to create environment file. Deployment setup failed.", "ERROR")
+                return 1
+                
+            if not self.create_frontend_env():
+                self.log("Failed to create frontend environment file. Deployment setup failed.", "ERROR")
+                return 1
+                
+            if not self.create_deployment_scripts():
+                self.log("Failed to create deployment scripts. Deployment setup failed.", "ERROR")
+                return 1
             
             # Show next steps
             self.show_next_steps()
