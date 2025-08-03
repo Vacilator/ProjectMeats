@@ -1232,7 +1232,7 @@ def main():
     # Apply profile settings as defaults, command line args take precedence
     server = args.server or profile_settings.get('server')
     domain = args.domain or profile_settings.get('domain')
-    username = args.username if args.username != "root" else profile_settings.get('username', "root")
+    username = args.username or profile_settings.get('username', "root")
     key_file = args.key_file or profile_settings.get('key_file')
     
     try:
