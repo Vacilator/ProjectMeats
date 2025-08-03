@@ -161,15 +161,29 @@ sudo -u projectmeats ./venv/bin/python manage.py migrate
 sudo -u projectmeats ./venv/bin/python manage.py collectstatic --noinput
 
 # Create superuser
+
+# Prompt for admin password or generate one
+echo -ne "${YELLOW}Enter password for Django admin user (leave blank to generate a random password): ${NC}"
+read -s ADMIN_PASS
+echo ""
+if [ -z "$ADMIN_PASS" ]; then
+    ADMIN_PASS=$(openssl rand -base64 16)
+    echo -e "${GREEN}No password entered. Generated random password for admin:${NC} ${BOLD}$ADMIN_PASS${NC}"
+else
+    echo -e "${GREEN}Password entered for admin user.${NC}"
+fi
+
 sudo -u projectmeats ./venv/bin/python manage.py shell -c "
 from django.contrib.auth import get_user_model
 User = get_user_model()
+import os
+admin_pass = os.environ.get('ADMIN_PASS')
 if not User.objects.filter(username='admin').exists():
-    User.objects.create_superuser('admin', 'admin@meatscentral.com', 'WATERMELON1219')
+    User.objects.create_superuser('admin', 'admin@meatscentral.com', admin_pass)
     print('Admin user created')
 else:
     print('Admin user already exists')
-"
+" ADMIN_PASS="$ADMIN_PASS"
 
 # Setup frontend
 cd /home/projectmeats/app/frontend
