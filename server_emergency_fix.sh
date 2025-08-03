@@ -137,16 +137,18 @@ sudo -u projectmeats ./venv/bin/pip install --upgrade pip
 sudo -u projectmeats ./venv/bin/pip install -r requirements.txt
 sudo -u projectmeats ./venv/bin/pip install gunicorn psycopg2-binary
 
+# Generate a strong random password for the database user
+DB_PASSWORD=$(openssl rand -base64 32)
 # Setup database (PostgreSQL)
 sudo -u postgres createdb projectmeats_prod 2>/dev/null || true
-sudo -u postgres psql -c "CREATE USER projectmeats_user WITH PASSWORD 'secure_password_123';" 2>/dev/null || true
+sudo -u postgres psql -c "CREATE USER projectmeats_user WITH PASSWORD '${DB_PASSWORD}';" 2>/dev/null || true
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE projectmeats_prod TO projectmeats_user;" 2>/dev/null || true
 
 # Create Django environment file
-cat > .env << 'DJANGO_ENV'
+cat > .env << DJANGO_ENV
 DEBUG=False
 SECRET_KEY=django-insecure-prod-key-change-this-in-production-deployment
-DATABASE_URL=postgresql://projectmeats_user:secure_password_123@localhost:5432/projectmeats_prod
+DATABASE_URL=postgresql://projectmeats_user:${DB_PASSWORD}@localhost:5432/projectmeats_prod
 ALLOWED_HOSTS=meatscentral.com,www.meatscentral.com,localhost
 DJANGO_SETTINGS_MODULE=projectmeats.settings.production
 DJANGO_SECRET_KEY=django-insecure-prod-key-change-this-in-production-deployment
