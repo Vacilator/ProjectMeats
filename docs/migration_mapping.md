@@ -286,7 +286,7 @@ PowerApps Canvas App        →    React Frontend
 
 **PowerApps Entity**: N/A (New Django-native entity)  
 **Django Model**: `UserProfile`  
-**Django App**: `apps.user_profiles`
+**Django App**: `apps.core`
 
 #### Field Mappings
 
