@@ -798,7 +798,7 @@ class AIDeploymentOrchestrator:
             server_info = self.state.server_info
             domain = server_info.get('domain', server_info['hostname'])
             
-            print(f"\n{Colors.GREEN}🎉 Deployment Successful!{Colors.END}")
+            print(f"\n{Colors.GREEN}[SUCCESS] Deployment Successful!{Colors.END}")
             print(f"\n{Colors.BOLD}Access your application:{Colors.END}")
             print(f"  {Colors.CYAN}Website:{Colors.END} https://{domain}")
             print(f"  {Colors.CYAN}Admin Panel:{Colors.END} https://{domain}/admin/")

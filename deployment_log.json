@@ -5,3 +5,25 @@
 {"timestamp": "2025-08-03 10:31:00", "level": "WARNING", "message": "Error detected: Package repository needs update", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-03 10:31:00", "level": "WARNING", "message": "Error detected: Permission issues detected", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-03 10:31:00", "level": "WARNING", "message": "Error detected: Port conflicts detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "DEBUG", "message": "Executing: echo 'test'", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "DEBUG", "message": "[STDOUT] Command output line 1", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "DEBUG", "message": "[STDOUT] Command output line 2", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "WARNING", "message": "Error detected: Node.js package conflicts detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Test message", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "SUCCESS", "message": "Success message", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "ERROR", "message": "Error message", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Connecting to test.example.com as testuser...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "SUCCESS", "message": "Successfully connected to test.example.com", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:39:56", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_113956.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:41:36", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_114136.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 11:42:04", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_114204.log", "deployment_id": null, "step": null}
