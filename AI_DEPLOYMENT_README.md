@@ -1,5 +1,25 @@
 # AI-Driven Production Deployment System
 
+## 🚨 DEPLOYMENT ISSUE RESOLUTION
+
+**If your deployment shows "success" but the site isn't reachable**, the deployment likely failed during the application download step. This issue has been fixed with improved download validation and backup handling.
+
+### Quick Diagnosis
+```bash
+# Check what's actually on your server
+python diagnose_deployment_issue.py --server YOUR_SERVER_IP --domain YOUR_DOMAIN
+```
+
+### Quick Fix
+```bash
+# Re-run with the fixed deployment orchestrator
+python ai_deployment_orchestrator.py --interactive
+```
+
+**📖 Complete Analysis**: See [DEPLOYMENT_ISSUE_ANALYSIS.md](DEPLOYMENT_ISSUE_ANALYSIS.md) for full technical details.
+
+---
+
 ## 🎯 WHERE TO RUN: LOCAL MACHINE → REMOTE SERVER
 
 **Important**: All commands below run on your **LOCAL machine** (Windows/Linux/Mac). The deployment system automatically connects to and configures your **REMOTE server** via SSH.

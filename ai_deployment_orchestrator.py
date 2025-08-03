@@ -18,6 +18,7 @@ Features:
 - Real-time monitoring and response
 - State persistence and rollback capabilities
 - Comprehensive logging and reporting
+- GitHub PAT authentication support
 
 Usage:
     # Interactive setup and deployment
@@ -25,6 +26,9 @@ Usage:
     
     # Automated deployment with configuration
     python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --auto
+    
+    # With GitHub authentication (recommended for private repos)
+    python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --github-user=USERNAME --github-token=TOKEN
     
     # Test connection and validate server
     python ai_deployment_orchestrator.py --test-connection --server=myserver.com
@@ -175,6 +179,10 @@ class AIDeploymentOrchestrator:
                 "command_timeout": 300,
                 "auto_approve": False
             },
+            "github": {
+                "user": None,
+                "token": None
+            },
             "logging": {
                 "level": "INFO",
                 "max_log_files": 10,
@@ -212,6 +220,30 @@ class AIDeploymentOrchestrator:
                 json.dump(self.config, f, indent=2)
         except Exception as e:
             self.log(f"Error saving config: {e}", "ERROR")
+    
+    def setup_github_auth(self):
+        """Setup GitHub authentication for private repository access"""
+        # Check for environment variables first
+        github_user = os.environ.get('GITHUB_USER') or os.environ.get('GITHUB_USERNAME')
+        github_token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_PAT')
+        
+        if github_user and github_token:
+            self.config['github']['user'] = github_user
+            self.config['github']['token'] = github_token
+            self.log("GitHub authentication loaded from environment variables", "SUCCESS")
+            return True
+        
+        # Check if already configured in config file
+        if self.config['github'].get('user') and self.config['github'].get('token'):
+            self.log("GitHub authentication already configured", "SUCCESS")
+            return True
+        
+        self.log("GitHub authentication not configured", "WARNING")
+        self.log("For private repository access, set environment variables:", "INFO")
+        self.log("  export GITHUB_USER=your_username", "INFO")
+        self.log("  export GITHUB_TOKEN=your_personal_access_token", "INFO")
+        
+        return False
     
     def _setup_logging(self):
         """Setup comprehensive logging"""
@@ -895,19 +927,155 @@ class AIDeploymentOrchestrator:
         return True
     
     def deploy_download_application(self) -> bool:
-        """Download application"""
+        """Download application with proper validation and backup handling"""
         self.log("Downloading ProjectMeats...", "INFO")
         
-        commands = [
-            "mkdir -p /opt/projectmeats",
-            "cd /opt/projectmeats && git clone https://github.com/Vacilator/ProjectMeats.git . || curl -L https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip && unzip project.zip && mv ProjectMeats-main/* . && rm project.zip"
-        ]
+        project_dir = "/opt/projectmeats"
         
-        for cmd in commands:
-            exit_code, stdout, stderr = self.execute_command(cmd)
+        # Setup GitHub authentication
+        self.setup_github_auth()
+        
+        # Create project directory
+        exit_code, stdout, stderr = self.execute_command(f"mkdir -p {project_dir}")
+        if exit_code != 0:
+            self.log("Failed to create project directory", "ERROR")
+            return False
+        
+        # Check if directory already has content and handle it
+        exit_code, stdout, stderr = self.execute_command(f"ls -la {project_dir}")
+        if exit_code == 0 and stdout and len(stdout.strip().split('\n')) > 3:  # More than just . and ..
+            self.log("Project directory already contains files", "WARNING")
+            
+            # Create backup of existing content
+            backup_dir = f"{project_dir}_backup_{int(time.time())}"
+            self.log(f"Creating backup at {backup_dir}", "INFO")
+            exit_code, stdout, stderr = self.execute_command(f"mv {project_dir} {backup_dir}")
             if exit_code != 0:
+                self.log("Failed to backup existing directory", "ERROR")
+                return False
+            
+            # Recreate empty directory
+            exit_code, stdout, stderr = self.execute_command(f"mkdir -p {project_dir}")
+            if exit_code != 0:
+                self.log("Failed to recreate project directory", "ERROR")
                 return False
         
+        # Download from GitHub (multiple methods with validation)
+        project_downloaded = False
+        
+        # Method 1: Git clone with PAT authentication (if configured)
+        if self.config['github'].get('user') and self.config['github'].get('token'):
+            self.log("Attempting git clone with Personal Access Token...", "INFO")
+            try:
+                github_url = f"https://{self.config['github']['user']}:{self.config['github']['token']}@github.com/Vacilator/ProjectMeats.git"
+                exit_code, stdout, stderr = self.execute_command(
+                    f"cd {project_dir} && git clone {github_url} ."
+                )
+                if exit_code == 0:
+                    project_downloaded = True
+                    self.log("Successfully downloaded using PAT authentication", "SUCCESS")
+                else:
+                    self.log("PAT authentication failed, trying other methods...", "WARNING")
+            except Exception as e:
+                self.log(f"PAT authentication error: {e}", "WARNING")
+        
+        # Method 2: Basic git clone (public access)
+        if not project_downloaded:
+            self.log("Attempting git clone (public access)...", "INFO")
+            exit_code, stdout, stderr = self.execute_command(
+                f"cd {project_dir} && git clone https://github.com/Vacilator/ProjectMeats.git ."
+            )
+            if exit_code == 0:
+                project_downloaded = True
+                self.log("Successfully downloaded using git clone", "SUCCESS")
+        
+        # Method 3: Direct zip download with validation
+        if not project_downloaded:
+            self.log("Attempting direct zip download...", "INFO")
+            
+            # Download
+            exit_code, stdout, stderr = self.execute_command(
+                f"cd {project_dir} && curl -L https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip"
+            )
+            if exit_code == 0:
+                # Validate download size
+                exit_code, stdout, stderr = self.execute_command(
+                    f"stat -c%s {project_dir}/project.zip 2>/dev/null || echo 0"
+                )
+                if exit_code == 0 and stdout:
+                    zip_size = int(stdout.strip())
+                    if zip_size < 1000:  # Less than 1KB indicates error response
+                        self.log(f"Download failed - file too small ({zip_size} bytes)", "ERROR")
+                    else:
+                        # Check if it's actually a zip file
+                        exit_code, stdout, stderr = self.execute_command(
+                            f"cd {project_dir} && file project.zip"
+                        )
+                        if exit_code == 0 and "zip" in stdout.lower():
+                            # Extract
+                            exit_code, stdout, stderr = self.execute_command(
+                                f"cd {project_dir} && unzip -q project.zip && mv ProjectMeats-main/* . && mv ProjectMeats-main/.* . 2>/dev/null || true && rm -rf ProjectMeats-main project.zip"
+                            )
+                            if exit_code == 0:
+                                project_downloaded = True
+                                self.log("Successfully downloaded via direct zip download", "SUCCESS")
+                            else:
+                                self.log("Failed to extract zip file", "ERROR")
+                        else:
+                            self.log("Downloaded file is not a valid zip archive", "ERROR")
+                            # Clean up invalid file
+                            self.execute_command(f"rm -f {project_dir}/project.zip")
+        
+        # Method 4: Try tarball download as alternative
+        if not project_downloaded:
+            self.log("Attempting tarball download...", "INFO")
+            
+            # Download
+            exit_code, stdout, stderr = self.execute_command(
+                f"cd {project_dir} && curl -L https://github.com/Vacilator/ProjectMeats/archive/refs/heads/main.tar.gz -o project.tar.gz"
+            )
+            if exit_code == 0:
+                # Validate tarball size
+                exit_code, stdout, stderr = self.execute_command(
+                    f"stat -c%s {project_dir}/project.tar.gz 2>/dev/null || echo 0"
+                )
+                if exit_code == 0 and stdout:
+                    tar_size = int(stdout.strip())
+                    if tar_size < 1000:  # Less than 1KB indicates error response
+                        self.log(f"Tarball download failed - file too small ({tar_size} bytes)", "ERROR")
+                    else:
+                        # Check if it's actually a tar.gz file
+                        exit_code, stdout, stderr = self.execute_command(
+                            f"cd {project_dir} && file project.tar.gz"
+                        )
+                        if exit_code == 0 and "gzip compressed" in stdout.lower():
+                            # Extract
+                            exit_code, stdout, stderr = self.execute_command(
+                                f"cd {project_dir} && tar -xzf project.tar.gz && mv ProjectMeats-main/* . && mv ProjectMeats-main/.* . 2>/dev/null || true && rm -rf ProjectMeats-main project.tar.gz"
+                            )
+                            if exit_code == 0:
+                                project_downloaded = True
+                                self.log("Successfully downloaded via tarball", "SUCCESS")
+                            else:
+                                self.log("Failed to extract tarball", "ERROR")
+                        else:
+                            self.log("Downloaded file is not a valid gzip archive", "ERROR")
+                            # Clean up invalid file
+                            self.execute_command(f"rm -f {project_dir}/project.tar.gz")
+        
+        if not project_downloaded:
+            self.log("All download methods failed", "ERROR")
+            return False
+        
+        # Verify that essential files exist
+        exit_code, stdout, stderr = self.execute_command(
+            f"ls -la {project_dir}/backend {project_dir}/frontend {project_dir}/README.md"
+        )
+        if exit_code != 0:
+            self.log("Downloaded project appears incomplete - missing essential directories", "ERROR")
+            return False
+        
+        self.log("ProjectMeats application downloaded and validated successfully", "SUCCESS")
         return True
     
     def deploy_configure_backend(self) -> bool:
@@ -997,6 +1165,8 @@ def main():
     parser.add_argument("--username", default="root", help="SSH username")
     parser.add_argument("--key-file", help="SSH private key file")
     parser.add_argument("--password", help="SSH password")
+    parser.add_argument("--github-user", help="GitHub username for authentication")
+    parser.add_argument("--github-token", help="GitHub Personal Access Token")
     parser.add_argument("--auto-approve", action="store_true", help="Automatic deployment without prompts")
     parser.add_argument("--test-connection", action="store_true", help="Test server connection only")
     parser.add_argument("--resume", help="Resume deployment with given ID")
@@ -1006,6 +1176,12 @@ def main():
     
     # Initialize orchestrator
     orchestrator = AIDeploymentOrchestrator(args.config)
+    
+    # Set GitHub authentication if provided
+    if args.github_user and args.github_token:
+        orchestrator.config['github']['user'] = args.github_user
+        orchestrator.config['github']['token'] = args.github_token
+        orchestrator.log("GitHub authentication configured from command line", "SUCCESS")
     
     try:
         if args.resume:
