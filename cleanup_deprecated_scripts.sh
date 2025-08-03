@@ -103,7 +103,7 @@ python3 unified_deployment_tool.py --status
 See `UNIFIED_DEPLOYMENT_COMPLETE_GUIDE.md` for comprehensive documentation.
 
 ---
-**Archived on:** $(date)
+**Archived on:** $ARCHIVE_DATE
 **Replaced by:** Unified Deployment Tool v1.0
 EOF
 
