@@ -130,6 +130,17 @@ fi
 # Run master deployment with auto mode
 log_header "🚀 Starting automated deployment"
 python3 master_deploy.py --auto --domain="$DOMAIN"
+DEPLOY_EXIT_CODE=$?
+if [[ $DEPLOY_EXIT_CODE -ne 0 ]]; then
+    log_error "Deployment script (master_deploy.py) failed with exit code $DEPLOY_EXIT_CODE."
+    echo -e "${RED}Troubleshooting steps:${NC}"
+    echo -e "  1. Check the output above for error messages."
+    echo -e "  2. Ensure all dependencies are installed (Python3, pip, required Python packages)."
+    echo -e "  3. Try running the deployment script manually: ${YELLOW}python3 master_deploy.py --auto --domain=\"$DOMAIN\"${NC}"
+    echo -e "  4. Review the logs in the project directory for more details."
+    echo -e "  5. If the issue persists, please report it at: https://github.com/Vacilator/ProjectMeats/issues"
+    exit $DEPLOY_EXIT_CODE
+fi
 
 # Check if deployment was successful
 if systemctl is-active --quiet projectmeats && systemctl is-active --quiet nginx; then
