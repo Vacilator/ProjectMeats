@@ -2,18 +2,31 @@
 
 A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
-## 🚀 ONE-CLICK PRODUCTION DEPLOYMENT
+## 🚀 PRODUCTION DEPLOYMENT
 
-**Deploy ProjectMeats to production in minutes with one command:**
+**Clean Production Deployment:**
 
 ```bash
-# Fully automated deployment (Ubuntu 20.04+):
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_click_deploy.sh | sudo bash
+# Complete deployment process
+python production_deploy.py --full
+
+# Step-by-step deployment
+python production_deploy.py --setup    # Server setup
+python production_deploy.py --deploy   # Deploy application  
+python production_deploy.py --verify   # Verify deployment
 ```
 
-**Having Node.js conflicts?** Fix them first:
+**AI-Enhanced Deployment:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/fix_nodejs.sh | sudo bash
+# Use AI deployment orchestrator (enhanced with GitHub integration)
+python ai_deployment_orchestrator.py
+```
+
+**Repository Cleanup:**
+```bash
+# Clean redundant files before deployment
+python cleanup_redundancies.py --analyze
+python cleanup_redundancies.py --clean
 ```
 
 **📖 Complete deployment guide:** [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)
@@ -34,7 +47,7 @@ curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/fix_node
 - **API**: RESTful endpoints with OpenAPI documentation
 - **Testing**: 95+ comprehensive backend tests
 
-## 📁 Project Structure
+## 📁 Project Structure (Clean & Organized)
 
 ```
 ProjectMeats/
@@ -54,9 +67,31 @@ ProjectMeats/
 │   │   ├── screens/           # Main application screens
 │   │   └── services/         # API communication
 │   └── package.json
-├── docs/                      # Documentation
-└── powerapps_export/          # Original PowerApps solution
+├── deployment/                 # Deployment files (organized)
+│   ├── configs/               # Configuration files
+│   ├── docs/                 # Deployment documentation
+│   └── scripts/              # Deployment utilities
+├── docs/                      # Project documentation
+├── powerapps_export/          # Original PowerApps solution
+├── ai_deployment_orchestrator.py  # Main AI deployment orchestrator
+├── production_deploy.py       # Clean production deployment
+├── cleanup_redundancies.py    # Repository cleanup script
+└── setup.py                  # Cross-platform setup
 ```
+
+### 🧹 Repository Cleanup
+
+This repository has been cleaned and organized to remove:
+- ✅ 57+ redundant deployment scripts
+- ✅ Duplicate test files  
+- ✅ Overlapping documentation
+- ✅ Backup and temporary files
+- ✅ Multiple configuration variants
+
+**Key Scripts:**
+- `production_deploy.py` - Clean, consolidated production deployment
+- `cleanup_redundancies.py` - Identifies and removes redundancies
+- `ai_deployment_orchestrator.py` - Enhanced AI deployment orchestrator
 
 ## 🚀 Quick Setup
 

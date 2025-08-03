@@ -58,3 +58,8 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Cleanup and deployment files
+cleanup_analysis.json
+deployment_*.log
+deployment_state_*.json
