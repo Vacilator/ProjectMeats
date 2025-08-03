@@ -335,3 +335,12 @@
 {"timestamp": "2025-08-03 15:11:15", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_151115.log", "deployment_id": null, "step": null}
 
 {"timestamp": "2025-08-03 16:54:11", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_165411.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:23:57", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_202357.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:24:33", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_202433.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:25:19", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_202519.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:25:50", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_202550.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:25:50", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:25:50", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:27:41", "level": "INFO", "message": "Logging initialized - logs/deployment_20250803_202741.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:27:41", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-03 20:27:41", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
