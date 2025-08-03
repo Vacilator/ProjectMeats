@@ -221,6 +221,37 @@ class AIDeploymentOrchestrator:
         except Exception as e:
             self.log(f"Error saving config: {e}", "ERROR")
     
+    def load_profile(self, profile_name: str) -> Dict[str, str]:
+        """Load server profile from configuration"""
+        server_profiles = self.config.get('server_profiles', {})
+        
+        if profile_name not in server_profiles:
+            available_profiles = list(server_profiles.keys())
+            self.log(f"Profile '{profile_name}' not found in configuration", "ERROR")
+            if available_profiles:
+                self.log(f"Available profiles: {', '.join(available_profiles)}", "INFO")
+            else:
+                self.log("No server profiles configured", "INFO")
+            return {}
+        
+        profile = server_profiles[profile_name]
+        self.log(f"Loading profile '{profile_name}'", "INFO")
+        
+        # Extract relevant settings from profile
+        profile_settings = {}
+        if 'hostname' in profile:
+            profile_settings['server'] = profile['hostname']
+        if 'username' in profile:
+            profile_settings['username'] = profile['username']
+        if 'domain' in profile:
+            profile_settings['domain'] = profile['domain']
+        if 'key_file' in profile:
+            profile_settings['key_file'] = profile['key_file']
+        
+        self.log(f"Profile settings: {profile_settings}", "DEBUG")
+        return profile_settings
+    
+    
     def setup_github_auth(self):
         """Setup GitHub authentication for private repository access"""
         # Check for environment variables first
@@ -1484,6 +1515,20 @@ def main():
         orchestrator.config['github']['token'] = args.github_token
         orchestrator.log("GitHub authentication configured from command line", "SUCCESS")
     
+    # Load profile settings if specified
+    profile_settings = {}
+    if args.profile:
+        profile_settings = orchestrator.load_profile(args.profile)
+        if not profile_settings:
+            # Profile not found or error loading
+            return 1
+    
+    # Apply profile settings as defaults, command line args take precedence
+    server = args.server or profile_settings.get('server')
+    domain = args.domain or profile_settings.get('domain')
+    username = args.username or profile_settings.get('username', "root")
+    key_file = args.key_file or profile_settings.get('key_file')
+    
     try:
         if args.resume:
             if orchestrator.load_state(args.resume):
@@ -1495,14 +1540,14 @@ def main():
                 return 1
         
         elif args.test_connection:
-            if not args.server:
+            if not server:
                 orchestrator.log("Server hostname required for connection test", "ERROR")
                 return 1
             
             server_config = {
-                'hostname': args.server,
-                'username': args.username,
-                'key_file': args.key_file,
+                'hostname': server,
+                'username': username,
+                'key_file': key_file,
                 'password': args.password
             }
             
@@ -1521,12 +1566,15 @@ def main():
             
             # Get server details
             print(f"\n{Colors.BOLD}Server Configuration:{Colors.END}")
-            hostname = input(f"{Colors.YELLOW}Enter server hostname or IP:{Colors.END} ").strip()
+            if server:
+                hostname = input(f"{Colors.YELLOW}Enter server hostname or IP [{server}]:{Colors.END} ").strip() or server
+            else:
+                hostname = input(f"{Colors.YELLOW}Enter server hostname or IP:{Colors.END} ").strip()
             if not hostname:
                 orchestrator.log("Server hostname is required", "ERROR")
                 return 1
             
-            username = input(f"{Colors.YELLOW}Enter SSH username [{args.username}]:{Colors.END} ").strip() or args.username
+            username_input = input(f"{Colors.YELLOW}Enter SSH username [{username}]:{Colors.END} ").strip() or username
             
             print(f"\n{Colors.BOLD}Authentication Method:{Colors.END}")
             print("1. Password authentication")
@@ -1534,10 +1582,14 @@ def main():
             auth_method = input(f"{Colors.YELLOW}Choose authentication method (1 or 2):{Colors.END} ").strip()
             
             if auth_method == "2":
-                key_file = input(f"{Colors.YELLOW}Enter path to SSH private key:{Colors.END} ").strip()
-                if not key_file or not os.path.exists(key_file):
-                    orchestrator.log(f"SSH key file not found: {key_file}", "ERROR")
+                if key_file:
+                    key_file_input = input(f"{Colors.YELLOW}Enter path to SSH private key [{key_file}]:{Colors.END} ").strip() or key_file
+                else:
+                    key_file_input = input(f"{Colors.YELLOW}Enter path to SSH private key:{Colors.END} ").strip()
+                if not key_file_input or not os.path.exists(key_file_input):
+                    orchestrator.log(f"SSH key file not found: {key_file_input}", "ERROR")
                     return 1
+                key_file = key_file_input
                 password = None
             else:
                 print(f"{Colors.YELLOW}Enter SSH password for {username}@{hostname}:{Colors.END}")
@@ -1550,15 +1602,18 @@ def main():
                     password = input("Password (will be visible): ")
                 key_file = None
             
-            domain = input(f"{Colors.YELLOW}Enter domain name (optional):{Colors.END} ").strip()
-            if not domain:
-                domain = hostname  # Use hostname as fallback
+            if domain:
+                domain_input = input(f"{Colors.YELLOW}Enter domain name (optional) [{domain}]:{Colors.END} ").strip() or domain
+            else:
+                domain_input = input(f"{Colors.YELLOW}Enter domain name (optional):{Colors.END} ").strip()
+            if not domain_input:
+                domain_input = hostname  # Use hostname as fallback
             
             print(f"\n{Colors.BOLD}Configuration Summary:{Colors.END}")
             print(f"  Server: {hostname}")
-            print(f"  Username: {username}")
+            print(f"  Username: {username_input}")
             print(f"  Auth method: {'SSH Key' if key_file else 'Password'}")
-            print(f"  Domain: {domain}")
+            print(f"  Domain: {domain_input}")
             
             confirm = input(f"\n{Colors.YELLOW}Proceed with deployment? [Y/n]:{Colors.END} ").strip()
             if confirm.lower() in ['n', 'no']:
@@ -1567,19 +1622,22 @@ def main():
             
             server_config = {
                 'hostname': hostname,
-                'username': username,
+                'username': username_input,
                 'key_file': key_file,
                 'password': password,
-                'domain': domain
+                'domain': domain_input
             }
             
             # Store domain in config
-            orchestrator.config['domain'] = domain
+            orchestrator.config['domain'] = domain_input
             
             # Run deployment
             success = orchestrator.run_deployment(server_config)
             return 0 if success else 1
         
+
+        elif server:
+            # Direct deployment (either from --server or --profile)
         elif args.profile:
             # Use predefined server profile
             profiles = orchestrator.config.get('server_profiles', {})
@@ -1613,15 +1671,15 @@ def main():
         elif args.server:
             # Direct deployment
             server_config = {
-                'hostname': args.server,
-                'username': args.username,
-                'key_file': args.key_file,
+                'hostname': server,
+                'username': username,
+                'key_file': key_file,
                 'password': args.password,
-                'domain': args.domain
+                'domain': domain
             }
             
-            if args.domain:
-                orchestrator.config['domain'] = args.domain
+            if domain:
+                orchestrator.config['domain'] = domain
             
             success = orchestrator.run_deployment(server_config)
             return 0 if success else 1
