@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "description": "AI Deployment Configuration - Quick Start Template",
+  "ssh": {
+    "port": 22,
+    "timeout": 30,
+    "key_file": null
+  },
+  "deployment": {
+    "max_retries": 3,
+    "retry_delay": 5,
+    "command_timeout": 300,
+    "auto_recovery": true,
+    "backup_on_failure": true,
+    "enable_monitoring": true,
+    "log_level": "INFO"
+  },
+  "ai_features": {
+    "intelligent_error_detection": true,
+    "auto_fix_common_issues": true,
+    "learn_from_failures": true,
+    "optimization_suggestions": true,
+    "predictive_scaling": false
+  },
+  "server_profiles": {
+    "example": {
+      "hostname": "your-server.com",
+      "username": "root",
+      "domain": "your-domain.com",
+      "use_password": false,
+      "key_file": "~/.ssh/id_rsa",
+      "specs": {
+        "cpu_cores": "2",
+        "memory_gb": "4",
+        "storage_gb": "50"
+      }
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "max_files": 10,
+    "max_size": "50MB"
+  },
+  "_instructions": {
+    "setup": "1. Copy this file to ai_deployment_config.json",
+    "configure": "2. Update server_profiles with your server details",
+    "deploy": "3. Run: ./ai_deploy.sh --interactive or ./ai_deploy.sh --profile example",
+    "full_setup": "For full setup wizard, run: python setup_ai_deployment.py"
+  }
+}
