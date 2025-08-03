@@ -6,9 +6,29 @@ This is the **ONLY** deployment guide you need. All other deployment documents h
 
 ---
 
-## 🚀 Quick Start (2 Options)
+## 🚀 Quick Start (3 Options)
 
-### Option 1: Fully Automated (Recommended)
+### Option 1: AI-Driven Deployment (NEW - Recommended)
+```bash
+# On your local machine:
+git clone https://github.com/Vacilator/ProjectMeats.git
+cd ProjectMeats
+
+# Setup AI deployment system
+python setup_ai_deployment.py
+
+# Deploy with intelligent error handling and recovery
+./ai_deploy.sh --interactive
+```
+
+**This AI-powered deployment provides:**
+- **Intelligent Error Detection**: Automatically detects and recovers from deployment issues
+- **Dynamic Terminal Session Management**: Handles interactive prompts and real-time monitoring
+- **Autonomous Error Recovery**: Fixes common problems without human intervention
+- **Resumable Deployments**: Continue from where you left off if something fails
+- **Comprehensive Monitoring**: Real-time progress tracking and detailed logging
+
+### Option 2: Fully Automated (Classic)
 ```bash
 # On your production server (Ubuntu 20.04+):
 curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_click_deploy.sh | sudo bash
@@ -23,7 +43,7 @@ curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_clic
 - Start all services
 - Create admin user
 
-### Option 2: Upload and Deploy
+### Option 3: Upload and Deploy
 ```bash
 # 1. On your local machine:
 git clone https://github.com/Vacilator/ProjectMeats.git
