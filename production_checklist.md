@@ -14,6 +14,9 @@
 - [x] Django security settings reviewed
 - [x] Environment variables properly configured
 - [x] Debug mode disabled in production template
+- [x] HTTPS/SSL configuration enabled
+- [x] Security headers configured (HSTS, CSP, etc.)
+- [x] Secure cookie settings applied
 
 ### Performance Optimization
 - [x] Database indexes implemented (from previous optimization)
@@ -28,8 +31,10 @@
 - [ ] Update all production environment variables
 - [ ] Generate new SECRET_KEY for production
 - [ ] Configure database connection string
-- [ ] Set up SSL certificates
+- [ ] Set up SSL certificates (see HTTPS_SETUP.md)
 - [ ] Configure domain and ALLOWED_HOSTS
+- [ ] Enable HTTPS security settings (SSL_REDIRECT, secure cookies)
+- [ ] Update CORS and CSRF trusted origins for HTTPS
 
 ### 2. Database Setup
 - [ ] Create production PostgreSQL database
@@ -48,7 +53,17 @@
 - [ ] Update CORS_ALLOWED_ORIGINS with production URLs
 - [ ] Test frontend connects to backend API
 
-### 5. Security Configuration
+### 5. HTTPS/SSL Configuration
+- [ ] Generate or obtain SSL certificates (Let's Encrypt recommended)
+- [ ] Run: `./setup_ssl.sh yourdomain.com`
+- [ ] Update nginx configuration with domain name
+- [ ] Test HTTPS redirects work correctly
+- [ ] Verify security headers are present
+- [ ] Test SSL certificate validity
+- [ ] Configure certificate auto-renewal
+- [ ] Update frontend API URLs to use HTTPS
+
+### 6. Security Configuration
 - [ ] Enable HTTPS redirect
 - [ ] Configure security headers
 - [ ] Set up proper cookie security

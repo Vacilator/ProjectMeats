@@ -48,6 +48,21 @@ docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py createsuperuser --username admin --email admin@example.com
 ```
 
+**🔐 HTTPS/SSL Support**: ProjectMeats supports secure HTTPS connections:
+
+```bash
+# Quick HTTPS setup with self-signed certificate (development)
+./setup_ssl.sh localhost
+
+# Production HTTPS with Let's Encrypt
+./setup_ssl.sh yourdomain.com
+
+# Start with HTTPS enabled
+docker compose -f docker-compose.prod.yml up -d
+```
+
+See [HTTPS_SETUP.md](HTTPS_SETUP.md) for complete SSL configuration guide.
+
 **📖 Deployment guides:**
 - [One-Click Deployment Guide](PRODUCTION_DEPLOYMENT.md)
 - [Docker Compose Guide](DOCKER_COMPOSE_GUIDE.md)
