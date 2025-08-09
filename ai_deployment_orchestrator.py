@@ -58,6 +58,19 @@ from typing import Dict, List, Optional, Tuple, Any, Callable
 from dataclasses import dataclass, asdict
 from enum import Enum
 import argparse
+import getpass
+
+# Try to import Django's secret key generator, fallback to manual generation
+try:
+    from django.core.management.utils import get_random_secret_key
+    DJANGO_AVAILABLE = True
+except ImportError:
+    DJANGO_AVAILABLE = False
+    
+    def get_random_secret_key():
+        """Generate a Django-compatible secret key without Django dependency"""
+        chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(-_=+)'
+        return ''.join(secrets.choice(chars) for _ in range(50))
 
 # Import GitHub integration
 try:
@@ -110,6 +123,48 @@ class DeploymentState:
             self.warnings = []
         if self.start_time is None:
             self.start_time = datetime.now()
+
+
+@dataclass 
+class ProductionConfig:
+    """Production configuration settings collected from user"""
+    # Django Core
+    secret_key: str = ""
+    debug: bool = False
+    allowed_hosts: str = ""
+    
+    # Database
+    db_name: str = "projectmeats_prod"
+    db_user: str = "projectmeats_user" 
+    db_password: str = ""
+    db_host: str = "localhost"
+    db_port: str = "5432"
+    
+    # Domain & CORS
+    domain: str = ""
+    cors_origins: str = ""
+    
+    # Email (optional)
+    email_host: str = ""
+    email_port: str = "587"
+    email_user: str = ""
+    email_password: str = ""
+    email_use_tls: bool = True
+    
+    # Company Info
+    company_name: str = "ProjectMeats"
+    company_email: str = ""
+    company_phone: str = ""
+    company_address: str = ""
+    
+    # Security
+    enable_ssl: bool = True
+    
+    # File paths
+    media_root: str = "/opt/projectmeats/media"
+    static_root: str = "/opt/projectmeats/backend/staticfiles"
+    log_dir: str = "/opt/projectmeats/logs"
+    backup_dir: str = "/opt/projectmeats/backups"
 
 
 @dataclass
@@ -282,6 +337,7 @@ class AIDeploymentOrchestrator:
             ("setup_database", "Database configuration"),
             ("download_application", "Application download and setup"),
             ("run_deployment_scripts", "Run automated deployment scripts"),  # NEW: Run specialized deployment scripts
+            ("production_config_setup", "Production configuration and environment setup"),  # NEW: Production config collection
             ("configure_backend", "Backend configuration"),
             ("configure_frontend", "Frontend build and configuration"),
             ("setup_webserver", "Web server and SSL configuration"),
@@ -1719,8 +1775,8 @@ class AIDeploymentOrchestrator:
         return self.fix_nodejs_conflicts()
     
     def deploy_setup_database(self) -> bool:
-        """Setup database"""
-        self.log("Setting up database...", "INFO")
+        """Setup PostgreSQL database service (database creation handled in production_config_setup)"""
+        self.log("Setting up PostgreSQL database service...", "INFO")
         
         # Start and enable PostgreSQL
         commands = [
@@ -1734,34 +1790,15 @@ class AIDeploymentOrchestrator:
                 self.log(f"Database service command failed: {cmd}", "ERROR")
                 return False
         
-        # Create database and user with proper authentication
-        self.log("Creating ProjectMeats database and user...", "INFO")
-        
-        db_commands = [
-            "sudo -u postgres psql -c \"DROP DATABASE IF EXISTS projectmeats;\"",
-            "sudo -u postgres psql -c \"DROP USER IF EXISTS projectmeats;\"",
-            "sudo -u postgres psql -c \"CREATE DATABASE projectmeats;\"",
-            "sudo -u postgres psql -c \"CREATE USER projectmeats WITH PASSWORD 'projectmeats';\"",
-            "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE projectmeats TO projectmeats;\"",
-            "sudo -u postgres psql -c \"ALTER USER projectmeats CREATEDB;\""
-        ]
-        
-        for cmd in db_commands:
-            exit_code, stdout, stderr = self.execute_command(cmd)
-            if exit_code != 0:
-                self.log(f"Database command failed: {cmd}", "WARNING")
-                # Continue with other commands as some may fail if already exist
-        
-        # Verify database connection
-        exit_code, stdout, stderr = self.execute_command(
-            "sudo -u postgres psql -d projectmeats -c \"SELECT version();\""
-        )
+        # Verify PostgreSQL is running
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active postgresql")
         if exit_code == 0:
-            self.log("Database setup completed successfully", "SUCCESS")
+            self.log("PostgreSQL service is running successfully", "SUCCESS")
+            self.log("Database and user creation will be handled during production configuration", "INFO")
+            return True
         else:
-            self.log("Database verification failed", "WARNING")
-        
-        return True
+            self.log("PostgreSQL service failed to start", "ERROR")
+            return False
     
     def deploy_download_application(self) -> bool:
         """Download and setup ProjectMeats application with improved validation"""
@@ -2188,6 +2225,392 @@ class AIDeploymentOrchestrator:
             self.log("Continuing with manual deployment configuration steps...", "INFO")
             return True  # Continue with manual steps
     
+    def collect_production_config(self, domain: str = None) -> ProductionConfig:
+        """
+        Collect production configuration from user through interactive prompts
+        """
+        self.log("=== Production Configuration Setup ===", "INFO")
+        print(f"\n{Colors.CYAN}{'='*60}")
+        print(f"{Colors.CYAN}  ProjectMeats Production Configuration")
+        print(f"{Colors.CYAN}{'='*60}{Colors.END}\n")
+        
+        config = ProductionConfig()
+        
+        # Auto-generate secret key
+        self.log("Generating Django secret key...", "INFO")
+        config.secret_key = get_random_secret_key()
+        print(f"{Colors.GREEN}✓ Django secret key generated automatically{Colors.END}")
+        
+        # Domain configuration
+        if domain:
+            config.domain = domain
+            config.allowed_hosts = f"{domain},www.{domain}"
+            config.cors_origins = f"https://{domain},https://www.{domain}"
+            print(f"{Colors.GREEN}✓ Domain configured: {domain}{Colors.END}")
+        else:
+            print(f"\n{Colors.YELLOW}Domain Configuration:{Colors.END}")
+            config.domain = input(f"Enter your domain name (e.g., example.com): ").strip()
+            if config.domain:
+                config.allowed_hosts = f"{config.domain},www.{config.domain}"
+                config.cors_origins = f"https://{config.domain},https://www.{config.domain}"
+        
+        # Database configuration
+        print(f"\n{Colors.YELLOW}Database Configuration:{Colors.END}")
+        print("Setting up PostgreSQL database configuration...")
+        
+        config.db_name = input(f"Database name [{config.db_name}]: ").strip() or config.db_name
+        config.db_user = input(f"Database username [{config.db_user}]: ").strip() or config.db_user
+        
+        while not config.db_password:
+            config.db_password = getpass.getpass("Database password (will be hidden): ").strip()
+            if not config.db_password:
+                print(f"{Colors.RED}Password cannot be empty. Please enter a secure password.{Colors.END}")
+        
+        print(f"{Colors.GREEN}✓ Database configuration collected{Colors.END}")
+        
+        # Company information
+        print(f"\n{Colors.YELLOW}Company Information (Optional):{Colors.END}")
+        config.company_name = input(f"Company name [{config.company_name}]: ").strip() or config.company_name
+        config.company_email = input("Company email (optional): ").strip()
+        config.company_phone = input("Company phone (optional): ").strip()
+        config.company_address = input("Company address (optional): ").strip()
+        
+        # Email configuration (optional)
+        print(f"\n{Colors.YELLOW}Email Configuration (Optional - can be configured later):{Colors.END}")
+        configure_email = input("Configure email settings now? (y/N): ").strip().lower()
+        
+        if configure_email in ['y', 'yes']:
+            config.email_host = input("SMTP host (e.g., smtp.gmail.com): ").strip()
+            if config.email_host:
+                config.email_port = input(f"SMTP port [{config.email_port}]: ").strip() or config.email_port
+                config.email_user = input("Email username: ").strip()
+                config.email_password = getpass.getpass("Email password (will be hidden): ").strip()
+                
+                use_tls = input("Use TLS encryption? (Y/n): ").strip().lower()
+                config.email_use_tls = use_tls not in ['n', 'no']
+                
+                print(f"{Colors.GREEN}✓ Email configuration collected{Colors.END}")
+        else:
+            print(f"{Colors.BLUE}Email configuration skipped - using console backend for now{Colors.END}")
+        
+        # SSL configuration
+        print(f"\n{Colors.YELLOW}Security Configuration:{Colors.END}")
+        enable_ssl = input("Enable SSL/HTTPS security settings? (Y/n): ").strip().lower()
+        config.enable_ssl = enable_ssl not in ['n', 'no']
+        
+        if config.enable_ssl:
+            print(f"{Colors.GREEN}✓ SSL/HTTPS security will be enabled{Colors.END}")
+        else:
+            print(f"{Colors.BLUE}SSL disabled - recommended only for development{Colors.END}")
+        
+        print(f"\n{Colors.GREEN}{'='*60}")
+        print(f"{Colors.GREEN}  Configuration Summary")
+        print(f"{Colors.GREEN}{'='*60}{Colors.END}")
+        print(f"Domain: {config.domain or 'Not specified'}")
+        print(f"Database: {config.db_name}")
+        print(f"Database User: {config.db_user}")
+        print(f"Company: {config.company_name}")
+        print(f"Email configured: {'Yes' if config.email_host else 'No'}")
+        print(f"SSL enabled: {'Yes' if config.enable_ssl else 'No'}")
+        print(f"{Colors.GREEN}{'='*60}{Colors.END}\n")
+        
+        return config
+    
+    def generate_production_env_file(self, config: ProductionConfig) -> str:
+        """
+        Generate .env file content from ProductionConfig
+        """
+        self.log("Generating production environment file...", "INFO")
+        
+        # Read the template file content
+        template_content = f"""# ProjectMeats Production Environment Configuration
+# Generated automatically by AI Deployment Orchestrator on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+# ==========================================
+# DJANGO CORE SETTINGS
+# ==========================================
+
+# Production settings
+DEBUG=False
+
+# Django secret key (auto-generated)
+SECRET_KEY={config.secret_key}
+
+# Allowed hosts
+ALLOWED_HOSTS={config.allowed_hosts}
+
+# ==========================================
+# DATABASE CONFIGURATION
+# ==========================================
+
+# PostgreSQL production database
+DATABASE_URL=postgresql://{config.db_user}:{config.db_password}@{config.db_host}:{config.db_port}/{config.db_name}
+
+# ==========================================
+# SECURITY SETTINGS
+# ==========================================
+"""
+        
+        if config.enable_ssl:
+            template_content += """
+# SSL/HTTPS Configuration
+SECURE_SSL_REDIRECT=True
+SECURE_HSTS_SECONDS=31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+SECURE_HSTS_PRELOAD=True
+
+# Security Headers
+SECURE_CONTENT_TYPE_NOSNIFF=True
+SECURE_BROWSER_XSS_FILTER=True
+SECURE_REFERRER_POLICY=strict-origin-when-cross-origin
+
+# Cookie Security
+SESSION_COOKIE_SECURE=True
+SESSION_COOKIE_HTTPONLY=True
+SESSION_COOKIE_SAMESITE=Strict
+CSRF_COOKIE_SECURE=True
+CSRF_COOKIE_HTTPONLY=True
+CSRF_COOKIE_SAMESITE=Strict
+"""
+        else:
+            template_content += """
+# SSL disabled for development
+SECURE_SSL_REDIRECT=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+"""
+        
+        template_content += f"""
+# ==========================================
+# CORS CONFIGURATION
+# ==========================================
+
+# Frontend domains
+CORS_ALLOWED_ORIGINS={config.cors_origins}
+
+# Additional CORS settings
+CORS_ALLOW_CREDENTIALS=True
+CORS_ALLOWED_HEADERS=accept,accept-encoding,authorization,content-type,dnt,origin,user-agent,x-csrftoken,x-requested-with
+
+# CSRF trusted origins
+CSRF_TRUSTED_ORIGINS={config.cors_origins}
+
+# ==========================================
+# FILE STORAGE
+# ==========================================
+
+# File storage paths
+MEDIA_ROOT={config.media_root}
+STATIC_ROOT={config.static_root}
+
+# ==========================================
+# EMAIL CONFIGURATION
+# ==========================================
+"""
+        
+        if config.email_host:
+            template_content += f"""
+# SMTP Email Configuration
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST={config.email_host}
+EMAIL_PORT={config.email_port}
+EMAIL_USE_TLS={str(config.email_use_tls).lower()}
+EMAIL_HOST_USER={config.email_user}
+EMAIL_HOST_PASSWORD={config.email_password}
+
+# Default from email
+DEFAULT_FROM_EMAIL={config.company_name} <{config.email_user}>
+SERVER_EMAIL={config.company_name} Server <{config.email_user}>
+"""
+        else:
+            template_content += """
+# Console email backend for development/testing
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+"""
+        
+        template_content += f"""
+# ==========================================
+# CACHE CONFIGURATION
+# ==========================================
+
+# Redis cache configuration (recommended for production)
+CACHE_URL=redis://localhost:6379/1
+
+# Session storage
+SESSION_ENGINE=django.contrib.sessions.backends.cache
+SESSION_CACHE_ALIAS=default
+
+# ==========================================
+# LOGGING CONFIGURATION
+# ==========================================
+
+# Logging level
+LOG_LEVEL=INFO
+
+# Log directory
+LOG_DIR={config.log_dir}
+
+# ==========================================
+# API CONFIGURATION
+# ==========================================
+
+# API version
+API_VERSION=v1
+
+# Rate limiting
+API_THROTTLE_RATE_ANON=100/hour
+API_THROTTLE_RATE_USER=1000/hour
+
+# ==========================================
+# BACKUP CONFIGURATION
+# ==========================================
+
+# Backup directory
+BACKUP_DIR={config.backup_dir}
+
+# Database backup retention (days)
+DB_BACKUP_RETENTION_DAYS=30
+
+# Full backup retention (days)
+FULL_BACKUP_RETENTION_DAYS=7
+
+# ==========================================
+# BUSINESS CONFIGURATION
+# ==========================================
+
+# Company Information
+COMPANY_NAME={config.company_name}
+COMPANY_EMAIL={config.company_email or 'info@' + (config.domain or 'example.com')}
+COMPANY_PHONE={config.company_phone}
+COMPANY_ADDRESS={config.company_address}
+
+# Time Zone
+TIME_ZONE=America/New_York
+
+# Default Currency
+DEFAULT_CURRENCY=USD
+
+# ==========================================
+# FEATURE FLAGS
+# ==========================================
+
+# Enable/disable features
+ENABLE_USER_REGISTRATION=False
+ENABLE_EMAIL_VERIFICATION=True
+ENABLE_TWO_FACTOR_AUTH=False
+ENABLE_API_DOCS=True
+
+# ==========================================
+# POWERAPPS MIGRATION
+# ==========================================
+
+# PowerApps Migration Mode
+POWERAPPS_MIGRATION_MODE=False
+"""
+        
+        return template_content
+    
+    def deploy_production_config_setup(self) -> bool:
+        """
+        Setup production configuration by collecting user input and generating environment files
+        """
+        try:
+            self.log("Setting up production configuration...", "INFO")
+            
+            # Get domain from server configuration
+            domain = self.state.server_info.get('domain') if self.state else None
+            
+            # Collect configuration from user
+            config = self.collect_production_config(domain)
+            
+            # Generate environment file
+            env_content = self.generate_production_env_file(config)
+            
+            # Create the environment file on the server
+            self.log("Creating production environment file on server...", "INFO")
+            
+            # Ensure the backend directory exists
+            exit_code, stdout, stderr = self.execute_command("mkdir -p /opt/projectmeats/backend")
+            if exit_code != 0:
+                self.log(f"Failed to create backend directory: {stderr}", "ERROR")
+                return False
+            
+            # Write the environment file
+            env_file_cmd = f"""cat > /opt/projectmeats/backend/.env << 'EOF'
+{env_content}
+EOF"""
+            
+            exit_code, stdout, stderr = self.execute_command(env_file_cmd)
+            if exit_code != 0:
+                self.log(f"Failed to create .env file: {stderr}", "ERROR")
+                return False
+            
+            # Set proper permissions
+            exit_code, stdout, stderr = self.execute_command("chmod 600 /opt/projectmeats/backend/.env")
+            if exit_code != 0:
+                self.log("Warning: Could not set secure permissions on .env file", "WARNING")
+            
+            self.log("✓ Production environment file created successfully", "SUCCESS")
+            
+            # Create database and user with the collected configuration
+            return self._setup_database_with_config(config)
+            
+        except Exception as e:
+            self.log(f"Error setting up production configuration: {e}", "ERROR")
+            return False
+    
+    def _setup_database_with_config(self, config: ProductionConfig) -> bool:
+        """Setup PostgreSQL database with user-provided configuration"""
+        try:
+            self.log(f"Setting up PostgreSQL database '{config.db_name}' with user '{config.db_user}'...", "INFO")
+            
+            # Create database user and database
+            db_setup_script = f"""
+sudo -u postgres psql << 'EOF'
+-- Create database user if not exists
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_user WHERE usename = '{config.db_user}') THEN
+        CREATE USER {config.db_user} WITH PASSWORD '{config.db_password}';
+    END IF;
+END
+$$;
+
+-- Create database if not exists
+SELECT 'CREATE DATABASE {config.db_name} OWNER {config.db_user};'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{config.db_name}');
+
+-- Grant permissions
+GRANT ALL PRIVILEGES ON DATABASE {config.db_name} TO {config.db_user};
+
+-- Exit psql
+\\q
+EOF
+"""
+            
+            exit_code, stdout, stderr = self.execute_command(db_setup_script)
+            if exit_code != 0:
+                self.log(f"Database setup failed: {stderr}", "ERROR")
+                return False
+            
+            # Test database connection
+            test_connection_cmd = f"""
+export PGPASSWORD='{config.db_password}'
+psql -h {config.db_host} -p {config.db_port} -U {config.db_user} -d {config.db_name} -c "SELECT version();"
+"""
+            
+            exit_code, stdout, stderr = self.execute_command(test_connection_cmd)
+            if exit_code == 0:
+                self.log("✓ Database connection test successful", "SUCCESS")
+                return True
+            else:
+                self.log(f"Database connection test failed: {stderr}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"Error setting up database: {e}", "ERROR")
+            return False
+
     def deploy_configure_backend(self) -> bool:
         """Configure backend"""
         self.log("Configuring backend...", "INFO")
@@ -2241,53 +2664,28 @@ class AIDeploymentOrchestrator:
                             continue
                 return False
         
-        # Create Django settings for production
-        self.log("Creating production Django settings...", "INFO")
-        production_settings = """
-import os
-from .settings import *
-
-# Production settings
-DEBUG = False
-ALLOWED_HOSTS = ['*']  # Configure properly in production
-
-# Database configuration
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'projectmeats',
-        'USER': 'projectmeats',
-        'PASSWORD': 'projectmeats',  # Should be secure in production
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
-
-# Static files configuration
-STATIC_URL = '/static/'
-STATIC_ROOT = '/opt/projectmeats/backend/staticfiles/'
-
-# Media files configuration
-MEDIA_URL = '/media/'
-MEDIA_ROOT = '/opt/projectmeats/backend/media/'
-
-# Security settings for production
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-"""
-        
-        exit_code, stdout, stderr = self.execute_command(
-            f"cat > /opt/projectmeats/backend/apps/settings/production.py << 'EOF'\n{production_settings}\nEOF"
-        )
+        # Verify .env file was created in production_config_setup step
+        self.log("Verifying production environment configuration...", "INFO")
+        exit_code, stdout, stderr = self.execute_command("test -f /opt/projectmeats/backend/.env")
         if exit_code != 0:
-            # Try alternative path structure
-            exit_code, stdout, stderr = self.execute_command(
-                f"mkdir -p /opt/projectmeats/backend/projectmeats && cat > /opt/projectmeats/backend/projectmeats/production_settings.py << 'EOF'\n{production_settings}\nEOF"
-            )
+            self.log("Production .env file not found - this should have been created in production_config_setup", "ERROR")
+            return False
         
-        # Set Django settings module
-        self.execute_command("export DJANGO_SETTINGS_MODULE=apps.settings.production")
+        self.log("✓ Production environment configuration found", "SUCCESS")
+        
+        # Verify that settings.py exists (should be from our PR fix)
+        exit_code, stdout, stderr = self.execute_command("test -f /opt/projectmeats/backend/apps/settings/settings.py")
+        if exit_code != 0:
+            self.log("settings.py file not found - deployment script may need updating", "ERROR")
+            return False
+        
+        # Set Django to use the smart settings.py that reads from .env
+        self.log("Configuring Django to use environment-based settings...", "INFO")
+        export_cmd = "echo 'export DJANGO_SETTINGS_MODULE=apps.settings.settings' >> /etc/environment"
+        self.execute_command(export_cmd)
+        
+        # Also set for current session
+        self.execute_command("export DJANGO_SETTINGS_MODULE=apps.settings.settings")
         
         # Run Django management commands
         django_commands = [
