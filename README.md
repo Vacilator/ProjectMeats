@@ -4,7 +4,25 @@ A comprehensive business management application for meat sales brokers, migrated
 
 ## 🚀 DEPLOYMENT OPTIONS
 
-### Option 1: One-Click Production Deployment
+### ⭐ NEW: Production Deployment Fix (Recommended)
+
+**Fixes deployment issues with missing static files and backend service problems:**
+
+```bash
+# Clone the repository and run the improved deployment script:
+git clone https://github.com/Vacilator/ProjectMeats.git
+cd ProjectMeats
+sudo ./production_deploy.sh
+```
+
+**This fixes common deployment issues:**
+- ✅ Django backend not running (uses gunicorn + systemd, not PM2)
+- ✅ Missing React static files (404 errors for `/static/js/main.*.js`, `/favicon.ico`)  
+- ✅ Proper Nginx configuration for frontend + backend integration
+- ✅ Complete React build process with all assets
+- ✅ Automated service management and monitoring
+
+### Option 1: One-Click Production Deployment (Legacy)
 
 **Deploy ProjectMeats to production in minutes with one command:**
 
