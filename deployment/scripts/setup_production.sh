@@ -58,9 +58,28 @@ apt-get install -y -qq python3-pip python3-venv postgresql postgresql-contrib ng
 # Set up Python virtual environment
 log_info "Setting up Python virtual environment..."
 cd $PROJECT_DIR
-python3 -m venv venv
+if [[ ! -d "venv" ]]; then
+    python3 -m venv venv
+fi
 source venv/bin/activate
+
+log_info "Installing Python dependencies..."
 pip install -r backend/requirements.txt
+
+# Verify critical dependencies are installed
+log_info "Verifying Django installation..."
+python -c "import django; print(f'Django {django.VERSION} installed successfully')" || {
+    log_error "Django installation failed"
+    exit 1
+}
+
+# Test Django settings can be imported
+log_info "Testing Django configuration..."
+cd backend
+export $(cat /etc/projectmeats/projectmeats.env | grep -v '^#' | xargs) 2>/dev/null || true
+python -c "import django; from django.conf import settings; django.setup(); print('Django configuration is valid')" || {
+    log_warning "Django configuration test failed - this may be resolved after environment setup"
+}
 
 # Set up PostgreSQL database
 log_info "Setting up PostgreSQL database..."
@@ -71,23 +90,50 @@ sudo -u postgres psql -c "ALTER USER $DB_USER CREATEDB;" 2>/dev/null || true
 
 # Set up environment file
 log_info "Setting up environment configuration..."
-if [[ ! -f $PROJECT_DIR/.env.production ]]; then
-    cp deployment/env.production.template $PROJECT_DIR/.env.production
+mkdir -p /etc/projectmeats
+
+if [[ ! -f /etc/projectmeats/projectmeats.env ]]; then
+    # Copy from deployment template
+    if [[ -f deployment/env.production.template ]]; then
+        cp deployment/env.production.template /etc/projectmeats/projectmeats.env
+    else
+        # Create basic environment file
+        cat > /etc/projectmeats/projectmeats.env << 'EOF'
+DJANGO_SETTINGS_MODULE=apps.settings.production
+DEBUG=False
+SECRET_KEY=temp-key-change-me
+ALLOWED_HOSTS=meatscentral.com,www.meatscentral.com,127.0.0.1,localhost
+DATABASE_URL=postgres://projectmeats_user:ProjectMeats2024!@localhost:5432/projectmeats_db
+CORS_ALLOWED_ORIGINS=https://meatscentral.com,https://www.meatscentral.com
+CSRF_TRUSTED_ORIGINS=https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com
+LOG_LEVEL=INFO
+EOF
+    fi
     
     # Generate a secret key
-    SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
-    sed -i "s/your-super-secret-key-change-this-in-production/$SECRET_KEY/" $PROJECT_DIR/.env.production
-    sed -i "s/your_db_password/ProjectMeats2024!/" $PROJECT_DIR/.env.production
+    SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())" 2>/dev/null || echo "django-insecure-$(openssl rand -hex 25)")
+    sed -i "s/your-super-secret-key-change-this-in-production/$SECRET_KEY/" /etc/projectmeats/projectmeats.env
+    sed -i "s/temp-key-change-me/$SECRET_KEY/" /etc/projectmeats/projectmeats.env
+    sed -i "s/your_db_password/ProjectMeats2024!/" /etc/projectmeats/projectmeats.env
     
-    log_warning "Environment file created at $PROJECT_DIR/.env.production"
+    # Set proper permissions
+    chown www-data:www-data /etc/projectmeats/projectmeats.env
+    chmod 640 /etc/projectmeats/projectmeats.env
+    
+    log_warning "Environment file created at /etc/projectmeats/projectmeats.env"
     log_warning "Please review and update the configuration values!"
+fi
+
+# Also create a backup copy in the project directory for reference
+if [[ ! -f $PROJECT_DIR/.env.production ]]; then
+    cp /etc/projectmeats/projectmeats.env $PROJECT_DIR/.env.production
 fi
 
 # Run Django setup
 log_info "Running Django migrations..."
 cd $PROJECT_DIR/backend
 source ../venv/bin/activate
-export $(cat ../.env.production | grep -v '^#' | xargs)
+export $(cat /etc/projectmeats/projectmeats.env | grep -v '^#' | xargs)
 python manage.py migrate
 python manage.py collectstatic --noinput
 
@@ -144,7 +190,7 @@ fi
 log_info "Creating Django admin user..."
 cd $PROJECT_DIR/backend
 source ../venv/bin/activate
-export $(cat ../.env.production | grep -v '^#' | xargs)
+export $(cat /etc/projectmeats/projectmeats.env | grep -v '^#' | xargs)
 echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'WATERMELON1219')" | python manage.py shell
 
 log_header "🎉 Deployment Complete!"
