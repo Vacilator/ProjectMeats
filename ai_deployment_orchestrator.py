@@ -2699,9 +2699,9 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_user WHERE usename = '{config.db_user}') THEN
         CREATE USER {config.db_user} WITH PASSWORD '{config.db_password}';
-        \\echo 'User {config.db_user} created successfully';
+        RAISE NOTICE 'User {config.db_user} created successfully';
     ELSE
-        \\echo 'User {config.db_user} already exists';
+        RAISE NOTICE 'User {config.db_user} already exists';
     END IF;
 END
 $$;
