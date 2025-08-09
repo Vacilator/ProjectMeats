@@ -429,7 +429,7 @@ class AIDeploymentOrchestrator:
             level=log_level,
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
-                logging.FileHandler(log_filename),
+                logging.FileHandler(log_filename, encoding='utf-8'),
                 logging.StreamHandler(sys.stdout)
             ],
             force=True  # Override any existing configuration
@@ -1109,7 +1109,7 @@ class AIDeploymentOrchestrator:
         self.state.domain_accessible = True
         self.save_state()
         
-        self.log("✓ All deployment verification checks passed", "SUCCESS", Colors.BOLD + Colors.GREEN)
+        self.log("OK All deployment verification checks passed", "SUCCESS", Colors.BOLD + Colors.GREEN)
         return True
     
     def _verify_services_health(self) -> bool:
@@ -1122,17 +1122,17 @@ class AIDeploymentOrchestrator:
         for service in required_services:
             exit_code, stdout, stderr = self.execute_command(f"systemctl is-active {service}")
             if exit_code != 0:
-                self.log(f"✗ Required service {service} is not running", "ERROR")
+                self.log(f"X Required service {service} is not running", "ERROR")
                 return False
             else:
-                self.log(f"✓ Service {service} is running", "SUCCESS")
+                self.log(f"OK Service {service} is running", "SUCCESS")
         
         for service in optional_services:
             exit_code, stdout, stderr = self.execute_command(f"systemctl is-active {service}")
             if exit_code != 0:
-                self.log(f"⚠ Optional service {service} is not running", "WARNING")
+                self.log(f"WARNING Optional service {service} is not running", "WARNING")
             else:
-                self.log(f"✓ Service {service} is running", "SUCCESS")
+                self.log(f"OK Service {service} is running", "SUCCESS")
         
         return True
     
@@ -1152,14 +1152,14 @@ class AIDeploymentOrchestrator:
         )
         
         if exit_code == 0 and "healthy" in stdout:
-            self.log(f"✓ Domain {domain} is accessible via HTTP", "SUCCESS")
+            self.log(f"OK Domain {domain} is accessible via HTTP", "SUCCESS")
             return True
         elif exit_code == 0 and "HTTP_ACCESS_FAILED" not in stdout:
             # Got a response but not the health endpoint
-            self.log(f"✓ Domain {domain} is responding (health endpoint may not be configured)", "SUCCESS")
+            self.log(f"OK Domain {domain} is responding (health endpoint may not be configured)", "SUCCESS")
             return True
         else:
-            self.log(f"✗ CRITICAL: Domain {domain} is NOT accessible externally", "CRITICAL")
+            self.log(f"X CRITICAL: Domain {domain} is NOT accessible externally", "CRITICAL")
             self.log("This means the deployment has not succeeded despite completing all steps", "CRITICAL")
             
             # Perform diagnostic checks
@@ -1173,18 +1173,18 @@ class AIDeploymentOrchestrator:
         # Test local nginx
         exit_code, stdout, stderr = self.execute_command("curl -f http://localhost/health")
         if exit_code != 0:
-            self.log("✗ Local nginx health check failed", "WARNING")
+            self.log("X Local nginx health check failed", "WARNING")
             return False
         else:
-            self.log("✓ Local nginx is responding", "SUCCESS")
+            self.log("OK Local nginx is responding", "SUCCESS")
         
         # Test if frontend files are served
         exit_code, stdout, stderr = self.execute_command("curl -I http://localhost/")
         if exit_code != 0:
-            self.log("✗ Frontend files not being served", "WARNING")
+            self.log("X Frontend files not being served", "WARNING")
             return False
         else:
-            self.log("✓ Frontend files are being served", "SUCCESS")
+            self.log("OK Frontend files are being served", "SUCCESS")
         
         return True
     
@@ -1195,10 +1195,10 @@ class AIDeploymentOrchestrator:
         # Check DNS resolution
         exit_code, stdout, stderr = self.execute_command(f"nslookup {domain}")
         if exit_code != 0:
-            self.log(f"✗ DNS resolution failed for {domain}", "ERROR")
+            self.log(f"X DNS resolution failed for {domain}", "ERROR")
             self.log("Possible causes: Domain not configured, DNS not propagated", "ERROR")
         else:
-            self.log(f"✓ DNS resolution works for {domain}", "INFO")
+            self.log(f"OK DNS resolution works for {domain}", "INFO")
             # Extract IP address from nslookup output
             lines = stdout.split('\n')
             for line in lines:
@@ -1210,16 +1210,16 @@ class AIDeploymentOrchestrator:
         # Check if nginx is listening on port 80
         exit_code, stdout, stderr = self.execute_command("netstat -tlnp | grep :80")
         if exit_code != 0:
-            self.log("✗ No process listening on port 80", "ERROR")
+            self.log("X No process listening on port 80", "ERROR")
         else:
-            self.log(f"✓ Port 80 is being used: {stdout.strip()}", "INFO")
+            self.log(f"OK Port 80 is being used: {stdout.strip()}", "INFO")
         
         # Check nginx configuration
         exit_code, stdout, stderr = self.execute_command(f"nginx -T | grep -A 10 'server_name {domain}'")
         if exit_code != 0:
-            self.log(f"✗ No nginx configuration found for {domain}", "ERROR")
+            self.log(f"X No nginx configuration found for {domain}", "ERROR")
         else:
-            self.log(f"✓ Nginx is configured for {domain}", "INFO")
+            self.log(f"OK Nginx is configured for {domain}", "INFO")
         
         # Check firewall
         exit_code, stdout, stderr = self.execute_command("ufw status")
@@ -1230,7 +1230,7 @@ class AIDeploymentOrchestrator:
         server_ip = self.state.server_info.get('hostname', 'unknown')
         self.log(f"Server IP: {server_ip}", "INFO")
         self.log("Suggested actions:", "INFO")
-        self.log(f"1. Verify DNS A record points {domain} → {server_ip}", "INFO")
+        self.log(f"1. Verify DNS A record points {domain} -> {server_ip}", "INFO")
         self.log(f"2. Test direct IP access: http://{server_ip}/health", "INFO")
         self.log(f"3. Check domain propagation: https://dnschecker.org/", "INFO")
         self.log(f"4. Verify firewall allows HTTP/HTTPS traffic", "INFO")
@@ -1279,15 +1279,15 @@ class AIDeploymentOrchestrator:
         # Show automated script usage information
         if hasattr(self.state, 'automated_script_used') and self.state.automated_script_used:
             print(f"{Colors.CYAN}Automated Script Used:{Colors.END} {self.state.automated_script_used}")
-            print(f"{Colors.GREEN}✓ Deployment leveraged specialized automation scripts{Colors.END}")
+            print(f"{Colors.GREEN}OK Deployment leveraged specialized automation scripts{Colors.END}")
         else:
             print(f"{Colors.CYAN}Deployment Method:{Colors.END} Manual step-by-step configuration")
         
         # Critical status indicators
         print(f"\n{Colors.BOLD}Critical Deployment Checks:{Colors.END}")
-        print(f"{Colors.CYAN}Services Healthy:{Colors.END} {'✓ YES' if self.state.services_healthy else '✗ NO'}")
-        print(f"{Colors.CYAN}Domain Accessible:{Colors.END} {'✓ YES' if self.state.domain_accessible else '✗ NO'}")
-        print(f"{Colors.CYAN}All Checks Passed:{Colors.END} {'✓ YES' if self.state.critical_checks_passed else '✗ NO'}")
+        print(f"{Colors.CYAN}Services Healthy:{Colors.END} {'OK YES' if self.state.services_healthy else 'X NO'}")
+        print(f"{Colors.CYAN}Domain Accessible:{Colors.END} {'OK YES' if self.state.domain_accessible else 'X NO'}")
+        print(f"{Colors.CYAN}All Checks Passed:{Colors.END} {'OK YES' if self.state.critical_checks_passed else 'X NO'}")
         
         if self.state.status == DeploymentStatus.SUCCESS and self.state.critical_checks_passed:
             server_info = self.state.server_info
@@ -1308,9 +1308,9 @@ class AIDeploymentOrchestrator:
             print(f"\n{Colors.YELLOW}[PARTIAL SUCCESS] Technical deployment completed but application not accessible{Colors.END}")
             print(f"\n{Colors.BOLD}Issues detected:{Colors.END}")
             if not self.state.services_healthy:
-                print(f"  {Colors.RED}✗ Services not healthy{Colors.END}")
+                print(f"  {Colors.RED}X Services not healthy{Colors.END}")
             if not self.state.domain_accessible:
-                print(f"  {Colors.RED}✗ Domain not accessible from internet{Colors.END}")
+                print(f"  {Colors.RED}X Domain not accessible from internet{Colors.END}")
             
             print(f"\n{Colors.BOLD}Troubleshooting needed:{Colors.END}")
             server_info = self.state.server_info
@@ -1338,9 +1338,9 @@ class AIDeploymentOrchestrator:
         
         # GitHub integration info
         if self.github_integration:
-            print(f"  GitHub integration: ✓ Enabled")
+            print(f"  GitHub integration: OK Enabled")
         else:
-            print(f"  GitHub integration: ✗ Disabled (set GITHUB_TOKEN to enable)")
+            print(f"  GitHub integration: X Disabled (set GITHUB_TOKEN to enable)")
         
         print(f"\n{Colors.BLUE}For support:{Colors.END}")
         print(f"  Documentation: https://github.com/Vacilator/ProjectMeats/blob/main/DEPLOYMENT_README.md")
@@ -1446,9 +1446,9 @@ class AIDeploymentOrchestrator:
         for test_name, test_command in connectivity_tests:
             exit_code, stdout, stderr = self.execute_command(test_command)
             if exit_code == 0:
-                self.log(f"✓ {test_name} connectivity: OK", "SUCCESS")
+                self.log(f"OK {test_name} connectivity: OK", "SUCCESS")
             else:
-                self.log(f"✗ {test_name} connectivity: FAILED", "WARNING")
+                self.log(f"X {test_name} connectivity: FAILED", "WARNING")
         
         return True
     
@@ -1834,9 +1834,9 @@ class AIDeploymentOrchestrator:
             exit_code, stdout, stderr = self.execute_command(cmd)
             if exit_code == 0:
                 dependencies_installed += 1
-                self.log(f"✓ {name} is available", "SUCCESS")
+                self.log(f"OK {name} is available", "SUCCESS")
             else:
-                self.log(f"✗ {name} not found", "INFO")
+                self.log(f"X {name} not found", "INFO")
         
         # Check if project files are already present
         project_exists = False
@@ -1845,9 +1845,9 @@ class AIDeploymentOrchestrator:
         )
         if exit_code == 0:
             project_exists = True
-            self.log("✓ Project files already exist", "SUCCESS")
+            self.log("OK Project files already exist", "SUCCESS")
         else:
-            self.log("✗ Project files not found", "INFO")
+            self.log("X Project files not found", "INFO")
         
         # Decision logic for which script to use
         if dependencies_installed >= (total_checks * 0.75) and project_exists:
@@ -1888,7 +1888,7 @@ class AIDeploymentOrchestrator:
             )
             
             if exit_code == 0:
-                self.log(f"✓ {script_name} script completed successfully", "SUCCESS", Colors.BOLD + Colors.GREEN)
+                self.log(f"OK {script_name} script completed successfully", "SUCCESS", Colors.BOLD + Colors.GREEN)
                 
                 # Parse script output for important information
                 if "Setup complete!" in stdout or "Deployment Complete!" in stdout:
@@ -1903,7 +1903,7 @@ class AIDeploymentOrchestrator:
                 
                 return True
             else:
-                self.log(f"✗ {script_name} script failed with exit code {exit_code}", "ERROR")
+                self.log(f"X {script_name} script failed with exit code {exit_code}", "ERROR")
                 
                 # Show error output for debugging
                 if stderr:
@@ -1941,7 +1941,7 @@ class AIDeploymentOrchestrator:
                 "systemctl is-active projectmeats && test -f /opt/projectmeats/backend/venv/bin/activate"
             )
             if exit_code == 0:
-                self.log("✓ Backend already configured and service running - skipping manual configuration", "SUCCESS")
+                self.log("OK Backend already configured and service running - skipping manual configuration", "SUCCESS")
                 return True
             else:
                 self.log("Backend not fully configured - continuing with manual setup", "INFO")
@@ -2074,7 +2074,7 @@ WantedBy=multi-user.target
                 "test -d /opt/projectmeats/frontend/build && test -f /opt/projectmeats/frontend/build/index.html"
             )
             if exit_code == 0:
-                self.log("✓ Frontend already built - skipping manual configuration", "SUCCESS")
+                self.log("OK Frontend already built - skipping manual configuration", "SUCCESS")
                 return True
             else:
                 self.log("Frontend not fully built - continuing with manual setup", "INFO")
@@ -2149,7 +2149,7 @@ WantedBy=multi-user.target
                 "test -f /etc/nginx/sites-enabled/projectmeats && systemctl is-active nginx"
             )
             if exit_code == 0:
-                self.log("✓ Web server already configured and running - skipping manual configuration", "SUCCESS")
+                self.log("OK Web server already configured and running - skipping manual configuration", "SUCCESS")
                 return True
             else:
                 self.log("Web server not fully configured - continuing with manual setup", "INFO")
@@ -2347,9 +2347,9 @@ server {{
                 f"curl -f -L --max-time 30 --connect-timeout 10 http://{domain}/health || echo 'EXTERNAL_ACCESS_FAILED'"
             )
             if exit_code == 0 and "healthy" in stdout:
-                self.log(f"✓ Domain {domain} is externally accessible via HTTP", "SUCCESS")
+                self.log(f"OK Domain {domain} is externally accessible via HTTP", "SUCCESS")
             else:
-                self.log(f"⚠ WARNING: Domain {domain} may not be externally accessible via HTTP", "WARNING")
+                self.log(f"WARNING WARNING: Domain {domain} may not be externally accessible via HTTP", "WARNING")
                 self.log(f"This could be due to DNS propagation, firewall, or SSL redirect issues", "WARNING")
                 
                 # Try to diagnose the issue
@@ -2358,32 +2358,32 @@ server {{
                 # Check if DNS resolves
                 dns_exit_code, dns_stdout, dns_stderr = self.execute_command(f"nslookup {domain}")
                 if dns_exit_code == 0:
-                    self.log(f"✓ DNS resolution for {domain} works", "INFO")
+                    self.log(f"OK DNS resolution for {domain} works", "INFO")
                 else:
-                    self.log(f"⚠ DNS resolution issue for {domain}: {dns_stderr}", "WARNING")
+                    self.log(f"WARNING DNS resolution issue for {domain}: {dns_stderr}", "WARNING")
                 
                 # Check what processes are listening on port 80
                 port_exit_code, port_stdout, port_stderr = self.execute_command("netstat -tlnp | grep :80")
                 if port_exit_code == 0:
-                    self.log(f"✓ Port 80 is being listened on: {port_stdout.strip()}", "INFO")
+                    self.log(f"OK Port 80 is being listened on: {port_stdout.strip()}", "INFO")
                 else:
-                    self.log("⚠ No process listening on port 80", "WARNING")
+                    self.log("WARNING No process listening on port 80", "WARNING")
                 
                 # Check nginx configuration for the domain
                 config_exit_code, config_stdout, config_stderr = self.execute_command(
                     f"nginx -T | grep -A 5 'server_name {domain}'"
                 )
                 if config_exit_code == 0:
-                    self.log(f"✓ Nginx configured for domain {domain}", "INFO")
+                    self.log(f"OK Nginx configured for domain {domain}", "INFO")
                 else:
-                    self.log(f"⚠ Nginx may not be configured for domain {domain}", "WARNING")
+                    self.log(f"WARNING Nginx may not be configured for domain {domain}", "WARNING")
             
             # Test HTTPS if available
             https_exit_code, https_stdout, https_stderr = self.execute_command(
                 f"curl -f -L --max-time 30 --connect-timeout 10 https://{domain}/health || echo 'HTTPS_ACCESS_FAILED'"
             )
             if https_exit_code == 0 and "healthy" in https_stdout:
-                self.log(f"✓ Domain {domain} is accessible via HTTPS", "SUCCESS")
+                self.log(f"OK Domain {domain} is accessible via HTTPS", "SUCCESS")
             else:
                 self.log(f"ℹ HTTPS not available for {domain} (normal for new deployments)", "INFO")
         
@@ -2412,10 +2412,10 @@ server {{
             f"timeout 30 curl -f -L --connect-timeout 10 http://{domain}/health || echo 'FAILED'"
         )
         if exit_code == 0 and "healthy" in stdout and "FAILED" not in stdout:
-            self.log("✓ HTTP health endpoint accessible", "SUCCESS")
+            self.log("OK HTTP health endpoint accessible", "SUCCESS")
             tests_passed += 1
         else:
-            self.log("✗ HTTP health endpoint not accessible", "ERROR")
+            self.log("X HTTP health endpoint not accessible", "ERROR")
         
         # Test 2: Root page accessibility
         self.log("Test 2: Root page accessibility", "INFO")
@@ -2423,26 +2423,26 @@ server {{
             f"timeout 30 curl -I -L --connect-timeout 10 http://{domain}/ || echo 'FAILED'"
         )
         if exit_code == 0 and ("200 OK" in stdout or "301" in stdout or "302" in stdout):
-            self.log("✓ Root page accessible", "SUCCESS")
+            self.log("OK Root page accessible", "SUCCESS")
             tests_passed += 1
         else:
-            self.log("✗ Root page not accessible", "ERROR")
+            self.log("X Root page not accessible", "ERROR")
         
         # Test 3: DNS resolution verification
         self.log("Test 3: DNS resolution", "INFO")
         exit_code, stdout, stderr = self.execute_command(f"nslookup {domain}")
         if exit_code == 0 and "NXDOMAIN" not in stderr:
-            self.log("✓ DNS resolution working", "SUCCESS")
+            self.log("OK DNS resolution working", "SUCCESS")
             tests_passed += 1
         else:
-            self.log("✗ DNS resolution failed", "ERROR")
+            self.log("X DNS resolution failed", "ERROR")
         
         # Determine if domain accessibility check passes
         if tests_passed >= 2:
-            self.log(f"✓ Domain accessibility check PASSED ({tests_passed}/{total_tests} tests)", "SUCCESS", Colors.BOLD + Colors.GREEN)
+            self.log(f"OK Domain accessibility check PASSED ({tests_passed}/{total_tests} tests)", "SUCCESS", Colors.BOLD + Colors.GREEN)
             return True
         else:
-            self.log(f"✗ Domain accessibility check FAILED ({tests_passed}/{total_tests} tests)", "CRITICAL", Colors.BOLD + Colors.RED)
+            self.log(f"X Domain accessibility check FAILED ({tests_passed}/{total_tests} tests)", "CRITICAL", Colors.BOLD + Colors.RED)
             self.log(f"CRITICAL: {domain} is not accessible from the internet", "CRITICAL")
             self.log("This indicates the deployment has NOT succeeded despite completing technical steps", "CRITICAL")
             
