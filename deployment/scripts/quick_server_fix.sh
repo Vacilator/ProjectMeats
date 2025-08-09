@@ -207,6 +207,11 @@ log_info "To check logs:"
 log_info "  sudo journalctl -u projectmeats -f"
 log_info "  sudo tail -f /var/log/nginx/access.log"
 echo
+log_info "To verify deployment status:"
+log_info "  sudo bash $PROJECT_DIR/deployment/scripts/verify_deployment.sh"
+echo
 if [[ $(systemctl is-active nginx) != "active" ]] || [[ $(systemctl is-active projectmeats) != "active" ]]; then
     log_warning "Some services failed to start. Check logs above."
+    log_info "Run the verification script for detailed diagnostics:"
+    log_info "  sudo bash $PROJECT_DIR/deployment/scripts/verify_deployment.sh"
 fi
