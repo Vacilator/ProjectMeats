@@ -527,6 +527,37 @@ class AIDeploymentOrchestrator:
                 severity=ErrorSeverity.MEDIUM,
                 recovery_function="fix_npm_permissions",
                 description="NPM permission issues"
+            ),
+            # NEW: Django-specific error patterns
+            ErrorPattern(
+                pattern=r"ModuleNotFoundError.*dj_database_url|ModuleNotFoundError.*django|No module named.*django",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="fix_django_service_issues",
+                description="Django dependencies missing"
+            ),
+            ErrorPattern(
+                pattern=r"ExecStart=.*gunicorn.*projectmeats.wsgi.*code=exited.*status=1",
+                severity=ErrorSeverity.CRITICAL,
+                recovery_function="fix_django_service_issues",
+                description="Django WSGI application failure"
+            ),
+            ErrorPattern(
+                pattern=r"systemctl.*failed.*projectmeats.*service|projectmeats.*service.*failed",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="fix_django_service_issues",
+                description="ProjectMeats Django service failure"
+            ),
+            ErrorPattern(
+                pattern=r"ImportError.*django|django.*not.*found|Django.*configuration.*invalid",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="fix_django_service_issues",
+                description="Django configuration or import issues"
+            ),
+            ErrorPattern(
+                pattern=r"EnvironmentFile.*projectmeats.env.*No such file",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="fix_django_service_issues",
+                description="Django environment file missing"
             )
         ]
     
@@ -920,6 +951,172 @@ class AIDeploymentOrchestrator:
         
         return True
     
+    def _check_django_service_health(self) -> bool:
+        """Check if Django service needs fixing - returns True if fix is needed"""
+        self.log("Checking Django service health...", "INFO")
+        
+        # Check 1: Is the Django service running?
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active projectmeats")
+        if exit_code != 0:
+            self.log("Django service (projectmeats) is not running", "WARNING")
+            return True
+        
+        # Check 2: Are Python dependencies installed?
+        project_dir = "/opt/projectmeats"
+        exit_code, stdout, stderr = self.execute_command(
+            f"test -d {project_dir}/venv && {project_dir}/venv/bin/pip show django dj-database-url psycopg2-binary"
+        )
+        if exit_code != 0:
+            self.log("Python dependencies missing or virtual environment not found", "WARNING")
+            return True
+        
+        # Check 3: Is the environment file in the correct location?
+        exit_code, stdout, stderr = self.execute_command("test -f /etc/projectmeats/projectmeats.env")
+        if exit_code != 0:
+            self.log("Environment file not found at expected systemd location", "WARNING")
+            return True
+        
+        # Check 4: Can Django configuration be imported?
+        exit_code, stdout, stderr = self.execute_command(
+            f"cd {project_dir}/backend && source ../venv/bin/activate && "
+            "export $(cat /etc/projectmeats/projectmeats.env | grep -v '^#' | xargs) && "
+            "timeout 10 python -c 'import django; from django.conf import settings; django.setup()' 2>/dev/null"
+        )
+        if exit_code != 0:
+            self.log("Django configuration cannot be imported - likely missing dependencies or config issues", "WARNING")
+            return True
+        
+        # Check 5: Is Django responding on the expected port?
+        exit_code, stdout, stderr = self.execute_command("curl -f --connect-timeout 5 --max-time 10 http://127.0.0.1:8000/ >/dev/null 2>&1")
+        if exit_code != 0:
+            self.log("Django application not responding on port 8000", "WARNING")
+            return True
+        
+        self.log("Django service appears to be healthy", "SUCCESS")
+        return False
+    
+    def _run_django_service_fix(self, fix_script_path: str) -> bool:
+        """Run the Django service fix script"""
+        self.log("Running Django service fix script...", "INFO", Colors.BOLD + Colors.YELLOW)
+        
+        # Make script executable
+        exit_code, stdout, stderr = self.execute_command(f"chmod +x {fix_script_path}")
+        if exit_code != 0:
+            self.log(f"Failed to make Django fix script executable: {fix_script_path}", "ERROR")
+            return False
+        
+        # Run the fix script with timeout
+        fix_timeout = 600  # 10 minutes should be enough for dependency installation
+        
+        try:
+            exit_code, stdout, stderr = self.execute_command(
+                f"bash {fix_script_path}",
+                timeout=fix_timeout + 30
+            )
+            
+            if exit_code == 0:
+                self.log("Django service fix script completed successfully", "SUCCESS", Colors.BOLD + Colors.GREEN)
+                
+                # Check for success indicators in output
+                if "🎉 Quick Fix Complete!" in stdout or "ProjectMeats Django service is now running" in stdout:
+                    self.log("Django fix script reports successful completion", "SUCCESS")
+                    
+                    # Verify the fix worked
+                    if self._verify_django_fix_success():
+                        self.log("Django service fix verification passed", "SUCCESS")
+                        return True
+                    else:
+                        self.log("Django service fix verification failed", "WARNING")
+                        return False
+                else:
+                    self.log("Django fix script completed but without clear success indicators", "WARNING")
+                    return self._verify_django_fix_success()
+            else:
+                self.log(f"Django service fix script failed with exit code {exit_code}", "ERROR")
+                
+                if stderr:
+                    self.log(f"Fix script error output: {stderr[-300:]}", "ERROR")
+                
+                return False
+                
+        except Exception as e:
+            self.log(f"Exception running Django service fix script: {e}", "ERROR")
+            return False
+    
+    def _verify_django_fix_success(self) -> bool:
+        """Verify that the Django service fix was successful"""
+        self.log("Verifying Django service fix...", "INFO")
+        
+        # Give the service a moment to start
+        import time
+        time.sleep(5)
+        
+        # Check if service is now running
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active projectmeats")
+        if exit_code != 0:
+            self.log("Django service still not running after fix", "ERROR")
+            return False
+        
+        # Check if Django is responding
+        exit_code, stdout, stderr = self.execute_command(
+            "timeout 15 curl -f --connect-timeout 5 http://127.0.0.1:8000/ >/dev/null 2>&1"
+        )
+        if exit_code == 0:
+            self.log("Django application is now responding on port 8000", "SUCCESS")
+            return True
+        else:
+            self.log("Django application still not responding after fix", "WARNING")
+            # Check service logs for more information
+            exit_code2, logs, stderr2 = self.execute_command("journalctl -u projectmeats -n 5 --no-pager")
+            if exit_code2 == 0:
+                self.log(f"Recent Django service logs: {logs[-200:]}", "INFO")
+            return False
+    
+    def _assess_remaining_deployment_needs(self) -> bool:
+        """Assess if there are remaining deployment needs after Django fix"""
+        self.log("Assessing remaining deployment needs...", "INFO")
+        
+        # Check critical components
+        components_status = {
+            "nginx": False,
+            "frontend_build": False,
+            "database_setup": False,
+            "static_files": False
+        }
+        
+        # Check nginx
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active nginx && test -f /etc/nginx/sites-enabled/projectmeats")
+        components_status["nginx"] = (exit_code == 0)
+        
+        # Check frontend build
+        exit_code, stdout, stderr = self.execute_command("test -d /opt/projectmeats/frontend/build && test -f /opt/projectmeats/frontend/build/index.html")
+        components_status["frontend_build"] = (exit_code == 0)
+        
+        # Check database setup
+        exit_code, stdout, stderr = self.execute_command("sudo -u postgres psql -d projectmeats -c 'SELECT 1;' -t >/dev/null 2>&1")
+        components_status["database_setup"] = (exit_code == 0)
+        
+        # Check static files
+        exit_code, stdout, stderr = self.execute_command("test -d /opt/projectmeats/backend/staticfiles")
+        components_status["static_files"] = (exit_code == 0)
+        
+        # Log component status
+        for component, status in components_status.items():
+            status_text = "OK" if status else "MISSING"
+            level = "SUCCESS" if status else "INFO"
+            self.log(f"{status_text} {component}", level)
+        
+        # Return True if we have significant missing components
+        missing_count = sum(1 for status in components_status.values() if not status)
+        needs_additional_setup = missing_count >= 2
+        
+        if needs_additional_setup:
+            self.log(f"Additional deployment needed - {missing_count} components require setup", "INFO")
+        else:
+            self.log("Most components are already configured", "SUCCESS")
+            
+        return needs_additional_setup
+    
     def execute_deployment_step(self, step_name: str, step_description: str) -> bool:
         """Execute a deployment step with error handling and recovery"""
         self.log(f"Starting step: {step_description}", "INFO", Colors.BOLD + Colors.BLUE)
@@ -1242,10 +1439,11 @@ class AIDeploymentOrchestrator:
         # Implement step-specific recovery logic
         recovery_methods = {
             "install_dependencies": ["update_package_lists", "fix_nodejs_conflicts"],
-            "configure_backend": ["fix_permissions", "restart_database_service"],
+            "configure_backend": ["fix_django_service_issues", "fix_permissions", "restart_database_service"],
             "configure_frontend": ["fix_npm_permissions", "cleanup_disk_space"],
             "setup_webserver": ["kill_conflicting_processes", "restart_services"],
-            "setup_services": ["restart_services", "fix_permissions"]
+            "setup_services": ["restart_services", "fix_permissions"],
+            "run_deployment_scripts": ["fix_django_service_issues"]  # NEW: For deployment script failures
         }
         
         methods = recovery_methods.get(failed_step, ["restart_services"])
@@ -1257,6 +1455,32 @@ class AIDeploymentOrchestrator:
                 return True
         
         return False
+    
+    def fix_django_service_issues(self) -> bool:
+        """Fix Django service issues using the dedicated fix script"""
+        self.log("Attempting to fix Django service issues...", "WARNING")
+        
+        project_dir = "/opt/projectmeats"
+        django_fix_script = f"{project_dir}/fix_django_service.sh"
+        
+        # Check if Django service actually needs fixing
+        if not self._check_django_service_health():
+            self.log("Django service appears healthy - no fix needed", "SUCCESS")
+            return True
+        
+        # Check if fix script exists
+        exit_code, stdout, stderr = self.execute_command(f"test -f {django_fix_script}")
+        if exit_code != 0:
+            self.log("Django fix script not found - cannot apply automatic fix", "WARNING")
+            return False
+        
+        # Run the Django service fix
+        if self._run_django_service_fix(django_fix_script):
+            self.log("Django service issues resolved successfully", "SUCCESS")
+            return True
+        else:
+            self.log("Django service fix failed", "ERROR")
+            return False
     
     def print_deployment_summary(self):
         """Print deployment summary"""
@@ -1806,11 +2030,38 @@ class AIDeploymentOrchestrator:
         # Check if deployment scripts exist
         quick_fix_script = f"{project_dir}/deployment/scripts/quick_server_fix.sh"
         setup_script = f"{project_dir}/deployment/scripts/setup_production.sh"
+        django_fix_script = f"{project_dir}/fix_django_service.sh"
         
-        # Verify scripts exist
+        # Check for Django service issues first - this is a critical fix
+        django_service_needs_fix = self._check_django_service_health()
+        
+        if django_service_needs_fix:
+            self.log("Django service issues detected - applying Django service fix...", "WARNING", Colors.BOLD + Colors.YELLOW)
+            
+            # Verify Django fix script exists
+            exit_code, stdout, stderr = self.execute_command(f"test -f {django_fix_script}")
+            if exit_code == 0:
+                if self._run_django_service_fix(django_fix_script):
+                    self.log("Django service fix completed successfully", "SUCCESS")
+                    # Mark that we used the Django fix script
+                    self.state.automated_script_used = "Django Service Fix"
+                    
+                    # After successful fix, continue with normal deployment logic
+                    # but first check if we still need additional scripts
+                    remaining_issues = self._assess_remaining_deployment_needs()
+                    if not remaining_issues:
+                        self.log("Django service fix resolved all issues - deployment scripts complete", "SUCCESS")
+                        return True
+                else:
+                    self.log("Django service fix failed - continuing with manual configuration", "WARNING")
+            else:
+                self.log("Django fix script not found, continuing with other deployment methods", "WARNING")
+        
+        # Standard deployment script selection logic
+        # Verify other scripts exist
         exit_code, stdout, stderr = self.execute_command(f"test -f {quick_fix_script} && test -f {setup_script}")
         if exit_code != 0:
-            self.log("Deployment scripts not found, using manual configuration", "WARNING")
+            self.log("Standard deployment scripts not found, using manual configuration", "WARNING")
             return True  # Continue with manual deployment steps
         
         # Determine which script to use based on server state
@@ -1898,8 +2149,11 @@ class AIDeploymentOrchestrator:
                 if "WARNING" in stdout or "failed" in stdout.lower():
                     self.log("Script completed but with warnings - check output above", "WARNING")
                 
-                # Mark that we used automated scripts
-                self.state.automated_script_used = script_name
+                # Mark that we used automated scripts (combine with Django fix if both used)
+                if hasattr(self.state, 'automated_script_used') and self.state.automated_script_used:
+                    self.state.automated_script_used = f"{self.state.automated_script_used} + {script_name}"
+                else:
+                    self.state.automated_script_used = script_name
                 
                 return True
             else:
@@ -1909,8 +2163,14 @@ class AIDeploymentOrchestrator:
                 if stderr:
                     self.log(f"Script error output: {stderr[-500:]}", "ERROR")  # Last 500 chars
                 
-                # Try to extract specific error information
-                if "Database" in stderr or "psql" in stderr:
+                # Try to extract specific error information and apply targeted fixes
+                if ("ModuleNotFoundError" in stderr or "django" in stderr.lower()) and not django_service_needs_fix:
+                    self.log("Django dependency issues detected - attempting Django service fix...", "WARNING")
+                    # Try Django fix as recovery
+                    if self._run_django_service_fix(django_fix_script):
+                        self.log("Django service fix resolved the issue", "SUCCESS")
+                        return True
+                elif "Database" in stderr or "psql" in stderr:
                     self.log("Database setup error detected - continuing with manual configuration", "WARNING")
                 elif "npm" in stderr or "node" in stderr:
                     self.log("Frontend build error detected - continuing with manual configuration", "WARNING")
@@ -1946,6 +2206,19 @@ class AIDeploymentOrchestrator:
             else:
                 self.log("Backend not fully configured - continuing with manual setup", "INFO")
         
+        # Check if Django service issues need to be addressed first
+        if self._check_django_service_health():
+            self.log("Django service issues detected - applying fix before continuing with configuration...", "WARNING")
+            if self.fix_django_service_issues():
+                self.log("Django service fix successful - continuing with remaining backend configuration", "SUCCESS")
+                # After successful Django fix, verify if we still need manual backend setup
+                exit_code, stdout, stderr = self.execute_command("systemctl is-active projectmeats")
+                if exit_code == 0:
+                    self.log("Django service is now running - backend configuration complete", "SUCCESS")
+                    return True
+            else:
+                self.log("Django service fix failed - continuing with manual backend setup", "WARNING")
+        
         # Create virtual environment and install dependencies
         commands = [
             "cd /opt/projectmeats/backend && python3 -m venv venv",
@@ -1957,6 +2230,15 @@ class AIDeploymentOrchestrator:
             exit_code, stdout, stderr = self.execute_command(cmd)
             if exit_code != 0:
                 self.log(f"Backend setup command failed: {cmd}", "ERROR")
+                # Try Django service fix if this appears to be a dependency issue
+                if "ModuleNotFoundError" in stderr or "No module named" in stderr:
+                    self.log("Dependency error detected - attempting Django service fix...", "WARNING")
+                    if self.fix_django_service_issues():
+                        self.log("Django service fix resolved dependency issues", "SUCCESS")
+                        # Retry the failed command
+                        exit_code, stdout, stderr = self.execute_command(cmd)
+                        if exit_code == 0:
+                            continue
                 return False
         
         # Create Django settings for production
@@ -2020,7 +2302,7 @@ X_FRAME_OPTIONS = 'DENY'
                 self.log(f"Django command failed: {cmd}", "WARNING")
                 # Continue with other commands
         
-        # Create Django service file
+        # Create Django service file (improved version from fix script knowledge)
         service_content = """[Unit]
 Description=ProjectMeats Django Backend
 After=network.target postgresql.service
@@ -2030,8 +2312,10 @@ Requires=postgresql.service
 Type=exec
 User=root
 WorkingDirectory=/opt/projectmeats/backend
+EnvironmentFile=-/etc/projectmeats/projectmeats.env
+EnvironmentFile=-/opt/projectmeats/.env.production
 Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
-ExecStart=/opt/projectmeats/backend/venv/bin/python manage.py runserver 127.0.0.1:8000
+ExecStart=/opt/projectmeats/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 projectmeats.wsgi:application
 Restart=always
 RestartSec=3
 
@@ -2058,8 +2342,20 @@ WantedBy=multi-user.target
             if exit_code != 0:
                 self.log(f"Service command failed: {cmd}", "WARNING")
         
-        self.log("Backend configuration completed", "SUCCESS")
-        return True
+        # Final verification that the service is running
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active projectmeats")
+        if exit_code == 0:
+            self.log("Backend configuration completed successfully", "SUCCESS")
+            return True
+        else:
+            self.log("Backend service not running after configuration - attempting Django service fix...", "WARNING")
+            # Last attempt with Django service fix
+            if self.fix_django_service_issues():
+                self.log("Django service fix resolved backend configuration issues", "SUCCESS")
+                return True
+            else:
+                self.log("Backend configuration completed but service may need manual attention", "WARNING")
+                return True  # Don't fail the entire deployment for service issues
     
     def deploy_configure_frontend(self) -> bool:
         """Configure frontend"""
