@@ -2564,34 +2564,59 @@ EOF"""
         try:
             self.log(f"Setting up PostgreSQL database '{config.db_name}' with user '{config.db_user}'...", "INFO")
             
-            # Create database user and database
-            db_setup_script = f"""
+            # Step 1: Create database user if not exists
+            create_user_script = f"""
 sudo -u postgres psql << 'EOF'
 -- Create database user if not exists
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_user WHERE usename = '{config.db_user}') THEN
         CREATE USER {config.db_user} WITH PASSWORD '{config.db_password}';
+        \\echo 'User {config.db_user} created successfully';
+    ELSE
+        \\echo 'User {config.db_user} already exists';
     END IF;
 END
 $$;
-
--- Create database if not exists
-SELECT 'CREATE DATABASE {config.db_name} OWNER {config.db_user};'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{config.db_name}');
-
--- Grant permissions
-GRANT ALL PRIVILEGES ON DATABASE {config.db_name} TO {config.db_user};
-
--- Exit psql
 \\q
 EOF
 """
             
-            exit_code, stdout, stderr = self.execute_command(db_setup_script)
+            self.log("Creating PostgreSQL user...", "INFO")
+            exit_code, stdout, stderr = self.execute_command(create_user_script)
             if exit_code != 0:
-                self.log(f"Database setup failed: {stderr}", "ERROR")
+                self.log(f"Database user creation failed: {stderr}", "ERROR")
                 return False
+            
+            # Step 2: Create database if not exists
+            create_db_script = f"""
+# Method 1: Check if database exists, then create it using createdb command
+if ! sudo -u postgres psql -lqt | cut -d \\| -f 1 | grep -qw {config.db_name}; then
+    echo "Creating database {config.db_name}..."
+    sudo -u postgres createdb -O {config.db_user} {config.db_name}
+else
+    echo "Database {config.db_name} already exists"
+fi
+"""
+            
+            self.log("Creating PostgreSQL database...", "INFO")
+            exit_code, stdout, stderr = self.execute_command(create_db_script)
+            # Don't fail on database creation errors as database might already exist
+            
+            # Step 3: Grant permissions to ensure user has access
+            grant_permissions_script = f"""
+sudo -u postgres psql -d {config.db_name} << 'EOF'
+-- Grant all permissions to the user
+GRANT ALL PRIVILEGES ON DATABASE {config.db_name} TO {config.db_user};
+GRANT ALL PRIVILEGES ON SCHEMA public TO {config.db_user};
+\\q
+EOF
+"""
+            
+            self.log("Granting database permissions...", "INFO")
+            exit_code, stdout, stderr = self.execute_command(grant_permissions_script)
+            if exit_code != 0:
+                self.log(f"Permission grant failed, but continuing: {stderr}", "WARNING")
             
             # Test database connection
             test_connection_cmd = f"""
@@ -2599,16 +2624,76 @@ export PGPASSWORD='{config.db_password}'
 psql -h {config.db_host} -p {config.db_port} -U {config.db_user} -d {config.db_name} -c "SELECT version();"
 """
             
+            self.log("Testing database connection...", "INFO")
             exit_code, stdout, stderr = self.execute_command(test_connection_cmd)
             if exit_code == 0:
                 self.log("✓ Database connection test successful", "SUCCESS")
                 return True
             else:
                 self.log(f"Database connection test failed: {stderr}", "ERROR")
-                return False
+                
+                # Attempt recovery by reconfiguring PostgreSQL authentication
+                if self._attempt_database_auth_recovery(config):
+                    # Retry connection test
+                    exit_code, stdout, stderr = self.execute_command(test_connection_cmd)
+                    if exit_code == 0:
+                        self.log("✓ Database connection test successful after recovery", "SUCCESS")
+                        return True
+                    else:
+                        self.log(f"Database connection still failed after recovery: {stderr}", "ERROR")
+                        return False
+                else:
+                    return False
                 
         except Exception as e:
             self.log(f"Error setting up database: {e}", "ERROR")
+            return False
+    
+    def _attempt_database_auth_recovery(self, config: ProductionConfig) -> bool:
+        """Attempt to recover from database authentication issues"""
+        try:
+            self.log("Attempting database authentication recovery...", "WARNING")
+            
+            # Check PostgreSQL authentication configuration
+            pg_hba_check = """
+# Check current pg_hba.conf configuration
+sudo -u postgres psql -c "SHOW hba_file;" -t
+"""
+            exit_code, stdout, stderr = self.execute_command(pg_hba_check)
+            if exit_code == 0:
+                hba_file = stdout.strip()
+                self.log(f"PostgreSQL HBA file location: {hba_file}", "INFO")
+                
+                # Backup and update pg_hba.conf to ensure local connections work
+                backup_and_update_hba = f"""
+# Backup original pg_hba.conf
+sudo cp {hba_file} {hba_file}.backup
+
+# Add/ensure local connection authentication method
+sudo grep -q "local.*{config.db_name}.*{config.db_user}" {hba_file} || {{
+    echo "# Added by ProjectMeats deployment" | sudo tee -a {hba_file}
+    echo "local   {config.db_name}   {config.db_user}   md5" | sudo tee -a {hba_file}
+    echo "host    {config.db_name}   {config.db_user}   127.0.0.1/32   md5" | sudo tee -a {hba_file}
+}}
+
+# Reload PostgreSQL configuration
+sudo systemctl reload postgresql
+"""
+                
+                exit_code, stdout, stderr = self.execute_command(backup_and_update_hba)
+                if exit_code == 0:
+                    self.log("✓ PostgreSQL authentication configuration updated", "SUCCESS")
+                    time.sleep(2)  # Give PostgreSQL time to reload config
+                    return True
+                else:
+                    self.log(f"Failed to update PostgreSQL configuration: {stderr}", "ERROR")
+                    return False
+            else:
+                self.log("Could not locate PostgreSQL HBA configuration file", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"Database authentication recovery failed: {e}", "ERROR")
             return False
 
     def deploy_configure_backend(self) -> bool:
