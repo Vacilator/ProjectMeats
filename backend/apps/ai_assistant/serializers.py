@@ -4,8 +4,10 @@ Serializers for AI Assistant models.
 Provides REST API serialization for chat sessions, messages,
 document uploads, and AI configurations.
 """
+from typing import Optional
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from .models import (AIConfiguration, ChatMessage, ChatSession, ProcessingTask,
                      UploadedDocument)
@@ -21,7 +23,8 @@ class UserBasicSerializer(serializers.ModelSerializer):
         fields = ["id", "username", "first_name", "last_name", "display_name"]
         read_only_fields = ["id", "username", "first_name", "last_name"]
 
-    def get_display_name(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_display_name(self, obj) -> str:
         """Get user's display name."""
         return obj.get_full_name() or obj.username
 
@@ -30,8 +33,8 @@ class ChatSessionListSerializer(serializers.ModelSerializer):
     """Serializer for ChatSession list view."""
 
     owner = UserBasicSerializer(read_only=True)
-    message_count = serializers.ReadOnlyField()
-    has_documents = serializers.ReadOnlyField()
+    message_count = serializers.SerializerMethodField()
+    has_documents = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatSession
@@ -55,13 +58,23 @@ class ChatSessionListSerializer(serializers.ModelSerializer):
             "created_on",
         ]
 
+    @extend_schema_field(serializers.IntegerField())
+    def get_message_count(self, obj) -> int:
+        """Get the total number of messages in this session."""
+        return obj.message_count
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_has_documents(self, obj) -> bool:
+        """Check if this session has any uploaded documents."""
+        return obj.has_documents
+
 
 class ChatSessionDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for ChatSession."""
 
     owner = UserBasicSerializer(read_only=True)
-    message_count = serializers.ReadOnlyField()
-    has_documents = serializers.ReadOnlyField()
+    message_count = serializers.SerializerMethodField()
+    has_documents = serializers.SerializerMethodField()
     created_by = UserBasicSerializer(read_only=True)
     modified_by = UserBasicSerializer(read_only=True)
 
@@ -94,13 +107,23 @@ class ChatSessionDetailSerializer(serializers.ModelSerializer):
             "modified_by",
         ]
 
+    @extend_schema_field(serializers.IntegerField())
+    def get_message_count(self, obj) -> int:
+        """Get the total number of messages in this session."""
+        return obj.message_count
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_has_documents(self, obj) -> bool:
+        """Check if this session has any uploaded documents."""
+        return obj.has_documents
+
 
 class UploadedDocumentSerializer(serializers.ModelSerializer):
     """Serializer for UploadedDocument."""
 
     owner = UserBasicSerializer(read_only=True)
-    file_size_mb = serializers.ReadOnlyField()
-    is_processed = serializers.ReadOnlyField()
+    file_size_mb = serializers.SerializerMethodField()
+    is_processed = serializers.SerializerMethodField()
     file_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -143,7 +166,18 @@ class UploadedDocumentSerializer(serializers.ModelSerializer):
             "created_on",
         ]
 
-    def get_file_url(self, obj):
+    @extend_schema_field(serializers.FloatField())
+    def get_file_size_mb(self, obj) -> float:
+        """Get file size in megabytes."""
+        return obj.file_size_mb
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_processed(self, obj) -> bool:
+        """Check if document processing is complete."""
+        return obj.is_processed
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_file_url(self, obj) -> Optional[str]:
         """Get file URL if available."""
         if obj.file and hasattr(obj.file, "url"):
             request = self.context.get("request")
@@ -326,7 +360,8 @@ class ProcessingTaskSerializer(serializers.ModelSerializer):
             "completed_at",
         ]
 
-    def get_duration(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_duration(self, obj) -> Optional[float]:
         """Calculate task duration."""
         if obj.started_at and obj.completed_at:
             duration = obj.completed_at - obj.started_at

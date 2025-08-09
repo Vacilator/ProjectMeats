@@ -4,7 +4,9 @@ Serializers for Purchase Orders API.
 Handles serialization/deserialization between Django models and JSON API responses.
 Migrated from PowerApps pro_purchaseorder entity.
 """
+from typing import Optional
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from .models import PurchaseOrder
 
@@ -159,11 +161,13 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
             "supplier_documents_url",
         ]
 
-    def get_powerapps_entity_name(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_powerapps_entity_name(self, obj) -> str:
         """Return the original PowerApps entity name for reference."""
         return obj.get_powerapps_entity_name()
 
-    def get_customer_documents_url(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_customer_documents_url(self, obj) -> Optional[str]:
         """Return URL for customer documents download."""
         if obj.customer_documents and obj.customer_documents.name:
             request = self.context.get("request")
@@ -172,7 +176,8 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
             return obj.customer_documents.url
         return None
 
-    def get_supplier_documents_url(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_supplier_documents_url(self, obj) -> Optional[str]:
         """Return URL for supplier documents download."""
         if obj.supplier_documents and obj.supplier_documents.name:
             request = self.context.get("request")

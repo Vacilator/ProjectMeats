@@ -4,8 +4,10 @@ Core serializers for ProjectMeats.
 Base serializer classes that provide common functionality for all entities
 migrated from PowerApps/Dataverse.
 """
+from typing import Optional
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from .models import UserProfile
 
@@ -59,7 +61,8 @@ class BaseDetailSerializer(serializers.ModelSerializer):
     class Meta:
         abstract = True
 
-    def get_powerapps_entity_name(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_powerapps_entity_name(self, obj) -> Optional[str]:
         """Return the original PowerApps entity name for reference."""
         if hasattr(obj, "get_powerapps_entity_name"):
             return obj.get_powerapps_entity_name()
@@ -157,7 +160,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "modified_on",
         ]
 
-    def get_profile_image_url(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_profile_image_url(self, obj) -> Optional[str]:
         """Return URL for profile image if available."""
         if obj.profile_image and obj.profile_image.name:
             request = self.context.get("request")
@@ -166,7 +170,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return obj.profile_image.url
         return None
 
-    def get_is_admin(self, obj):
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_admin(self, obj) -> bool:
         """Return True if user is an administrator (staff or superuser)."""
         return obj.user.is_staff or obj.user.is_superuser
 
@@ -269,3 +274,9 @@ class AuthSignupSerializer(serializers.Serializer):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email already exists.")
         return value
+
+
+class AuthLogoutSerializer(serializers.Serializer):
+    """Serializer for user logout (no fields required)."""
+    
+    pass

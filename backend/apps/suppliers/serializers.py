@@ -5,6 +5,7 @@ Handles serialization/deserialization between Django models and JSON API respons
 Migrated from PowerApps cr7c4_supplier entity.
 """
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from .models import Supplier, SupplierLocation, SupplierPlantMapping
 
@@ -98,7 +99,8 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
             "accounts_receivable_name",
         ]
 
-    def get_powerapps_entity_name(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_powerapps_entity_name(self, obj) -> str:
         """Return the original PowerApps entity name for reference."""
         return obj.get_powerapps_entity_name()
 
@@ -253,7 +255,8 @@ class SupplierPlantMappingDetailSerializer(serializers.ModelSerializer):
             "contact_info_name",
         ]
 
-    def get_powerapps_entity_name(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_powerapps_entity_name(self, obj) -> str:
         """Return the original PowerApps entity name for reference."""
         return obj.get_powerapps_entity_name()
 
@@ -402,7 +405,8 @@ class SupplierLocationDetailSerializer(serializers.ModelSerializer):
             "supplier_name",
         ]
 
-    def get_powerapps_entity_name(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_powerapps_entity_name(self, obj) -> str:
         """Return the original PowerApps entity name for reference."""
         return obj.get_powerapps_entity_name()
 
