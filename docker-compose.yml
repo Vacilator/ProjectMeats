@@ -33,10 +33,13 @@ services:
     build: ./nginx
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - backend
       - frontend
     volumes:
       - ./nginx:/etc/nginx/conf.d
+      # Uncomment the line below when you have SSL certificates set up:
+      # - ./ssl:/etc/nginx/ssl:ro
 volumes:
   postgres_data:
