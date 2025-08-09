@@ -952,8 +952,15 @@ STATIC_ROOT={backend_dir}/staticfiles
         
         # Configure npm for the project user
         self.log("Configuring npm...")
+        
+        # Ensure proper directory ownership before npm operations
+        self.log("Setting frontend directory ownership...")
+        self.run_command(f"chown -R {self.config['app_user']}:{self.config['app_user']} {frontend_dir}")
+        self.run_command(f"chmod -R 755 {frontend_dir}")
+        
         npm_prefix = f"{self.config['project_dir']}/.npm-global"
         self.run_command(f"mkdir -p {npm_prefix}")
+        self.run_command(f"chown -R {self.config['app_user']}:{self.config['app_user']} {npm_prefix}")
         self.run_command(f"sudo -u {self.config['app_user']} npm config set prefix {npm_prefix}")
         
         # Install dependencies with optimized retry strategies and caching

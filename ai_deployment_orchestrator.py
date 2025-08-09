@@ -898,13 +898,23 @@ class AIDeploymentOrchestrator:
         """Fix NPM permission issues"""
         self.log("Fixing NPM permissions...", "INFO")
         commands = [
-            "npm config set prefix /usr/local",
-            "chown -R $(whoami) $(npm config get prefix)/{lib/node_modules,bin,share}",
-            "npm cache clean --force"
+            # Fix project-specific directory permissions
+            "chown -R projectmeats:projectmeats /opt/projectmeats/frontend",
+            "chmod -R 755 /opt/projectmeats/frontend",
+            # Clean npm cache for projectmeats user
+            "sudo -u projectmeats npm cache clean --force",
+            # Ensure npm global directory exists and is owned correctly
+            "mkdir -p /opt/projectmeats/.npm-global",
+            "chown -R projectmeats:projectmeats /opt/projectmeats/.npm-global",
+            # Set npm prefix for projectmeats user
+            "sudo -u projectmeats npm config set prefix /opt/projectmeats/.npm-global"
         ]
         
         for cmd in commands:
-            self.execute_command(cmd)
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"NPM permission fix failed: {cmd}", "WARNING")
+                # Continue with other commands even if one fails
         
         return True
     
@@ -1800,6 +1810,20 @@ WantedBy=multi-user.target
     def deploy_configure_frontend(self) -> bool:
         """Configure frontend"""
         self.log("Configuring frontend...", "INFO")
+        
+        # Ensure proper directory ownership before npm operations
+        self.log("Setting frontend directory ownership...", "INFO")
+        ownership_commands = [
+            "chown -R projectmeats:projectmeats /opt/projectmeats/frontend",
+            "chmod -R 755 /opt/projectmeats/frontend"
+        ]
+        
+        for cmd in ownership_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Ownership setup failed: {cmd}", "ERROR")
+                self.log(f"Error output: {stderr}", "ERROR")
+                return False
         
         # Configure npm for projectmeats user to avoid permission issues
         self.log("Configuring npm...", "INFO")
