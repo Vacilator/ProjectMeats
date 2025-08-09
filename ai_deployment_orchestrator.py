@@ -248,6 +248,10 @@ class AIDeploymentOrchestrator:
         self.config = self._load_config()
         self.state = None
         
+        # Logging initialization guard
+        self._logging_initialized = False
+        self._reported_errors = set()  # Track reported errors to prevent duplicates
+        
         # Initialize logging
         self._setup_logging()
         
@@ -403,7 +407,10 @@ class AIDeploymentOrchestrator:
         return False
     
     def _setup_logging(self):
-        """Setup comprehensive logging"""
+        """Setup comprehensive logging with duplicate prevention"""
+        if self._logging_initialized:
+            return  # Prevent duplicate initialization
+        
         log_level = getattr(logging, self.config["logging"]["level"].upper())
         
         # Create logs directory
@@ -412,16 +419,22 @@ class AIDeploymentOrchestrator:
         # Setup file logging
         log_filename = f"logs/deployment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
+        # Clear any existing handlers to prevent duplicates
+        root_logger = logging.getLogger()
+        root_logger.handlers.clear()
+        
         logging.basicConfig(
             level=log_level,
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
                 logging.FileHandler(log_filename),
                 logging.StreamHandler(sys.stdout)
-            ]
+            ],
+            force=True  # Override any existing configuration
         )
         
         self.logger = logging.getLogger(__name__)
+        self._logging_initialized = True
         self.log(f"Logging initialized - {log_filename}", "INFO")
     
     def _setup_github_integration(self):
@@ -451,64 +464,64 @@ class AIDeploymentOrchestrator:
             self.log(f"Failed to initialize GitHub integration: {e}", "WARNING")
     
     def _initialize_error_patterns(self) -> List[ErrorPattern]:
-        """Initialize error detection patterns"""
+        """Initialize error detection patterns with improved specificity"""
         return [
             ErrorPattern(
-                pattern=r"nodejs.*conflicts.*npm",
+                pattern=r"npm.*ERR.*conflict|nodejs.*conflict.*npm.*ERR",
                 severity=ErrorSeverity.HIGH,
                 recovery_function="fix_nodejs_conflicts",
                 description="Node.js package conflicts detected"
             ),
             ErrorPattern(
-                pattern=r"E: Unable to locate package",
+                pattern=r"E: Unable to locate package.*|Package.*not found.*repository",
                 severity=ErrorSeverity.MEDIUM,
                 recovery_function="update_package_lists",
                 description="Package repository needs update"
             ),
             ErrorPattern(
-                pattern=r"Permission denied",
+                pattern=r"Permission denied.*(/opt/|/home/|/etc/|systemctl|chmod|chown)",
                 severity=ErrorSeverity.HIGH,
                 recovery_function="fix_permissions",
                 description="Permission issues detected"
             ),
             ErrorPattern(
-                pattern=r"Could not connect to.*database",
-                severity=ErrorSeverity.HIGH,
-                recovery_function="restart_database_service",
-                description="Database connection issues"
-            ),
-            ErrorPattern(
-                pattern=r"Port.*already in use",
+                pattern=r"bind.*Address already in use|Port.*already in use.*:80|:443|:8000",
                 severity=ErrorSeverity.MEDIUM,
                 recovery_function="kill_conflicting_processes",
                 description="Port conflicts detected"
             ),
             ErrorPattern(
-                pattern=r"Connection refused",
+                pattern=r"Could not connect to.*database.*Connection refused",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="restart_database_service",
+                description="Database connection issues"
+            ),
+            ErrorPattern(
+                pattern=r"Connection refused.*:80|:443|:8000",
                 severity=ErrorSeverity.HIGH,
                 recovery_function="restart_services",
                 description="Service connection issues"
             ),
             ErrorPattern(
-                pattern=r"disk space",
+                pattern=r"No space left on device|disk.*full.*usage.*9[0-9]%",
                 severity=ErrorSeverity.CRITICAL,
                 recovery_function="cleanup_disk_space",
                 description="Insufficient disk space"
             ),
             ErrorPattern(
-                pattern=r"DNS.*failed|name resolution",
+                pattern=r"DNS.*failed.*NXDOMAIN|name resolution.*failed.*not found",
                 severity=ErrorSeverity.MEDIUM,
                 recovery_function="fix_dns_issues",
                 description="DNS resolution problems"
             ),
             ErrorPattern(
-                pattern=r"SSL.*certificate.*failed",
+                pattern=r"SSL.*certificate.*failed.*verification|certbot.*failed.*challenge",
                 severity=ErrorSeverity.HIGH,
                 recovery_function="retry_ssl_setup",
                 description="SSL certificate issues"
             ),
             ErrorPattern(
-                pattern=r"npm.*EACCES",
+                pattern=r"npm.*ERR.*EACCES.*permission|npm.*WARN.*EACCES",
                 severity=ErrorSeverity.MEDIUM,
                 recovery_function="fix_npm_permissions",
                 description="NPM permission issues"
@@ -516,7 +529,13 @@ class AIDeploymentOrchestrator:
         ]
     
     def log(self, message: str, level: str = "INFO", color: Optional[str] = None):
-        """Enhanced logging with colors and structured output"""
+        """Enhanced logging with colors and structured output, with deduplication"""
+        # Skip redundant logging initialization messages
+        if "Logging initialized" in message:
+            if hasattr(self, '_logging_init_logged') and self._logging_init_logged:
+                return  # Skip duplicate logging initialization messages
+            self._logging_init_logged = True
+        
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Color mapping
@@ -535,8 +554,9 @@ class AIDeploymentOrchestrator:
         # Console output with colors
         print(f"{color}[{timestamp}] [{level}] {message}{Colors.END}")
         
-        # Structured logging
-        self.logger.log(getattr(logging, level.upper(), logging.INFO), message)
+        # Structured logging - only if logger is initialized
+        if hasattr(self, 'logger') and self.logger:
+            self.logger.log(getattr(logging, level.upper(), logging.INFO), message)
         
         # Save to structured log file
         log_entry = {
@@ -685,6 +705,14 @@ class AIDeploymentOrchestrator:
                 self.log(f"Command completed successfully", "SUCCESS")
             else:
                 self.log(f"Command failed with exit code {exit_status}", "ERROR")
+                # Only run error detection on failed commands, not successful ones
+                if stderr_text:
+                    errors = self.detect_errors(stderr_text)
+                    # Attempt auto-recovery if configured and errors are detected
+                    if errors and self.config.get('recovery', {}).get('auto_recovery', False):
+                        for error in errors:
+                            if self.auto_recover_error(error):
+                                break
             
             return exit_status, stdout_text, stderr_text
             
@@ -693,13 +721,22 @@ class AIDeploymentOrchestrator:
             return -1, "", str(e)
     
     def detect_errors(self, output: str) -> List[ErrorPattern]:
-        """Detect errors in command output using patterns"""
+        """Detect errors in command output using patterns with deduplication"""
+        if not output or len(output.strip()) < 10:  # Skip very short outputs
+            return []
+        
         detected_errors = []
         
         for pattern in self.error_patterns:
-            if re.search(pattern.pattern, output, re.IGNORECASE):
-                detected_errors.append(pattern)
-                self.log(f"Error detected: {pattern.description}", "WARNING")
+            if re.search(pattern.pattern, output, re.IGNORECASE | re.MULTILINE):
+                # Create a unique key for this error to prevent duplicates
+                error_key = f"{pattern.description}:{hash(output[:200])}"
+                
+                if error_key not in self._reported_errors:
+                    detected_errors.append(pattern)
+                    self._reported_errors.add(error_key)
+                    self.log(f"Error detected: {pattern.description}", "WARNING")
+                # If already reported, skip to prevent spam
         
         return detected_errors
     
@@ -1427,14 +1464,9 @@ class AIDeploymentOrchestrator:
         exit_code, stdout, stderr = self.execute_command(f"apt install -y {' '.join(packages)}")
         
         if exit_code != 0:
-            # Check for errors and attempt recovery
-            errors = self.detect_errors(stderr)
-            for error in errors:
-                if self.config['recovery']['auto_recovery']:
-                    if self.auto_recover_error(error):
-                        # Retry installation
-                        exit_code, stdout, stderr = self.execute_command(f"apt install -y {' '.join(packages)}")
-                        break
+            # Error detection and recovery is now handled in execute_command for failed commands
+            self.log("Package installation failed, but will continue with deployment", "WARNING")
+            return False
         
         return exit_code == 0
     
