@@ -103,6 +103,7 @@ class DeploymentState:
     domain_accessible: bool = False  # NEW: Track domain accessibility
     services_healthy: bool = False   # NEW: Track service health
     critical_checks_passed: bool = False  # NEW: Track critical deployment checks
+    automated_script_used: Optional[str] = None  # NEW: Track which automated script was used
     
     def __post_init__(self):
         if self.warnings is None:
@@ -272,7 +273,7 @@ class AIDeploymentOrchestrator:
         # Error patterns for intelligent recovery
         self.error_patterns = self._initialize_error_patterns()
         
-        # Deployment steps with enhanced verification
+        # Deployment steps with enhanced verification and automated scripts
         self.deployment_steps = [
             ("validate_server", "Server validation and prerequisites"),
             ("setup_authentication", "Authentication and security setup"),
@@ -280,6 +281,7 @@ class AIDeploymentOrchestrator:
             ("handle_nodejs_conflicts", "Node.js conflict resolution"),
             ("setup_database", "Database configuration"),
             ("download_application", "Application download and setup"),
+            ("run_deployment_scripts", "Run automated deployment scripts"),  # NEW: Run specialized deployment scripts
             ("configure_backend", "Backend configuration"),
             ("configure_frontend", "Frontend build and configuration"),
             ("setup_webserver", "Web server and SSL configuration"),
@@ -1274,6 +1276,13 @@ class AIDeploymentOrchestrator:
         print(f"{Colors.CYAN}Errors:{Colors.END} {self.state.error_count}")
         print(f"{Colors.CYAN}Warnings:{Colors.END} {len(self.state.warnings)}")
         
+        # Show automated script usage information
+        if hasattr(self.state, 'automated_script_used') and self.state.automated_script_used:
+            print(f"{Colors.CYAN}Automated Script Used:{Colors.END} {self.state.automated_script_used}")
+            print(f"{Colors.GREEN}✓ Deployment leveraged specialized automation scripts{Colors.END}")
+        else:
+            print(f"{Colors.CYAN}Deployment Method:{Colors.END} Manual step-by-step configuration")
+        
         # Critical status indicators
         print(f"\n{Colors.BOLD}Critical Deployment Checks:{Colors.END}")
         print(f"{Colors.CYAN}Services Healthy:{Colors.END} {'✓ YES' if self.state.services_healthy else '✗ NO'}")
@@ -1788,9 +1797,154 @@ class AIDeploymentOrchestrator:
         self.log("ProjectMeats application setup completed successfully", "SUCCESS")
         return True
     
+    def deploy_run_deployment_scripts(self) -> bool:
+        """Run specialized deployment scripts based on server state"""
+        self.log("Running automated deployment scripts...", "INFO", Colors.BOLD + Colors.BLUE)
+        
+        project_dir = "/opt/projectmeats"
+        
+        # Check if deployment scripts exist
+        quick_fix_script = f"{project_dir}/deployment/scripts/quick_server_fix.sh"
+        setup_script = f"{project_dir}/deployment/scripts/setup_production.sh"
+        
+        # Verify scripts exist
+        exit_code, stdout, stderr = self.execute_command(f"test -f {quick_fix_script} && test -f {setup_script}")
+        if exit_code != 0:
+            self.log("Deployment scripts not found, using manual configuration", "WARNING")
+            return True  # Continue with manual deployment steps
+        
+        # Determine which script to use based on server state
+        script_to_use = None
+        
+        # Check if this is an existing deployment (has dependencies and project already setup)
+        self.log("Analyzing server state to choose appropriate deployment script...", "INFO")
+        
+        # Check for existing dependencies
+        checks = [
+            ("python3 --version", "Python"),
+            ("psql --version", "PostgreSQL"),
+            ("nginx -v", "Nginx"),
+            ("node --version", "Node.js")
+        ]
+        
+        dependencies_installed = 0
+        total_checks = len(checks)
+        
+        for cmd, name in checks:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code == 0:
+                dependencies_installed += 1
+                self.log(f"✓ {name} is available", "SUCCESS")
+            else:
+                self.log(f"✗ {name} not found", "INFO")
+        
+        # Check if project files are already present
+        project_exists = False
+        exit_code, stdout, stderr = self.execute_command(
+            f"test -d {project_dir}/backend && test -d {project_dir}/frontend && test -f {project_dir}/README.md"
+        )
+        if exit_code == 0:
+            project_exists = True
+            self.log("✓ Project files already exist", "SUCCESS")
+        else:
+            self.log("✗ Project files not found", "INFO")
+        
+        # Decision logic for which script to use
+        if dependencies_installed >= (total_checks * 0.75) and project_exists:
+            # Use quick fix script for existing servers with dependencies
+            script_to_use = quick_fix_script
+            script_name = "Quick Server Fix"
+            self.log(f"Server has most dependencies and project files - using {script_name} script", "INFO")
+        else:
+            # Use full setup script for fresh servers
+            script_to_use = setup_script
+            script_name = "Full Production Setup"
+            self.log(f"Fresh server or missing dependencies - using {script_name} script", "INFO")
+        
+        # Make script executable
+        exit_code, stdout, stderr = self.execute_command(f"chmod +x {script_to_use}")
+        if exit_code != 0:
+            self.log(f"Failed to make script executable: {script_to_use}", "ERROR")
+            return False
+        
+        # Get domain from config for script environment
+        domain = self.config.get('domain', 'meatscentral.com')
+        
+        # Set environment variables for the script
+        env_vars = f"export DOMAIN={domain}"
+        
+        # Run the selected deployment script
+        self.log(f"Executing {script_name} script...", "INFO")
+        self.log("This may take several minutes as it sets up the entire application", "INFO")
+        
+        # Use extended timeout for deployment scripts (30 minutes)
+        script_timeout = 1800
+        
+        try:
+            # Run script with environment variables and extended timeout
+            exit_code, stdout, stderr = self.execute_command(
+                f"cd {project_dir} && {env_vars} && timeout {script_timeout} bash {script_to_use}",
+                timeout=script_timeout + 60
+            )
+            
+            if exit_code == 0:
+                self.log(f"✓ {script_name} script completed successfully", "SUCCESS", Colors.BOLD + Colors.GREEN)
+                
+                # Parse script output for important information
+                if "Setup complete!" in stdout or "Deployment Complete!" in stdout:
+                    self.log("Deployment script reports successful completion", "SUCCESS")
+                
+                # Check for any warnings in the output
+                if "WARNING" in stdout or "failed" in stdout.lower():
+                    self.log("Script completed but with warnings - check output above", "WARNING")
+                
+                # Mark that we used automated scripts
+                self.state.automated_script_used = script_name
+                
+                return True
+            else:
+                self.log(f"✗ {script_name} script failed with exit code {exit_code}", "ERROR")
+                
+                # Show error output for debugging
+                if stderr:
+                    self.log(f"Script error output: {stderr[-500:]}", "ERROR")  # Last 500 chars
+                
+                # Try to extract specific error information
+                if "Database" in stderr or "psql" in stderr:
+                    self.log("Database setup error detected - continuing with manual configuration", "WARNING")
+                elif "npm" in stderr or "node" in stderr:
+                    self.log("Frontend build error detected - continuing with manual configuration", "WARNING")
+                elif "nginx" in stderr:
+                    self.log("Nginx configuration error detected - continuing with manual configuration", "WARNING")
+                else:
+                    self.log("General script error - continuing with manual configuration", "WARNING")
+                
+                # Don't fail the deployment - continue with manual steps
+                self.log("Continuing with manual deployment configuration steps...", "INFO")
+                return True
+                
+        except Exception as e:
+            self.log(f"Exception running deployment script: {e}", "ERROR")
+            self.log("Continuing with manual deployment configuration steps...", "INFO")
+            return True  # Continue with manual steps
+    
     def deploy_configure_backend(self) -> bool:
         """Configure backend"""
         self.log("Configuring backend...", "INFO")
+        
+        # Check if automated script already handled this
+        if hasattr(self.state, 'automated_script_used') and self.state.automated_script_used:
+            self.log(f"Backend may already be configured by {self.state.automated_script_used} script", "INFO")
+            
+            # Verify if backend is already configured
+            exit_code, stdout, stderr = self.execute_command(
+                "systemctl is-active projectmeats && test -f /opt/projectmeats/backend/venv/bin/activate"
+            )
+            if exit_code == 0:
+                self.log("✓ Backend already configured and service running - skipping manual configuration", "SUCCESS")
+                return True
+            else:
+                self.log("Backend not fully configured - continuing with manual setup", "INFO")
         
         # Create virtual environment and install dependencies
         commands = [
@@ -1911,6 +2065,20 @@ WantedBy=multi-user.target
         """Configure frontend"""
         self.log("Configuring frontend...", "INFO")
         
+        # Check if automated script already handled this
+        if hasattr(self.state, 'automated_script_used') and self.state.automated_script_used:
+            self.log(f"Frontend may already be configured by {self.state.automated_script_used} script", "INFO")
+            
+            # Verify if frontend is already built
+            exit_code, stdout, stderr = self.execute_command(
+                "test -d /opt/projectmeats/frontend/build && test -f /opt/projectmeats/frontend/build/index.html"
+            )
+            if exit_code == 0:
+                self.log("✓ Frontend already built - skipping manual configuration", "SUCCESS")
+                return True
+            else:
+                self.log("Frontend not fully built - continuing with manual setup", "INFO")
+        
         # Ensure proper directory ownership before npm operations
         self.log("Setting frontend directory ownership...", "INFO")
         ownership_commands = [
@@ -1971,6 +2139,20 @@ WantedBy=multi-user.target
     def deploy_setup_webserver(self) -> bool:
         """Setup web server"""
         self.log("Setting up web server...", "INFO")
+        
+        # Check if automated script already handled this
+        if hasattr(self.state, 'automated_script_used') and self.state.automated_script_used:
+            self.log(f"Web server may already be configured by {self.state.automated_script_used} script", "INFO")
+            
+            # Verify if nginx is already configured for ProjectMeats
+            exit_code, stdout, stderr = self.execute_command(
+                "test -f /etc/nginx/sites-enabled/projectmeats && systemctl is-active nginx"
+            )
+            if exit_code == 0:
+                self.log("✓ Web server already configured and running - skipping manual configuration", "SUCCESS")
+                return True
+            else:
+                self.log("Web server not fully configured - continuing with manual setup", "INFO")
         
         # Get domain from config
         domain = self.config.get('domain', 'localhost')
