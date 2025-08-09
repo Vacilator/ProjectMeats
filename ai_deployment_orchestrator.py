@@ -1531,8 +1531,8 @@ class AIDeploymentOrchestrator:
         return True
     
     def deploy_download_application(self) -> bool:
-        """Download application with improved timeout and error handling"""
-        self.log("Setting up ProjectMeats application...", "INFO")
+        """Download and setup ProjectMeats application with improved validation"""
+        self.log("Downloading and setting up ProjectMeats application...", "INFO")
         
         project_dir = "/opt/projectmeats"
         
@@ -1547,30 +1547,41 @@ class AIDeploymentOrchestrator:
         
         # Check if application is already downloaded and valid
         exit_code, stdout, stderr = self.execute_command(
-            f"ls -la {project_dir}/backend {project_dir}/frontend {project_dir}/README.md 2>/dev/null"
+            f"test -d {project_dir}/backend && test -d {project_dir}/frontend && test -f {project_dir}/README.md"
         )
         if exit_code == 0:
-            self.log("ProjectMeats application already exists - skipping download", "SUCCESS")
-            return True
+            self.log("ProjectMeats application already exists - verifying integrity...", "INFO")
+            # Quick validation of existing installation
+            key_files = ["backend/manage.py", "backend/requirements.txt", "frontend/package.json"]
+            all_present = True
+            for file_path in key_files:
+                exit_code2, stdout2, stderr2 = self.execute_command(f"test -f {project_dir}/{file_path}")
+                if exit_code2 != 0:
+                    all_present = False
+                    break
+            
+            if all_present:
+                self.log("Existing installation is valid - skipping download", "SUCCESS")
+                return True
+            else:
+                self.log("Existing installation is incomplete - will re-download", "WARNING")
         
         # Check if directory has content that needs backup
-        exit_code, stdout, stderr = self.execute_command(f"ls -A {project_dir} 2>/dev/null | wc -l")
-        if exit_code == 0 and stdout and int(stdout.strip()) > 0:
-            self.log("Project directory contains files - creating backup", "WARNING")
-            
-            # Create backup of existing content
-            backup_dir = f"{project_dir}_backup_{int(time.time())}"
-            self.log(f"Creating backup at {backup_dir}", "INFO")
-            exit_code, stdout, stderr = self.execute_command(f"mv {project_dir} {backup_dir}")
-            if exit_code != 0:
-                self.log("Failed to backup existing directory", "ERROR")
-                return False
-            
-            # Recreate empty directory
-            exit_code, stdout, stderr = self.execute_command(f"mkdir -p {project_dir}")
-            if exit_code != 0:
-                self.log("Failed to recreate project directory", "ERROR")
-                return False
+        try:
+            exit_code, stdout, stderr = self.execute_command(f"ls -la {project_dir}")
+            if exit_code == 0 and len(stdout.strip().split('\n')) > 3:  # More than just . and ..
+                self.log("Project directory contains files - creating backup", "WARNING")
+                
+                # Create backup of existing content
+                backup_dir = f"{project_dir}_backup_{int(time.time())}"
+                self.log(f"Creating backup at {backup_dir}", "INFO")
+                exit_code, stdout, stderr = self.execute_command(f"mv {project_dir} {backup_dir}")
+                if exit_code != 0:
+                    self.log(f"Failed to backup existing directory: {stderr}", "ERROR")
+                    return False
+                self.execute_command(f"mkdir -p {project_dir}")
+        except:
+            pass  # Directory is empty or doesn't exist, which is fine
         
         # Test network connectivity first
         self.log("Testing network connectivity...", "INFO")
@@ -1579,7 +1590,7 @@ class AIDeploymentOrchestrator:
             self.log("Network connectivity issue - cannot reach GitHub", "ERROR")
             return False
         
-        # Download from GitHub with improved timeout handling
+        # Download from GitHub with improved timeout handling and validation
         project_downloaded = False
         download_timeout = 1200  # 20 minutes for download operations
         
@@ -1607,62 +1618,144 @@ class AIDeploymentOrchestrator:
         if not project_downloaded:
             self.log("Attempting git clone (public access)...", "INFO")
             self.log("This may take several minutes for a large repository...", "INFO")
-            exit_code, stdout, stderr = self.execute_command(
-                f"cd {project_dir} && timeout {download_timeout} git clone --progress https://github.com/Vacilator/ProjectMeats.git .",
-                timeout=download_timeout + 60
-            )
-            if exit_code == 0:
-                project_downloaded = True
-                self.log("Successfully downloaded using git clone", "SUCCESS")
-            else:
-                self.log(f"Git clone failed (exit code: {exit_code}), trying direct download...", "WARNING")
-                if stderr:
-                    self.log(f"Error details: {stderr[:200]}...", "WARNING")
-        
-        # Method 3: Direct zip download (fallback)
-        if not project_downloaded:
-            self.log("Attempting direct zip download as fallback...", "INFO")
-            
-            # Download with timeout
-            exit_code, stdout, stderr = self.execute_command(
-                f"cd {project_dir} && timeout {download_timeout} curl -L --connect-timeout 30 --max-time {download_timeout} https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip",
-                timeout=download_timeout + 60
-            )
-            if exit_code == 0:
-                # Quick size check
-                exit_code, stdout, stderr = self.execute_command(f"stat -c%s {project_dir}/project.zip 2>/dev/null || echo 0")
-                if exit_code == 0 and stdout and int(stdout.strip()) > 1000:
-                    # Extract without complex validation
-                    self.log("Extracting downloaded archive...", "INFO")
-                    exit_code, stdout, stderr = self.execute_command(
-                        f"cd {project_dir} && unzip -q project.zip && mv ProjectMeats-main/* . && rmdir ProjectMeats-main && rm project.zip"
-                    )
-                    if exit_code == 0:
-                        project_downloaded = True
-                        self.log("Successfully downloaded via direct zip download", "SUCCESS")
-                    else:
-                        self.log("Failed to extract zip file", "ERROR")
-                        # Clean up
-                        self.execute_command(f"rm -f {project_dir}/project.zip")
+            try:
+                exit_code, stdout, stderr = self.execute_command(
+                    f"cd {project_dir} && timeout {download_timeout} git clone --progress https://github.com/Vacilator/ProjectMeats.git .",
+                    timeout=download_timeout + 60
+                )
+                if exit_code == 0:
+                    project_downloaded = True
+                    self.log("Successfully downloaded using git clone", "SUCCESS")
                 else:
-                    self.log("Downloaded file appears invalid or too small", "ERROR")
-                    self.execute_command(f"rm -f {project_dir}/project.zip")
-            else:
-                self.log(f"Direct download failed (exit code: {exit_code})", "WARNING")
+                    self.log(f"Git clone failed (exit code: {exit_code}), trying direct download...", "WARNING")
+                    if stderr and "already exists and is not an empty directory" in stderr:
+                        self.log("Git clone failed due to directory conflict - already handled with backup", "WARNING")
+                    elif stderr:
+                        self.log(f"Error details: {stderr[:200]}...", "WARNING")
+            except Exception as e:
+                self.log(f"Git clone error: {e}", "WARNING")
+        
+        # Method 3: Direct ZIP download with validation
+        if not project_downloaded:
+            self.log("Attempting direct ZIP download with validation...", "INFO")
+            
+            try:
+                # Download with timeout
+                exit_code, stdout, stderr = self.execute_command(
+                    f"cd {project_dir} && timeout {download_timeout} curl -L --connect-timeout 30 --max-time {download_timeout} https://github.com/Vacilator/ProjectMeats/archive/main.zip -o project.zip",
+                    timeout=download_timeout + 60
+                )
+                if exit_code != 0:
+                    raise Exception(f"Download command failed with exit code {exit_code}")
+                
+                # Validate download - check file size
+                exit_code, stdout, stderr = self.execute_command(f"stat -c%s {project_dir}/project.zip 2>/dev/null || echo 0")
+                if exit_code != 0 or not stdout:
+                    raise Exception("Failed to check downloaded file size")
+                
+                file_size = int(stdout.strip())
+                if file_size < 1000:  # Less than 1KB indicates error response (404, etc.)
+                    raise Exception(f"Download failed - file too small ({file_size} bytes), likely a 404 error page")
+                
+                # Check if it's actually a ZIP file
+                exit_code, stdout, stderr = self.execute_command(f"cd {project_dir} && file project.zip")
+                if exit_code != 0 or "zip" not in stdout.lower():
+                    # Show what we actually got
+                    exit_code2, head_content, stderr2 = self.execute_command(f"head -c 200 {project_dir}/project.zip")
+                    self.log(f"Downloaded file is not a valid ZIP archive. Content preview: {head_content[:100]}...", "WARNING")
+                    raise Exception("Downloaded file is not a valid ZIP archive")
+                
+                # Extract with proper handling of hidden files
+                self.log("Extracting validated ZIP archive...", "INFO")
+                extract_commands = [
+                    f"cd {project_dir} && unzip -q project.zip",
+                    f"cd {project_dir} && mv ProjectMeats-main/* . 2>/dev/null || true",
+                    f"cd {project_dir} && mv ProjectMeats-main/.* . 2>/dev/null || true",
+                    f"cd {project_dir} && rm -rf ProjectMeats-main project.zip"
+                ]
+                
+                for cmd in extract_commands:
+                    exit_code, stdout, stderr = self.execute_command(cmd)
+                    if exit_code != 0 and "mv ProjectMeats-main/.*" not in cmd:  # Allow hidden file move to fail
+                        raise Exception(f"Extraction command failed: {cmd}")
+                
+                project_downloaded = True
+                self.log("Successfully downloaded via validated ZIP download", "SUCCESS")
+                
+            except Exception as e:
+                self.log(f"ZIP download failed: {e}", "ERROR")
+                # Clean up failed download
+                self.execute_command(f"rm -f {project_dir}/project.zip")
+                self.execute_command(f"rm -rf {project_dir}/ProjectMeats-main")
+        
+        # Method 4: Tarball download as alternative
+        if not project_downloaded:
+            self.log("Attempting tarball download as final fallback...", "INFO")
+            
+            try:
+                # Download tarball
+                exit_code, stdout, stderr = self.execute_command(
+                    f"cd {project_dir} && timeout {download_timeout} curl -L --connect-timeout 30 --max-time {download_timeout} https://github.com/Vacilator/ProjectMeats/archive/refs/heads/main.tar.gz -o project.tar.gz",
+                    timeout=download_timeout + 60
+                )
+                if exit_code != 0:
+                    raise Exception(f"Tarball download failed with exit code {exit_code}")
+                
+                # Validate tarball
+                exit_code, stdout, stderr = self.execute_command(f"stat -c%s {project_dir}/project.tar.gz 2>/dev/null || echo 0")
+                if exit_code != 0 or not stdout:
+                    raise Exception("Failed to check downloaded tarball size")
+                
+                tar_size = int(stdout.strip())
+                if tar_size < 1000:  # Less than 1KB indicates error response
+                    raise Exception(f"Tarball download failed - file too small ({tar_size} bytes)")
+                
+                # Check if it's actually a gzip file
+                exit_code, stdout, stderr = self.execute_command(f"cd {project_dir} && file project.tar.gz")
+                if exit_code != 0 or "gzip compressed" not in stdout.lower():
+                    raise Exception("Downloaded file is not a valid gzip archive")
+                
+                # Extract tarball
+                self.log("Extracting validated tarball...", "INFO")
+                extract_commands = [
+                    f"cd {project_dir} && tar -xzf project.tar.gz",
+                    f"cd {project_dir} && mv ProjectMeats-main/* . 2>/dev/null || true",
+                    f"cd {project_dir} && mv ProjectMeats-main/.* . 2>/dev/null || true",
+                    f"cd {project_dir} && rm -rf ProjectMeats-main project.tar.gz"
+                ]
+                
+                for cmd in extract_commands:
+                    exit_code, stdout, stderr = self.execute_command(cmd)
+                    if exit_code != 0 and "mv ProjectMeats-main/.*" not in cmd:  # Allow hidden file move to fail
+                        raise Exception(f"Extraction command failed: {cmd}")
+                
+                project_downloaded = True
+                self.log("Successfully downloaded via validated tarball", "SUCCESS")
+                
+            except Exception as e:
+                self.log(f"Tarball download failed: {e}", "ERROR")
+                # Clean up failed download
+                self.execute_command(f"rm -f {project_dir}/project.tar.gz")
+                self.execute_command(f"rm -rf {project_dir}/ProjectMeats-main")
         
         if not project_downloaded:
-            self.log("All download methods failed", "ERROR")
-            self.log("Please check network connectivity and GitHub access", "ERROR")
+            self.log("All download methods failed!", "ERROR")
+            self.log("This indicates a network connectivity issue or GitHub access problem", "ERROR")
+            self.log("Please check: 1) Internet connectivity, 2) DNS resolution, 3) GitHub accessibility", "ERROR")
             return False
         
-        # Simple verification that essential files exist
-        self.log("Verifying downloaded application...", "INFO")
+        # Comprehensive verification that essential files exist
+        self.log("Verifying downloaded application structure...", "INFO")
         exit_code, stdout, stderr = self.execute_command(
             f"test -d {project_dir}/backend && test -d {project_dir}/frontend && test -f {project_dir}/README.md"
         )
         if exit_code != 0:
             self.log("Downloaded project appears incomplete - missing essential directories", "ERROR")
-            self.log("Required: backend/, frontend/, README.md", "ERROR")
+            self.log("Required directories/files: backend/, frontend/, README.md", "ERROR")
+            # Show what we actually have
+            exit_code2, ls_output, stderr2 = self.execute_command(f"ls -la {project_dir}")
+            if exit_code2 == 0:
+                self.log(f"Current directory contents: {ls_output}", "ERROR")
             return False
         
         # Check for key files
@@ -1670,7 +1763,8 @@ class AIDeploymentOrchestrator:
         key_files = [
             "backend/manage.py",
             "backend/requirements.txt", 
-            "frontend/package.json"
+            "frontend/package.json",
+            "backend/apps/settings/settings.py"
         ]
         
         missing_files = []
@@ -1680,10 +1774,16 @@ class AIDeploymentOrchestrator:
                 missing_files.append(file_path)
         
         if missing_files:
-            self.log(f"Warning: Some expected files are missing: {', '.join(missing_files)}", "WARNING")
-            self.log("Deployment will continue but may fail in later steps", "WARNING")
+            self.log(f"CRITICAL: Some essential files are missing: {', '.join(missing_files)}", "ERROR")
+            self.log("This indicates the download was incomplete or corrupted", "ERROR")
+            return False
         else:
-            self.log("All key application files found", "SUCCESS")
+            self.log("All key application files found and verified", "SUCCESS")
+        
+        # Set ownership
+        exit_code, stdout, stderr = self.execute_command(f"chown -R projectmeats:projectmeats {project_dir}")
+        if exit_code != 0:
+            self.log("Warning: Could not set proper ownership", "WARNING")
         
         self.log("ProjectMeats application setup completed successfully", "SUCCESS")
         return True
