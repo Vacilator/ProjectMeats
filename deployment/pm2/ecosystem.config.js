@@ -21,9 +21,9 @@ module.exports = {
       ],
       interpreter: '/opt/projectmeats/venv/bin/python',
       env: {
-        DJANGO_SETTINGS_MODULE: 'projectmeats.settings'
+        DJANGO_SETTINGS_MODULE: 'apps.settings.production'
       },
-      env_file: '/opt/projectmeats/.env.production',
+      env_file: '/etc/projectmeats/projectmeats.env',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
