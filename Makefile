@@ -1,7 +1,7 @@
 # ProjectMeats Development Makefile
 # Provides essential development commands for Django + React application
 
-.PHONY: help setup dev test clean docs format lint
+.PHONY: help setup dev test clean docs format lint docker-build docker-up docker-down
 
 # Default target
 help:
@@ -21,6 +21,12 @@ help:
 	@echo "  make dev       - Start both backend and frontend servers"
 	@echo "  make backend   - Start Django development server"
 	@echo "  make frontend  - Start React development server"
+	@echo ""
+	@echo "Docker Commands:"
+	@echo "  make docker-build  - Build Docker Compose services"
+	@echo "  make docker-up     - Start Docker Compose stack"
+	@echo "  make docker-down   - Stop Docker Compose stack"
+	@echo "  make docker-logs   - View Docker Compose logs"
 	@echo ""
 	@echo "Database Commands:"
 	@echo "  make migrate   - Run Django migrations"
@@ -71,6 +77,24 @@ backend:
 frontend:
 	@echo "⚛️  Starting React development server..."
 	cd frontend && npm start
+
+# Docker commands
+docker-build:
+	@echo "🐳 Building Docker Compose services..."
+	docker compose build
+
+docker-up:
+	@echo "🚀 Starting Docker Compose stack..."
+	docker compose up -d
+	@echo "✅ Services started! Run 'make docker-logs' to view logs"
+
+docker-down:
+	@echo "🛑 Stopping Docker Compose stack..."
+	docker compose down
+
+docker-logs:
+	@echo "📋 Viewing Docker Compose logs..."
+	docker compose logs -f
 
 # Database commands
 migrate:
