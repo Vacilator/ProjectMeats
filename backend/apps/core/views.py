@@ -16,7 +16,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from .models import UserProfile
-from .serializers import (AuthLoginSerializer, AuthSignupSerializer,
+from .serializers import (AuthLoginSerializer, AuthLogoutSerializer, AuthSignupSerializer,
                           UserProfileCreateSerializer, UserProfileSerializer)
 
 
@@ -353,6 +353,7 @@ def login_view(request):
     summary="User Logout",
     description="Logout user and clear session",
     tags=["Authentication"],
+    request=AuthLogoutSerializer,
     responses={200: {"description": "Logout successful"}},
 )
 @api_view(["POST"])

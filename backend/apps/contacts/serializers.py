@@ -5,6 +5,7 @@ Handles serialization/deserialization between Django models and JSON API respons
 Migrated from PowerApps pro_contactinfo entity.
 """
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from .models import ContactInfo
 
@@ -115,7 +116,8 @@ class ContactInfoDetailSerializer(serializers.ModelSerializer):
             "supplier_name",
         ]
 
-    def get_powerapps_entity_name(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_powerapps_entity_name(self, obj) -> str:
         """Return the original PowerApps entity name for reference."""
         return obj.get_powerapps_entity_name()
 

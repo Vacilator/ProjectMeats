@@ -453,6 +453,7 @@ class ChatBotAPIViewSet(viewsets.ViewSet):
     """
 
     permission_classes = [IsAuthenticated]
+    serializer_class = ChatBotRequestSerializer  # Default serializer for OpenAPI
 
     @action(detail=False, methods=["post"])
     def chat(self, request):
