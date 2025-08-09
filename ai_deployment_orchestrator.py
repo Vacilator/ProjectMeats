@@ -2227,7 +2227,7 @@ class AIDeploymentOrchestrator:
     
     def collect_production_config(self, domain: str = None) -> ProductionConfig:
         """
-        Collect production configuration from user through interactive prompts
+        Setup production configuration with automatic database credential generation
         """
         self.log("=== Production Configuration Setup ===", "INFO")
         print(f"\n{Colors.CYAN}{'='*60}")
@@ -2254,19 +2254,39 @@ class AIDeploymentOrchestrator:
                 config.allowed_hosts = f"{config.domain},www.{config.domain}"
                 config.cors_origins = f"https://{config.domain},https://www.{config.domain}"
         
-        # Database configuration
+        # Database configuration - AUTO-GENERATED (no user prompts)
         print(f"\n{Colors.YELLOW}Database Configuration:{Colors.END}")
-        print("Setting up PostgreSQL database configuration...")
+        print("Setting up PostgreSQL database configuration automatically...")
         
-        config.db_name = input(f"Database name [{config.db_name}]: ").strip() or config.db_name
-        config.db_user = input(f"Database username [{config.db_user}]: ").strip() or config.db_user
+        # Generate unique, secure database credentials automatically
+        config.db_name = f"projectmeats_prod_{secrets.token_hex(4)}"  # e.g., projectmeats_prod_a1b2c3d4
+        config.db_user = f"pm_user_{secrets.token_hex(3)}"  # e.g., pm_user_x9y8z7
+        config.db_password = self._generate_secure_db_password()
         
-        while not config.db_password:
-            config.db_password = getpass.getpass("Database password (will be hidden): ").strip()
-            if not config.db_password:
-                print(f"{Colors.RED}Password cannot be empty. Please enter a secure password.{Colors.END}")
+        print(f"{Colors.GREEN}✓ Database name: {config.db_name}{Colors.END}")
+        print(f"{Colors.GREEN}✓ Database user: {config.db_user}{Colors.END}")
+        print(f"{Colors.GREEN}✓ Database password: [auto-generated 16-character secure password]{Colors.END}")
+        print(f"{Colors.GREEN}✓ Database configuration generated automatically{Colors.END}")
         
-        print(f"{Colors.GREEN}✓ Database configuration collected{Colors.END}")
+        # Log the credentials securely for system administration
+        self.log(f"Generated database credentials - Name: {config.db_name}, User: {config.db_user}", "INFO")
+        
+        # Save credentials to a secure admin file (readable only by root)
+        try:
+            admin_info = {
+                "deployment_time": datetime.now().isoformat(),
+                "database_name": config.db_name,
+                "database_user": config.db_user,
+                "database_password": config.db_password,
+                "database_host": config.db_host,
+                "database_port": config.db_port
+            }
+            
+            # Note: In production, this would be written to the server, here we just log it
+            self.log("Database credentials will be saved to /opt/projectmeats/admin/database_credentials.json on the server", "INFO")
+            
+        except Exception as e:
+            self.log(f"Warning: Could not prepare admin credentials file: {e}", "WARNING")
         
         # Company information
         print(f"\n{Colors.YELLOW}Company Information (Optional):{Colors.END}")
@@ -2315,6 +2335,14 @@ class AIDeploymentOrchestrator:
         print(f"{Colors.GREEN}{'='*60}{Colors.END}\n")
         
         return config
+    
+    def _generate_secure_db_password(self) -> str:
+        """Generate a secure database password automatically"""
+        # Use a mix of letters and numbers (avoiding special chars that might cause SQL escaping issues)
+        chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        # Generate 16-character password (sufficient for database security)
+        password = ''.join(secrets.choice(chars) for _ in range(16))
+        return password
     
     def generate_production_env_file(self, config: ProductionConfig) -> str:
         """
@@ -2553,10 +2581,51 @@ EOF"""
             self.log("✓ Production environment file created successfully", "SUCCESS")
             
             # Create database and user with the collected configuration
-            return self._setup_database_with_config(config)
+            if self._setup_database_with_config(config):
+                # Create secure admin credentials file on the server
+                self._save_admin_credentials(config)
+                return True
+            else:
+                return False
             
         except Exception as e:
             self.log(f"Error setting up production configuration: {e}", "ERROR")
+            return False
+    
+    def _save_admin_credentials(self, config: ProductionConfig) -> bool:
+        """Save database credentials to a secure admin file on the server"""
+        try:
+            admin_info = {
+                "deployment_time": datetime.now().isoformat(),
+                "database_name": config.db_name,
+                "database_user": config.db_user, 
+                "database_password": config.db_password,
+                "database_host": config.db_host,
+                "database_port": config.db_port,
+                "domain": config.domain,
+                "company_name": config.company_name
+            }
+            
+            # Create admin directory and credentials file
+            admin_setup_cmd = f"""
+            mkdir -p /opt/projectmeats/admin
+            cat > /opt/projectmeats/admin/database_credentials.json << 'EOF'
+{json.dumps(admin_info, indent=2)}
+EOF
+            chmod 600 /opt/projectmeats/admin/database_credentials.json
+            chown root:root /opt/projectmeats/admin/database_credentials.json
+            """
+            
+            exit_code, stdout, stderr = self.execute_command(admin_setup_cmd)
+            if exit_code == 0:
+                self.log("✓ Admin credentials file saved to /opt/projectmeats/admin/database_credentials.json", "SUCCESS")
+                return True
+            else:
+                self.log(f"Warning: Could not save admin credentials file: {stderr}", "WARNING")
+                return False
+                
+        except Exception as e:
+            self.log(f"Warning: Error saving admin credentials: {e}", "WARNING")
             return False
     
     def _setup_database_with_config(self, config: ProductionConfig) -> bool:
