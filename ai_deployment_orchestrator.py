@@ -2557,26 +2557,35 @@ POWERAPPS_MIGRATION_MODE=False
             # Create the environment file on the server
             self.log("Creating production environment file on server...", "INFO")
             
-            # Ensure the backend directory exists
-            exit_code, stdout, stderr = self.execute_command("mkdir -p /opt/projectmeats/backend")
+            # Ensure the directories exist
+            exit_code, stdout, stderr = self.execute_command("mkdir -p /opt/projectmeats/backend /etc/projectmeats")
             if exit_code != 0:
-                self.log(f"Failed to create backend directory: {stderr}", "ERROR")
+                self.log(f"Failed to create directories: {stderr}", "ERROR")
                 return False
             
-            # Write the environment file
-            env_file_cmd = f"""cat > /opt/projectmeats/backend/.env << 'EOF'
+            # Write the environment file to the location expected by systemd service
+            env_file_cmd = f"""cat > /etc/projectmeats/projectmeats.env << 'EOF'
 {env_content}
 EOF"""
             
             exit_code, stdout, stderr = self.execute_command(env_file_cmd)
             if exit_code != 0:
-                self.log(f"Failed to create .env file: {stderr}", "ERROR")
+                self.log(f"Failed to create systemd environment file: {stderr}", "ERROR")
                 return False
             
-            # Set proper permissions
-            exit_code, stdout, stderr = self.execute_command("chmod 600 /opt/projectmeats/backend/.env")
+            # Also create a backup in the backend directory for Django management commands
+            backup_env_cmd = f"""cat > /opt/projectmeats/backend/.env << 'EOF'
+{env_content}
+EOF"""
+            
+            exit_code, stdout, stderr = self.execute_command(backup_env_cmd)
             if exit_code != 0:
-                self.log("Warning: Could not set secure permissions on .env file", "WARNING")
+                self.log(f"Warning: Failed to create backend .env file: {stderr}", "WARNING")
+            
+            # Set proper permissions on both files
+            exit_code, stdout, stderr = self.execute_command("chmod 600 /etc/projectmeats/projectmeats.env /opt/projectmeats/backend/.env 2>/dev/null")
+            if exit_code != 0:
+                self.log("Warning: Could not set secure permissions on .env files", "WARNING")
             
             self.log("✓ Production environment file created successfully", "SUCCESS")
             
@@ -2584,12 +2593,61 @@ EOF"""
             if self._setup_database_with_config(config):
                 # Create secure admin credentials file on the server
                 self._save_admin_credentials(config)
+                # Ensure Django service directories and permissions are set up
+                self._setup_django_service_directories()
                 return True
             else:
                 return False
             
         except Exception as e:
             self.log(f"Error setting up production configuration: {e}", "ERROR")
+            return False
+    
+    def _setup_django_service_directories(self) -> bool:
+        """Setup directories and permissions required by Django systemd service"""
+        try:
+            self.log("Setting up Django service directories and permissions...", "INFO")
+            
+            # Create required directories
+            setup_dirs_cmd = """
+            # Create log directory
+            mkdir -p /var/log/projectmeats
+            chown www-data:www-data /var/log/projectmeats
+            chmod 755 /var/log/projectmeats
+            
+            # Create PID directory
+            mkdir -p /var/run/projectmeats
+            chown www-data:www-data /var/run/projectmeats
+            chmod 755 /var/run/projectmeats
+            
+            # Create media directory (for file uploads)
+            mkdir -p /opt/projectmeats/backend/media
+            chown -R www-data:www-data /opt/projectmeats/backend/media
+            chmod -R 755 /opt/projectmeats/backend/media
+            
+            # Create static files directory
+            mkdir -p /opt/projectmeats/backend/staticfiles
+            chown -R www-data:www-data /opt/projectmeats/backend/staticfiles
+            chmod -R 755 /opt/projectmeats/backend/staticfiles
+            
+            # Ensure www-data can read environment file
+            chown www-data:www-data /etc/projectmeats/projectmeats.env 2>/dev/null || true
+            
+            # Ensure backend directory has proper permissions
+            chown -R www-data:www-data /opt/projectmeats/backend
+            chmod -R 755 /opt/projectmeats/backend
+            """
+            
+            exit_code, stdout, stderr = self.execute_command(setup_dirs_cmd)
+            if exit_code == 0:
+                self.log("✓ Django service directories and permissions configured", "SUCCESS")
+                return True
+            else:
+                self.log(f"Warning: Could not set up all Django service directories: {stderr}", "WARNING")
+                return False
+                
+        except Exception as e:
+            self.log(f"Warning: Error setting up Django service directories: {e}", "WARNING")
             return False
     
     def _save_admin_credentials(self, config: ProductionConfig) -> bool:
