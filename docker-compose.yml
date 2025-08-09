@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: projectmeats_user
+      POSTGRES_PASSWORD: WATERMELON1219
+      POSTGRES_DB: projectmeats_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  backend:
+    build: ./backend
+    environment:
+      - DATABASE_URL=postgres://projectmeats_user:WATERMELON1219@db:5432/projectmeats_db
+      - DJANGO_SECRET_KEY=your_secure_secret_key
+      - DEBUG=False
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app/backend
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app/frontend
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+volumes:
+  postgres_data:

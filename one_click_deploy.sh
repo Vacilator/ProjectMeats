@@ -8,6 +8,13 @@
 # wget https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_click_deploy.sh
 # chmod +x one_click_deploy.sh
 # sudo ./one_click_deploy.sh
+#
+# For Docker Compose deployment (alternative to this script):
+# git clone https://github.com/Vacilator/ProjectMeats.git
+# cd ProjectMeats
+# docker compose up --build -d
+# docker compose exec backend python manage.py migrate
+# docker compose exec backend python manage.py createsuperuser --username admin --email admin@example.com
 
 set -e
 
