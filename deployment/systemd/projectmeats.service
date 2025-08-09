@@ -8,10 +8,9 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/opt/projectmeats/backend
-Environment=DJANGO_SETTINGS_MODULE=projectmeats.settings
-EnvironmentFile=/opt/projectmeats/.env.production
-ExecStartPre=/bin/mkdir -p /var/log/projectmeats /var/run/projectmeats
-ExecStartPre=/bin/chown www-data:www-data /var/log/projectmeats /var/run/projectmeats
+
+Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
+EnvironmentFile=/etc/projectmeats/projectmeats.env
 ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --bind 127.0.0.1:8000 \
     --workers 3 \
