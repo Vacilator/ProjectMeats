@@ -95,7 +95,7 @@ python manage.py collectstatic --noinput
 log_info "Building React frontend..."
 cd $PROJECT_DIR/frontend
 if command -v npm >/dev/null 2>&1; then
-    npm install --production
+    npm install
     npm run build
 else
     log_warning "npm not found. Please install Node.js and run: cd $PROJECT_DIR/frontend && npm install && npm run build"
