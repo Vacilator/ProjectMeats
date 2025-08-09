@@ -87,7 +87,7 @@ cd ..
 log_info "Building frontend..."
 cd frontend
 if command -v npm >/dev/null; then
-    npm install --silent --production
+    npm install --silent
     npm run build
 else
     log_warning "npm not found - please install Node.js"
