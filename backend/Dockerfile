@@ -1,45 +1,27 @@
-# ProjectMeats Backend Dockerfile
-FROM python:3.11-slim
+# Build stage
+FROM python:3.9-slim AS builder
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app/backend
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
-
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
+# Install system dependencies needed for Python packages
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY requirements.txt /app/
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
-COPY . /app/
+# Production stage
+FROM python:3.9-slim
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app/backend
 
-# Create directories for logs and static files
-RUN mkdir -p /app/logs /app/staticfiles /app/media
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Collect static files
-RUN python manage.py collectstatic --noinput || echo "Static files will be collected at runtime"
-
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash projectmeats && \
-    chown -R projectmeats:projectmeats /app
-USER projectmeats
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health/ || exit 1
-
-# Expose port
-EXPOSE 8000
-
-# Run gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "projectmeats.wsgi:application"]
+COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY . .
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "projectmeats.wsgi:application", "--workers=3"]

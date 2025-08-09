@@ -2,7 +2,9 @@
 
 A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
-## 🚀 ONE-CLICK PRODUCTION DEPLOYMENT
+## 🚀 DEPLOYMENT OPTIONS
+
+### Option 1: One-Click Production Deployment
 
 **Deploy ProjectMeats to production in minutes with one command:**
 
@@ -16,7 +18,21 @@ curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_clic
 curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/fix_nodejs.sh | sudo bash
 ```
 
-**📖 Complete deployment guide:** [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)
+### Option 2: Docker Compose Deployment
+
+**For containerized environments or development:**
+
+```bash
+git clone https://github.com/Vacilator/ProjectMeats.git
+cd ProjectMeats
+docker compose up --build -d
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser --username admin --email admin@example.com
+```
+
+**📖 Deployment guides:**
+- [One-Click Deployment Guide](PRODUCTION_DEPLOYMENT.md)
+- [Docker Compose Guide](DOCKER_COMPOSE_GUIDE.md)
 
 ### ✨ What You Get
 - ✅ **Professional UI** at your domain with SSL
