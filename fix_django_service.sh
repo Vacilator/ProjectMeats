@@ -94,15 +94,35 @@ else
     python -c "import django; from django.conf import settings; django.setup()" || true
 fi
 
-# Step 4: Reload and restart service
-log_info "Step 4: Restarting ProjectMeats service..."
+# Step 4: Create required directories
+log_info "Step 4: Creating required directories and setting permissions..."
+
+# Create log directory
+mkdir -p /var/log/projectmeats
+chown www-data:www-data /var/log/projectmeats
+chmod 755 /var/log/projectmeats
+
+# Create run directory for PID file
+mkdir -p /var/run/projectmeats
+chown www-data:www-data /var/run/projectmeats
+chmod 755 /var/run/projectmeats
+
+# Create media directory if it doesn't exist
+mkdir -p /opt/projectmeats/backend/media
+chown www-data:www-data /opt/projectmeats/backend/media
+chmod 755 /opt/projectmeats/backend/media
+
+log_success "Required directories created and permissions set"
+
+# Step 5: Reload and restart service
+log_info "Step 5: Restarting ProjectMeats service..."
 systemctl daemon-reload
 systemctl stop projectmeats || true
 sleep 2
 systemctl start projectmeats
 
-# Step 5: Verify service status
-log_info "Step 5: Checking service status..."
+# Step 6: Verify service status
+log_info "Step 6: Checking service status..."
 sleep 5
 
 if systemctl is-active --quiet projectmeats; then
@@ -117,8 +137,8 @@ else
     exit 1
 fi
 
-# Step 6: Test HTTP response
-log_info "Step 6: Testing HTTP response..."
+# Step 7: Test HTTP response
+log_info "Step 7: Testing HTTP response..."
 sleep 3
 if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/ | grep -q "200\|302\|404"; then
     log_success "✅ Django application is responding on port 8000"
