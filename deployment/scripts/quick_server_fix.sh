@@ -41,6 +41,7 @@ cd $PROJECT_DIR
 log_info "Creating directories..."
 mkdir -p /var/log/projectmeats
 mkdir -p /var/run/projectmeats
+mkdir -p /etc/projectmeats
 mkdir -p backend/staticfiles backend/media
 
 # Set up Python environment if it doesn't exist
@@ -63,6 +64,12 @@ if [[ ! -f ".env.production" ]]; then
     SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
     sed -i "s/your-super-secret-key-change-this-in-production/$SECRET_KEY/" .env.production
     sed -i "s/your_db_password/ProjectMeats2024!/" .env.production
+fi
+
+# Copy environment file to systemd expected location
+if [[ ! -f "/etc/projectmeats/projectmeats.env" ]]; then
+    log_info "Creating systemd environment file..."
+    cp .env.production /etc/projectmeats/projectmeats.env
 fi
 
 # Set up database
@@ -98,6 +105,8 @@ cd ..
 log_info "Setting permissions..."
 chown -R www-data:www-data /var/log/projectmeats /var/run/projectmeats
 chown -R www-data:www-data $PROJECT_DIR
+chown root:www-data /etc/projectmeats/projectmeats.env
+chmod 640 /etc/projectmeats/projectmeats.env
 
 # Install Nginx config
 log_info "Configuring Nginx..."
@@ -114,10 +123,43 @@ cp deployment/systemd/projectmeats.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable projectmeats
 
+# Verify the service configuration
+log_info "Verifying service configuration..."
+if systemctl cat projectmeats >/dev/null 2>&1; then
+    log_success "Service configuration loaded successfully"
+else
+    log_error "Failed to load service configuration"
+    exit 1
+fi
+
 # Start services
 log_info "Starting services..."
 systemctl restart nginx
-systemctl restart projectmeats
+
+# Start ProjectMeats service with detailed error handling
+if ! systemctl start projectmeats; then
+    log_error "Failed to start ProjectMeats service"
+    log_info "Checking service status..."
+    systemctl status projectmeats --no-pager -l
+    log_info "Checking recent logs..."
+    journalctl -u projectmeats -n 20 --no-pager
+    
+    # Check if critical files exist
+    log_info "Verifying critical files..."
+    if [[ ! -f "/etc/projectmeats/projectmeats.env" ]]; then
+        log_error "Missing environment file: /etc/projectmeats/projectmeats.env"
+    fi
+    if [[ ! -f "/opt/projectmeats/venv/bin/gunicorn" ]]; then
+        log_error "Missing gunicorn: /opt/projectmeats/venv/bin/gunicorn"
+    fi
+    if [[ ! -f "/opt/projectmeats/backend/projectmeats/wsgi.py" ]]; then
+        log_error "Missing WSGI file: /opt/projectmeats/backend/projectmeats/wsgi.py"
+    fi
+    
+    log_warning "Service failed to start - continuing with manual verification"
+else
+    log_success "ProjectMeats service started successfully"
+fi
 
 # Give services a moment to start
 sleep 3
