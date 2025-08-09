@@ -36,17 +36,99 @@ curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_clic
 curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/fix_nodejs.sh | sudo bash
 ```
 
-### Option 2: Docker Compose Deployment
+### Option 2: Docker Compose Deployment (Recommended for Containerized Environments)
 
-**For containerized environments or development:**
+**For containerized environments, development, or production:**
 
+#### Development Setup (with hot reload)
 ```bash
 git clone https://github.com/Vacilator/ProjectMeats.git
 cd ProjectMeats
-docker compose up --build -d
-docker compose exec backend python manage.py migrate
-docker compose exec backend python manage.py createsuperuser --username admin --email admin@example.com
+
+# Copy environment template and configure
+cp .env.example .env
+# Edit .env file with your settings
+
+# Start development environment with hot reload
+docker compose -f docker-compose.dev.yml up --build -d
+
+# Run migrations
+docker compose -f docker-compose.dev.yml exec backend python manage.py migrate
+
+# Create superuser
+docker compose -f docker-compose.dev.yml exec backend python manage.py createsuperuser --username admin --email admin@example.com
+
+# Access services:
+# Frontend: http://localhost:3000 (with hot reload)
+# Backend API: http://localhost:8000/api/
+# Admin: http://localhost:8000/admin/
 ```
+
+#### Production Setup
+```bash
+git clone https://github.com/Vacilator/ProjectMeats.git
+cd ProjectMeats
+
+# Copy and configure production environment
+cp .env.example .env
+# Edit .env with production values (strong passwords, proper domains, etc.)
+
+# Start production services
+docker compose up --build -d
+
+# Run migrations
+docker compose exec backend python manage.py migrate
+
+# Create superuser
+docker compose exec backend python manage.py createsuperuser --username admin --email admin@example.com
+
+# Collect static files (if needed)
+docker compose exec backend python manage.py collectstatic --noinput
+
+# Access services:
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8000/api/
+# Admin: http://localhost:8000/admin/
+```
+
+#### High-Availability Production Setup
+```bash
+# Use the production-optimized compose file
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+#### Docker Commands Cheat Sheet
+```bash
+# View logs
+docker compose logs -f [service_name]
+
+# Stop services
+docker compose down
+
+# Stop and remove volumes (⚠️ destroys data)
+docker compose down --volumes
+
+# Rebuild specific service
+docker compose up --build [service_name]
+
+# Run Django commands
+docker compose exec backend python manage.py [command]
+
+# Access database
+docker compose exec db psql -U projectmeats_user -d projectmeats_db
+
+# Test the setup
+./test_docker.sh
+```
+
+**Features of our Docker setup:**
+- ✅ Multi-stage builds for optimized images
+- ✅ Health checks for all services  
+- ✅ Production-ready nginx frontend serving
+- ✅ PostgreSQL with persistent data
+- ✅ Environment-based configuration
+- ✅ Development mode with hot reload
+- ✅ Comprehensive testing script
 
 **🔐 HTTPS/SSL Support**: ProjectMeats supports secure HTTPS connections:
 
