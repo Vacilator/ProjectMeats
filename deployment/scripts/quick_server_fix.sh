@@ -17,7 +17,7 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-echo -e "${GREEN}🚀 ProjectMeats Quick Server Setup${NC}"
+echo -e "${GREEN}ProjectMeats Quick Server Setup${NC}"
 echo "This script sets up the application on an existing server"
 echo
 
@@ -127,16 +127,16 @@ echo
 log_info "Checking service status..."
 
 if systemctl is-active --quiet nginx; then
-    log_success "✅ Nginx is running"
+    log_success "OK Nginx is running"
 else
-    log_error "❌ Nginx is not running"
+    log_error "X Nginx is not running"
     systemctl status nginx --no-pager -l
 fi
 
 if systemctl is-active --quiet projectmeats; then
-    log_success "✅ ProjectMeats Django service is running"
+    log_success "OK ProjectMeats Django service is running"
 else
-    log_error "❌ ProjectMeats Django service is not running"
+    log_error "X ProjectMeats Django service is not running"
     systemctl status projectmeats --no-pager -l
     echo
     log_info "Recent logs:"
@@ -146,13 +146,13 @@ fi
 # Test the application
 log_info "Testing application..."
 if curl -f -s http://localhost/health >/dev/null; then
-    log_success "✅ Application health check passed"
+    log_success "OK Application health check passed"
 else
-    log_warning "⚠️  Application health check failed"
+    log_warning "WARNING Application health check failed"
 fi
 
 echo
-log_success "🎉 Setup complete!"
+log_success "Setup complete!"
 echo
 log_info "Your application should now be available at:"
 log_info "  Main app: http://meatscentral.com/"

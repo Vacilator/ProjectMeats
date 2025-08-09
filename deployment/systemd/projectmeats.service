@@ -4,10 +4,11 @@ After=network.target postgresql.service
 Wants=postgresql.service
 
 [Service]
-Type=notify
+Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/opt/projectmeats/backend
+
 Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
 EnvironmentFile=/etc/projectmeats/projectmeats.env
 ExecStart=/opt/projectmeats/venv/bin/gunicorn \
