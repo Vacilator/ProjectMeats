@@ -1128,6 +1128,147 @@ class AIDeploymentOrchestrator:
                 self.log(f"Recent Django service logs: {logs[-200:]}", "INFO")
             return False
     
+    def _detect_socket_service_configuration(self) -> bool:
+        """Detect if the new Unix socket-based SystemD service configuration is available"""
+        self.log("Detecting SystemD socket service configuration...", "INFO")
+        
+        # Check for socket service files in the project
+        required_socket_files = [
+            "/opt/projectmeats/deployment/systemd/projectmeats-socket.service",
+            "/opt/projectmeats/deployment/systemd/projectmeats.socket",
+            "/opt/projectmeats/deployment/nginx/projectmeats-socket.conf",
+            "/opt/projectmeats/deployment/scripts/reload_and_start_services.sh"
+        ]
+        
+        socket_files_present = True
+        for file_path in required_socket_files:
+            exit_code, stdout, stderr = self.execute_command(f"test -f {file_path}")
+            if exit_code != 0:
+                self.log(f"Socket configuration file not found: {file_path}", "DEBUG")
+                socket_files_present = False
+        
+        if socket_files_present:
+            self.log("✓ Unix socket SystemD service configuration detected", "SUCCESS")
+            self.log("Will use socket-based deployment architecture", "INFO")
+            return True
+        else:
+            self.log("Socket service configuration not found - using traditional TCP configuration", "INFO")
+            return False
+
+    def _setup_projectmeats_user(self) -> bool:
+        """Setup the dedicated projectmeats user required by socket services"""
+        self.log("Setting up projectmeats user for socket services...", "INFO")
+        
+        # Check if user already exists
+        exit_code, stdout, stderr = self.execute_command("id projectmeats")
+        if exit_code == 0:
+            self.log("ProjectMeats user already exists", "SUCCESS")
+            return True
+        
+        # Create user with proper settings
+        create_user_commands = [
+            # Create system user with no shell and specific home directory
+            "useradd --system --group --home-dir /opt/projectmeats --shell /bin/false projectmeats",
+            # Create necessary directories
+            "mkdir -p /opt/projectmeats /var/log/projectmeats /var/run/projectmeats",
+            # Set ownership
+            "chown -R projectmeats:projectmeats /opt/projectmeats /var/log/projectmeats /var/run/projectmeats",
+            # Set permissions
+            "chmod 755 /opt/projectmeats /var/log/projectmeats /var/run/projectmeats"
+        ]
+        
+        for cmd in create_user_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0 and "already exists" not in stderr:
+                self.log(f"User setup command failed: {cmd}", "ERROR")
+                self.log(f"Error: {stderr}", "ERROR")
+                return False
+        
+        self.log("✓ ProjectMeats user created successfully", "SUCCESS")
+        return True
+
+    def _deploy_socket_service_files(self) -> bool:
+        """Deploy the socket-based SystemD service files"""
+        self.log("Deploying Unix socket SystemD service configuration...", "INFO")
+        
+        # Copy service files to systemd directory
+        service_files = [
+            ("/opt/projectmeats/deployment/systemd/projectmeats.socket", "/etc/systemd/system/projectmeats.socket"),
+            ("/opt/projectmeats/deployment/systemd/projectmeats-socket.service", "/etc/systemd/system/projectmeats.service")
+        ]
+        
+        for source, dest in service_files:
+            exit_code, stdout, stderr = self.execute_command(f"cp {source} {dest}")
+            if exit_code != 0:
+                self.log(f"Failed to copy {source} to {dest}: {stderr}", "ERROR")
+                return False
+            
+            # Set proper permissions
+            exit_code, stdout, stderr = self.execute_command(f"chmod 644 {dest}")
+            if exit_code != 0:
+                self.log(f"Failed to set permissions on {dest}", "WARNING")
+        
+        self.log("✓ SystemD socket service files deployed", "SUCCESS")
+        return True
+
+    def _deploy_socket_nginx_configuration(self) -> bool:
+        """Deploy the socket-based Nginx configuration"""
+        self.log("Deploying Unix socket Nginx configuration...", "INFO")
+        
+        domain = self.config.get('domain', 'localhost')
+        
+        # Copy and customize nginx configuration
+        exit_code, stdout, stderr = self.execute_command(
+            f"cp /opt/projectmeats/deployment/nginx/projectmeats-socket.conf /etc/nginx/sites-available/projectmeats"
+        )
+        if exit_code != 0:
+            self.log(f"Failed to copy nginx socket configuration: {stderr}", "ERROR")
+            return False
+        
+        # Update server_name in nginx config if domain is specified
+        if domain and domain != 'localhost':
+            self.log(f"Updating nginx configuration for domain: {domain}", "INFO")
+            exit_code, stdout, stderr = self.execute_command(
+                f"sed -i 's/server_name meatscentral.com www.meatscentral.com;/server_name {domain} www.{domain};/g' /etc/nginx/sites-available/projectmeats"
+            )
+            if exit_code != 0:
+                self.log("Failed to update domain in nginx config", "WARNING")
+        
+        # Enable the site
+        exit_code, stdout, stderr = self.execute_command(
+            "ln -sf /etc/nginx/sites-available/projectmeats /etc/nginx/sites-enabled/"
+        )
+        if exit_code != 0:
+            self.log(f"Failed to enable nginx site: {stderr}", "ERROR")
+            return False
+        
+        # Remove default site
+        self.execute_command("rm -f /etc/nginx/sites-enabled/default")
+        
+        self.log("✓ Unix socket Nginx configuration deployed", "SUCCESS")
+        return True
+
+    def _run_socket_service_management(self) -> bool:
+        """Run the automated socket service management script"""
+        self.log("Running socket service management script...", "INFO")
+        
+        # Make the script executable
+        script_path = "/opt/projectmeats/deployment/scripts/reload_and_start_services.sh"
+        exit_code, stdout, stderr = self.execute_command(f"chmod +x {script_path}")
+        if exit_code != 0:
+            self.log(f"Failed to make service script executable: {stderr}", "ERROR")
+            return False
+        
+        # Run the service management script
+        exit_code, stdout, stderr = self.execute_command(f"bash {script_path}")
+        if exit_code != 0:
+            self.log(f"Socket service management script failed: {stderr}", "ERROR")
+            self.log(f"Script output: {stdout}", "INFO")
+            return False
+        
+        self.log("✓ Socket services configured and started", "SUCCESS")
+        return True
+
     def _assess_remaining_deployment_needs(self) -> bool:
         """Assess if there are remaining deployment needs after Django fix"""
         self.log("Assessing remaining deployment needs...", "INFO")
@@ -2059,7 +2200,7 @@ class AIDeploymentOrchestrator:
         return True
     
     def deploy_run_deployment_scripts(self) -> bool:
-        """Run specialized deployment scripts based on server state"""
+        """Run specialized deployment scripts based on server state with socket service support"""
         self.log("Running automated deployment scripts...", "INFO", Colors.BOLD + Colors.BLUE)
         
         project_dir = "/opt/projectmeats"
@@ -2068,6 +2209,10 @@ class AIDeploymentOrchestrator:
         quick_fix_script = f"{project_dir}/deployment/scripts/quick_server_fix.sh"
         setup_script = f"{project_dir}/deployment/scripts/setup_production.sh"
         django_fix_script = f"{project_dir}/fix_django_service.sh"
+        
+        # NEW: Check for socket service management scripts
+        socket_service_script = f"{project_dir}/deployment/scripts/reload_and_start_services.sh"
+        socket_verification_script = f"{project_dir}/deployment/scripts/verify_service.sh"
         
         # Check for Django service issues first - this is a critical fix
         django_service_needs_fix = self._check_django_service_health()
@@ -2093,6 +2238,44 @@ class AIDeploymentOrchestrator:
                     self.log("Django service fix failed - continuing with manual configuration", "WARNING")
             else:
                 self.log("Django fix script not found, continuing with other deployment methods", "WARNING")
+        
+        # NEW: Check if socket service configuration is available and prioritize it
+        use_socket_services = self._detect_socket_service_configuration()
+        
+        if use_socket_services:
+            self.log("Socket service configuration detected - prioritizing socket-based deployment", "INFO", Colors.BOLD + Colors.CYAN)
+            
+            # Run socket service management if backend is configured
+            exit_code, stdout, stderr = self.execute_command("test -d /opt/projectmeats/venv && test -f /opt/projectmeats/backend/.env")
+            if exit_code == 0:
+                self.log("Backend appears configured - running socket service management", "INFO")
+                
+                if self._run_socket_service_management():
+                    self.log("Socket services configured successfully", "SUCCESS")
+                    
+                    # Run socket verification if available
+                    exit_code, stdout, stderr = self.execute_command(f"test -f {socket_verification_script}")
+                    if exit_code == 0:
+                        self.log("Running socket service verification...", "INFO")
+                        exit_code, stdout, stderr = self.execute_command(f"chmod +x {socket_verification_script} && bash {socket_verification_script}")
+                        if exit_code == 0:
+                            self.log("Socket service verification passed", "SUCCESS")
+                        else:
+                            self.log("Socket service verification had warnings", "WARNING")
+                    
+                    # Mark that we used socket service management
+                    if hasattr(self.state, 'automated_script_used') and self.state.automated_script_used:
+                        self.state.automated_script_used = f"{self.state.automated_script_used} + Socket Service Management"
+                    else:
+                        self.state.automated_script_used = "Socket Service Management"
+                    
+                    # Check if this resolved deployment needs
+                    remaining_issues = self._assess_remaining_deployment_needs()
+                    if not remaining_issues:
+                        self.log("Socket service management resolved all deployment needs", "SUCCESS")
+                        return True
+                else:
+                    self.log("Socket service management failed - continuing with standard deployment scripts", "WARNING")
         
         # Standard deployment script selection logic
         # Verify other scripts exist
@@ -2824,7 +3007,7 @@ sudo systemctl reload postgresql
             return False
 
     def deploy_configure_backend(self) -> bool:
-        """Configure backend"""
+        """Configure backend with automatic socket service detection"""
         self.log("Configuring backend...", "INFO")
         
         # Check if automated script already handled this
@@ -2841,6 +3024,13 @@ sudo systemctl reload postgresql
             else:
                 self.log("Backend not fully configured - continuing with manual setup", "INFO")
         
+        # NEW: Detect if socket service configuration is available
+        use_socket_services = self._detect_socket_service_configuration()
+        
+        if use_socket_services:
+            self.log("Using Unix socket-based SystemD service configuration", "INFO", Colors.BOLD + Colors.CYAN)
+            return self._configure_backend_with_socket_services()
+        
         # Check if Django service issues need to be addressed first
         if self._check_django_service_health():
             self.log("Django service issues detected - applying fix before continuing with configuration...", "WARNING")
@@ -2853,6 +3043,96 @@ sudo systemctl reload postgresql
                     return True
             else:
                 self.log("Django service fix failed - continuing with manual backend setup", "WARNING")
+    def _configure_backend_with_socket_services(self) -> bool:
+        """Configure backend using the new Unix socket-based SystemD service configuration"""
+        self.log("Configuring backend with Unix socket services...", "INFO")
+        
+        # Step 1: Setup projectmeats user
+        if not self._setup_projectmeats_user():
+            return False
+        
+        # Step 2: Create virtual environment and install dependencies
+        self.log("Setting up Python virtual environment...", "INFO")
+        venv_commands = [
+            "cd /opt/projectmeats && python3 -m venv venv",
+            "cd /opt/projectmeats && ./venv/bin/pip install --upgrade pip",
+            "cd /opt/projectmeats && ./venv/bin/pip install -r backend/requirements.txt"
+        ]
+        
+        for cmd in venv_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Backend setup command failed: {cmd}", "ERROR")
+                self.log(f"Error: {stderr}", "ERROR")
+                return False
+        
+        # Step 3: Verify .env file exists (should be created in production_config_setup step)
+        self.log("Verifying production environment configuration...", "INFO")
+        exit_code, stdout, stderr = self.execute_command("test -f /opt/projectmeats/backend/.env")
+        if exit_code != 0:
+            self.log("Production .env file not found - this should have been created in production_config_setup", "ERROR")
+            return False
+        
+        # Step 4: Set proper ownership for projectmeats user
+        self.log("Setting proper ownership for projectmeats user...", "INFO")
+        ownership_commands = [
+            "chown -R projectmeats:projectmeats /opt/projectmeats",
+            "chmod -R 755 /opt/projectmeats",
+            "chmod +x /opt/projectmeats/venv/bin/*"
+        ]
+        
+        for cmd in ownership_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Ownership command failed: {cmd}", "WARNING")
+        
+        # Step 5: Run Django management commands
+        self.log("Running Django management commands...", "INFO")
+        django_commands = [
+            "cd /opt/projectmeats/backend && ../venv/bin/python manage.py migrate",
+            "cd /opt/projectmeats/backend && ../venv/bin/python manage.py collectstatic --noinput",
+            "cd /opt/projectmeats/backend && ../venv/bin/python manage.py check --deploy"
+        ]
+        
+        for cmd in django_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Django command failed: {cmd}", "WARNING")
+                # Continue with other commands
+        
+        # Step 6: Deploy socket service files
+        if not self._deploy_socket_service_files():
+            return False
+        
+        # Step 7: Run socket service management
+        if not self._run_socket_service_management():
+            return False
+        
+        # Step 8: Verify socket service is running
+        self.log("Verifying socket service status...", "INFO")
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active projectmeats.socket")
+        if exit_code != 0:
+            self.log("ProjectMeats socket not active", "ERROR")
+            return False
+        
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active projectmeats.service")
+        if exit_code != 0:
+            self.log("ProjectMeats service not active", "WARNING")
+            # Socket activation should start the service when needed
+        
+        # Step 9: Test socket connectivity
+        self.log("Testing Unix socket connectivity...", "INFO")
+        exit_code, stdout, stderr = self.execute_command("test -S /run/projectmeats.sock")
+        if exit_code != 0:
+            self.log("Unix socket file not found", "ERROR")
+            return False
+        
+        self.log("✓ Backend configured successfully with Unix socket services", "SUCCESS", Colors.BOLD + Colors.GREEN)
+        return True
+
+    def _configure_backend_traditional(self) -> bool:
+        """Configure backend using traditional TCP-based approach"""
+        self.log("Using traditional TCP-based backend configuration...", "INFO")
         
         # Create virtual environment and install dependencies
         commands = [
@@ -2912,7 +3192,7 @@ sudo systemctl reload postgresql
                 self.log(f"Django command failed: {cmd}", "WARNING")
                 # Continue with other commands
         
-        # Create Django service file (improved version from fix script knowledge)
+        # Create traditional Django service file (TCP-based)
         service_content = """[Unit]
 Description=ProjectMeats Django Backend
 After=network.target postgresql.service
@@ -3043,7 +3323,7 @@ WantedBy=multi-user.target
         return True
     
     def deploy_setup_webserver(self) -> bool:
-        """Setup web server"""
+        """Setup web server with automatic socket configuration detection"""
         self.log("Setting up web server...", "INFO")
         
         # Check if automated script already handled this
@@ -3059,6 +3339,54 @@ WantedBy=multi-user.target
                 return True
             else:
                 self.log("Web server not fully configured - continuing with manual setup", "INFO")
+        
+        # NEW: Detect if socket nginx configuration is available
+        use_socket_config = self._detect_socket_service_configuration()
+        
+        if use_socket_config:
+            self.log("Using Unix socket-based Nginx configuration", "INFO", Colors.BOLD + Colors.CYAN)
+            return self._setup_webserver_with_socket_config()
+        
+        # Fall back to traditional TCP-based configuration
+        return self._setup_webserver_traditional()
+
+    def _setup_webserver_with_socket_config(self) -> bool:
+        """Setup web server using Unix socket nginx configuration"""
+        self.log("Configuring Nginx with Unix socket configuration...", "INFO")
+        
+        # Deploy socket nginx configuration
+        if not self._deploy_socket_nginx_configuration():
+            return False
+        
+        # Test nginx configuration
+        exit_code, stdout, stderr = self.execute_command("nginx -t")
+        if exit_code != 0:
+            self.log(f"Nginx configuration test failed: {stderr}", "ERROR")
+            return False
+        
+        # Start and enable nginx
+        exit_code, stdout, stderr = self.execute_command("systemctl start nginx")
+        if exit_code != 0:
+            self.log("Failed to start nginx", "ERROR")
+            return False
+        
+        exit_code, stdout, stderr = self.execute_command("systemctl enable nginx")
+        if exit_code != 0:
+            self.log("Failed to enable nginx", "ERROR")
+            return False
+        
+        # Reload nginx to apply configuration
+        exit_code, stdout, stderr = self.execute_command("systemctl reload nginx")
+        if exit_code != 0:
+            self.log("Failed to reload nginx", "ERROR")
+            return False
+        
+        self.log("✓ Nginx configured with Unix socket successfully", "SUCCESS", Colors.BOLD + Colors.GREEN)
+        return True
+
+    def _setup_webserver_traditional(self) -> bool:
+        """Setup web server using traditional TCP-based configuration"""
+        self.log("Configuring Nginx with traditional TCP configuration...", "INFO")
         
         # Get domain from config
         domain = self.config.get('domain', 'localhost')
