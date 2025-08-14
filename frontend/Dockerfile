@@ -1,14 +1,16 @@
 # Build stage
 FROM node:16 AS builder
-WORKDIR /app/frontend
+WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
 COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:16-alpine
-WORKDIR /app/frontend
-COPY --from=builder /app/frontend/build ./build
-RUN npm install -g serve
-CMD ["serve", "-s", "build", "-l", "3000"]
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

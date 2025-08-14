@@ -1,0 +1,55 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+test_env/
+test_venv/
+venv_temp/
+
+# Database files
+*.db
+*.sqlite3
+db.sqlite3
+comprehensive_prod_test.db
+test_prod.db
+
+# Django specific
+*.log
+media/
+staticfiles/
+migrations/__pycache__/
+
+# Development and testing
+.pytest_cache/
+coverage/
+.coverage
+htmlcov/
+.tox/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+
+# Build artifacts
+dist/
+build/

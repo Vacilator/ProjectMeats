@@ -17,9 +17,9 @@ services:
 
   backend:
     build: ./backend
-    command: gunicorn --bind 0.0.0.0:8000 projectmeats.wsgi:application --workers=3
+    command: python manage.py runserver 0.0.0.0:8000  # Use runserver for development
     volumes:
-      - ./backend:/app/backend  # For development - remove for production
+      - ./backend:/app  # Mount for hot reload
     ports:
       - "8000:8000"
     depends_on:
@@ -28,23 +28,24 @@ services:
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-projectmeats_user}:${POSTGRES_PASSWORD:-WATERMELON1219}@db:5432/${POSTGRES_DB:-projectmeats_db}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-your_secure_secret_key}
-      - DEBUG=${DEBUG:-False}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app  # Mount for hot reload
+      - /app/node_modules  # Exclude node_modules from mount
     ports:
-      - "3000:80"  # Map to port 3000 externally for dev familiarity
+      - "3000:3000"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app/frontend  # For development - remove for production
+    environment:
+      - CHOKIDAR_USEPOLLING=true  # For file watching in Docker
+    stdin_open: true
+    tty: true
 
 volumes:
   postgres_data:
