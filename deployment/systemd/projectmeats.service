@@ -10,6 +10,7 @@ Group=www-data
 WorkingDirectory=/opt/projectmeats/backend
 
 Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
+Environment=PYTHONPATH=/opt/projectmeats/backend
 EnvironmentFile=-/etc/projectmeats/projectmeats.env
 EnvironmentFile=-/opt/projectmeats/.env.production
 ExecStart=/opt/projectmeats/venv/bin/gunicorn \
@@ -25,6 +26,8 @@ ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --error-logfile /var/log/projectmeats/error.log \
     --log-level info \
     --pid /var/run/projectmeats/gunicorn.pid \
+    --timeout 120 \
+    --graceful-timeout 30 \
     projectmeats.wsgi:application
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
