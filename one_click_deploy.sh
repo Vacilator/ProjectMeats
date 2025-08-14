@@ -134,6 +134,101 @@ if ! command -v python3 >/dev/null 2>&1; then
     apt install -y python3 python3-pip
 fi
 
+# Check if projectmeats.service exists and create if needed
+log_header "🔧 Checking SystemD service configuration"
+if [[ ! -f "/etc/systemd/system/projectmeats.service" ]]; then
+    log_warning "projectmeats.service not found, creating it..."
+    
+    # Create the service file
+    cat > /etc/systemd/system/projectmeats.service << 'EOF'
+[Unit]
+Description=ProjectMeats Django Application
+Documentation=https://github.com/Vacilator/ProjectMeats
+After=network.target postgresql.service
+Wants=postgresql.service
+Requires=projectmeats.socket
+
+[Service]
+Type=notify
+User=projectmeats
+Group=projectmeats
+WorkingDirectory=/opt/projectmeats/backend
+Environment=PATH=/opt/projectmeats/venv/bin
+Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
+Environment=PYTHONPATH=/opt/projectmeats/backend
+EnvironmentFile=/opt/projectmeats/backend/.env
+ExecStart=/opt/projectmeats/venv/bin/gunicorn \
+    --workers 3 \
+    --worker-class sync \
+    --worker-connections 1000 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --preload \
+    --bind unix:/run/projectmeats.sock \
+    --access-logfile /var/log/projectmeats/access.log \
+    --error-logfile /var/log/projectmeats/error.log \
+    --log-level info \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    projectmeats.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/projectmeats/backend/media /var/log/projectmeats /var/run/projectmeats /run
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    log_success "ProjectMeats service file created"
+    
+    # Create socket file if it doesn't exist
+    if [[ ! -f "/etc/systemd/system/projectmeats.socket" ]]; then
+        log_info "Creating projectmeats.socket file..."
+        cat > /etc/systemd/system/projectmeats.socket << 'EOF'
+[Unit]
+Description=ProjectMeats Gunicorn Socket
+Documentation=https://github.com/Vacilator/ProjectMeats
+
+[Socket]
+ListenStream=/run/projectmeats.sock
+SocketUser=projectmeats
+SocketGroup=projectmeats
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target
+EOF
+        log_success "ProjectMeats socket file created"
+    fi
+    
+    # Reload systemd daemon
+    log_info "Reloading systemd daemon..."
+    systemctl daemon-reload
+    
+    # Enable and start the service
+    log_info "Enabling projectmeats.socket..."
+    systemctl enable projectmeats.socket
+    
+    log_info "Enabling projectmeats.service..."
+    systemctl enable projectmeats.service
+    
+    log_success "SystemD service configured and enabled"
+else
+    log_info "projectmeats.service already exists"
+fi
+
 # Run master deployment with auto mode
 log_header "🚀 Starting automated deployment"
 python3 master_deploy.py --auto --domain="$DOMAIN"

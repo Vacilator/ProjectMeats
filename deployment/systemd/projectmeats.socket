@@ -1,0 +1,12 @@
+[Unit]
+Description=ProjectMeats Gunicorn Socket
+Documentation=https://github.com/Vacilator/ProjectMeats
+
+[Socket]
+ListenStream=/run/projectmeats.sock
+SocketUser=projectmeats
+SocketGroup=projectmeats
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target

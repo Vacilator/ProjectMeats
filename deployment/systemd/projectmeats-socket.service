@@ -1,0 +1,48 @@
+[Unit]
+Description=ProjectMeats Django Application
+Documentation=https://github.com/Vacilator/ProjectMeats
+After=network.target postgresql.service
+Wants=postgresql.service
+Requires=projectmeats.socket
+
+[Service]
+Type=notify
+User=projectmeats
+Group=projectmeats
+WorkingDirectory=/opt/projectmeats/backend
+Environment=PATH=/opt/projectmeats/venv/bin
+Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
+Environment=PYTHONPATH=/opt/projectmeats/backend
+EnvironmentFile=/opt/projectmeats/backend/.env
+ExecStart=/opt/projectmeats/venv/bin/gunicorn \
+    --workers 3 \
+    --worker-class sync \
+    --worker-connections 1000 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --preload \
+    --bind unix:/run/projectmeats.sock \
+    --access-logfile /var/log/projectmeats/access.log \
+    --error-logfile /var/log/projectmeats/error.log \
+    --log-level info \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    projectmeats.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/projectmeats/backend/media /var/log/projectmeats /var/run/projectmeats /run
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
