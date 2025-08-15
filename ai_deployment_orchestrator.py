@@ -4243,6 +4243,15 @@ server {{
         """Install Docker with industry best practices"""
         self.log("Installing Docker with latest security practices...", "INFO")
         
+        # First, get the Ubuntu codename to build the proper repository URL
+        exit_code, codename_output, stderr = self.execute_command("lsb_release -cs")
+        if exit_code != 0:
+            self.log(f"Failed to get Ubuntu codename: {stderr}", "ERROR")
+            return False
+        
+        ubuntu_codename = codename_output.strip()
+        self.log(f"Detected Ubuntu codename: {ubuntu_codename}", "DEBUG")
+        
         commands = [
             # Remove any old Docker versions
             "apt-get remove -y docker docker-engine docker.io containerd runc || true",
@@ -4254,8 +4263,8 @@ server {{
             # Add Docker's official GPG key
             "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
             
-            # Add Docker repository
-            "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable' | tee /etc/apt/sources.list.d/docker.list > /dev/null",
+            # Add Docker repository with proper Ubuntu codename
+            f"echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {ubuntu_codename} stable' | tee /etc/apt/sources.list.d/docker.list > /dev/null",
             
             # Install Docker
             "apt-get update",
