@@ -403,6 +403,53 @@ cd backend && ../venv/bin/gunicorn --bind 127.0.0.1:8001 projectmeats.wsgi:appli
 - **Frontend**: React functional components with TypeScript
 - **Documentation**: Clear inline comments for PowerApps migrations
 
+## 🔧 Troubleshooting
+
+### Health Endpoint Issues
+
+If deployment verification fails with 404 or 301 errors on `/health` endpoint:
+
+**Common Issues:**
+- **404 on /health**: Health endpoint not properly configured in Django URLs or Nginx
+- **301 redirects**: APPEND_SLASH setting causing automatic redirects
+- **502 Bad Gateway**: Django backend not responding via Unix socket
+
+**Diagnostic Commands:**
+```bash
+# Test health endpoint directly on server
+curl -I http://localhost/health
+
+# Check Django service status
+systemctl status projectmeats
+
+# Check Unix socket permissions
+ls -la /run/projectmeats.sock
+
+# Check Nginx configuration
+nginx -t && nginx -s reload
+
+# Check port 80 binding
+sudo ss -tlnp | grep :80
+```
+
+**DNS Resolution Issues:**
+```bash
+# Test DNS resolution (modern method)
+dig +short A yourdomain.com
+
+# Test external connectivity
+curl -m 10 -I -L http://yourdomain.com/health
+
+# Test with DNS bypass
+curl --resolve "yourdomain.com:80:YOUR_SERVER_IP" -I http://yourdomain.com/health
+```
+
+### Deployment Logs
+Check deployment logs for detailed error analysis:
+- **Django**: `journalctl -u projectmeats -f`
+- **Nginx**: `tail -f /var/log/nginx/error.log`
+- **System**: `systemctl status nginx`
+
 ---
 
 **Need Help?** Check the [docs/](docs/) folder or create an issue for questions.

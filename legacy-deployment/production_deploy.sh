@@ -261,10 +261,11 @@ sleep 5
 # Enhanced port binding verification using privileged check as specified
 log_info "Performing enhanced port 80 binding verification..."
 
-# Check if port 80 is listening with detailed output
+# Check if port 80 is listening with improved method from problem statement
 if command -v ss >/dev/null 2>&1; then
-    log_info "Checking port 80 with ss command..."
-    ss_output=$(ss -tuln | grep ":80 ")
+    log_info "Checking port 80 with enhanced ss command..."
+    # Use sudo ss -tlnp | grep :80 as specified in problem statement
+    ss_output=$(sudo ss -tlnp | grep ":80 ")
     if [ -n "$ss_output" ]; then
         log_success "✅ Port 80 (HTTP) is listening"
         echo "$ss_output" | while read line; do
@@ -296,9 +297,9 @@ if command -v ss >/dev/null 2>&1; then
     fi
 else
     log_warning "ss command not available, using netstat fallback"
-    if netstat -tuln 2>/dev/null | grep -q ":80 "; then
+    if sudo netstat -tlnp 2>/dev/null | grep ":80 "; then
         log_success "✅ Port 80 (HTTP) is listening (netstat check)"
-        netstat -tuln | grep ":80 "
+        sudo netstat -tlnp | grep ":80 "
     else
         log_error "❌ Port 80 (HTTP) is not listening (netstat check)"
     fi
@@ -571,6 +572,13 @@ if systemctl is-active --quiet projectmeats && systemctl is-active --quiet nginx
         log_warning "Backend API may have issues - check Django logs"
     fi
     
+    # Test health endpoint (fixes 404 on /health deployment verification)
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost/health | grep -q "200"; then
+        log_success "Health endpoint responding correctly"
+    else
+        log_warning "Health endpoint may have issues - check Django/nginx configuration"
+    fi
+    
 else
     log_error "Some services failed to start!"
     echo
@@ -581,6 +589,8 @@ else
     echo "- Check Django logs: journalctl -u projectmeats -f"
     echo "- Check Nginx: systemctl status nginx"  
     echo "- Check Nginx logs: tail -f /var/log/nginx/error.log"
+    echo "- Test health endpoint manually: curl -I http://localhost/health"
+    echo "- Check socket permissions: ls -la /run/projectmeats.sock"
     echo "- Run diagnostics: projectmeats status"
     echo
 fi

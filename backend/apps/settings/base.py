@@ -23,9 +23,8 @@ ALLOWED_HOSTS = config(
     default="localhost,127.0.0.1,testserver,meatscentral.com,www.meatscentral.com,0.0.0.0"
 ).split(",")
 
-# Prevent automatic slash redirects on health endpoints (fixes 301 redirects)
-# Do not set APPEND_SLASH globally. To prevent automatic slash redirects on health endpoints,
-# handle this in urls.py by defining both '/health' and '/health/' routes, or use custom middleware.
+# Keep APPEND_SLASH at default (True) to maintain Django best practices
+# Health endpoint redirects are handled via explicit URL routing for both /health and /health/
 
 # Application definition
 DJANGO_APPS = [
