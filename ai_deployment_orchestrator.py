@@ -1032,7 +1032,26 @@ class AIDeploymentOrchestrator:
         
         for cmd in commands:
             self.execute_command(cmd)
-        
+        # Remove any files with various malformed lsb_release syntax patterns safely in Python
+        malformed_patterns = [
+            '$(lsb_release Release',
+            '$(lsb_release)',
+            '$(lsb_release -cs ',
+        ]
+        sources_list_dir = Path("/etc/apt/sources.list.d/")
+        for list_file in sources_list_dir.glob("*.list"):
+            try:
+                with list_file.open("r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                if any(pattern in content for pattern in malformed_patterns):
+                    self.log(f"Deleting malformed repository file: {list_file}", "WARNING")
+                    list_file.unlink()
+            except Exception as e:
+                self.log(f"Error processing {list_file}: {e}", "ERROR")
+        # Clean package cache to avoid issues
+        self.execute_command("apt clean")
+        # Remove any duplicate repository entries
+        self.execute_command("sort -u /etc/apt/sources.list -o /etc/apt/sources.list || true")
         return True
 
     def fix_repository_issues(self, error_output: str) -> bool:
