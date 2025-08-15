@@ -2,43 +2,38 @@
 
 A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
-## 🚀 DEPLOYMENT OPTIONS
+## 🚀 Production Deployment
 
-### ⭐ NEW: Production Deployment Fix (Recommended)
+### ⭐ AI Deployment Orchestrator (Recommended)
 
-**Fixes deployment issues with missing static files and backend service problems:**
+**The primary production deployment tool with intelligent automation and error recovery:**
 
 ```bash
-# Clone the repository and run the improved deployment script:
+# Clone the repository and run the AI deployment orchestrator:
 git clone https://github.com/Vacilator/ProjectMeats.git
 cd ProjectMeats
-sudo ./production_deploy.sh
+
+# Interactive deployment with guided setup
+python ai_deployment_orchestrator.py --interactive
+
+# Automated deployment for specific server/domain
+python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --auto
+
+# With GitHub authentication
+python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --github-user=USERNAME --github-token=TOKEN
 ```
 
-**This fixes common deployment issues:**
-- ✅ Django backend not running (uses gunicorn + systemd, not PM2)
-- ✅ Missing React static files (404 errors for `/static/js/main.*.js`, `/favicon.ico`)  
-- ✅ Proper Nginx configuration for frontend + backend integration
-- ✅ Complete React build process with all assets
-- ✅ Automated service management and monitoring
+**Features:**
+- ✅ Intelligent error detection and automatic recovery
+- ✅ Comprehensive server setup and configuration
+- ✅ Automated SSL certificate management
+- ✅ Database configuration with PostgreSQL
+- ✅ Complete security hardening
+- ✅ Health monitoring and verification
 
-### Option 1: One-Click Production Deployment (Legacy)
+### Docker Compose Deployment (Alternative)
 
-**Deploy ProjectMeats to production in minutes with one command:**
-
-```bash
-# Fully automated deployment (Ubuntu 20.04+):
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/one_click_deploy.sh | sudo bash
-```
-
-**Having Node.js conflicts?** Fix them first:
-```bash
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/fix_nodejs.sh | sudo bash
-```
-
-### Option 2: Docker Compose Deployment (Recommended for Containerized Environments)
-
-**For containerized environments, development, or production:**
+**For containerized environments and development:**
 
 #### Development Setup (with hot reload)
 ```bash
@@ -249,48 +244,6 @@ python setup.py --frontend
 python setup.py --ai-only
 ```
 
-## 🚀 Production Deployment
-
-### Quick Deployment (No Authentication Required)
-
-**Fastest method - works without GitHub authentication:**
-
-```bash
-# One-command production deployment
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/deploy_no_auth.sh | sudo bash
-```
-
-### Alternative Deployment Methods
-
-**If you have GitHub authentication set up:**
-
-```bash
-# Traditional git clone method
-git clone https://github.com/Vacilator/ProjectMeats.git
-cd ProjectMeats
-sudo python3 deploy_production.py
-```
-
-**Having authentication issues?** See [DEPLOYMENT_AUTH_QUICKREF.md](DEPLOYMENT_AUTH_QUICKREF.md)
-
-### Deployment Verification
-
-Check if your system is ready for deployment:
-
-```bash
-# Download and run verification
-curl -sSL https://raw.githubusercontent.com/Vacilator/ProjectMeats/main/verify_deployment_readiness.sh | bash
-
-# Or if you have the project locally
-./verify_deployment_readiness.sh
-```
-
-### Documentation
-
-- 📖 [Complete Production Guide](docs/production_deployment.md)
-- 🔐 [Authentication Solutions](docs/deployment_authentication_guide.md)  
-- ⚡ [Quick Setup Guide](docs/production_setup_guide.md)
-- 📋 [Quick Reference](DEPLOYMENT_AUTH_QUICKREF.md)
 
 ## 🔧 Development
 
@@ -416,45 +369,27 @@ cd backend && ../venv/bin/gunicorn --bind 127.0.0.1:8001 projectmeats.wsgi:appli
 
 ### Technical Documentation  
 - **[API Reference](docs/api_reference.md)** - Complete API documentation  
-- **[Production Deployment](docs/production_deployment.md)** - Production deployment guide
+- **[AI Deployment Guide](docs/ai_deployment_guide.md)** - AI deployment system documentation
 - **[Migration Mapping](docs/migration_mapping.md)** - PowerApps to Django mappings
 - **[Architecture Guide](docs/architecture.md)** - System architecture and design decisions
 
-## 🚀 Performance & Production
+## 🚀 Performance & Production Features
 
 ### Recent Optimizations ✅
 - **Database indexes**: Strategic indexes for improved query performance
 - **Query optimization**: Reduced N+1 queries with `select_related()`
 - **Code quality**: Automated formatting and linting
 - **Security review**: Comprehensive security assessment
+- **AI-powered deployment**: Intelligent deployment with error recovery
+- **Monitoring**: Built-in health checks and performance monitoring
 
-### Production Deployment
-
-ProjectMeats includes an **interactive production deployment system** with guided setup:
-
-```bash
-# Interactive production setup with server recommendations
-python deploy_production.py
-
-# Or quick server provider comparison
-python server_guide.py
-```
-
-**Features**:
-- 🎯 **Interactive console prompts** for all configuration values
-- 🌟 **Server provider recommendations** with cost comparisons
-- 🔧 **Automated configuration file generation**
-- 🚀 **One-command server deployment**
-- 🔒 **Security best practices** (SSL, firewall, fail2ban)
-- 📊 **Deployment verification** and health checks
-
-**Quick Setup**:
-1. Choose server provider (DigitalOcean, Linode, Vultr, AWS Lightsail)
-2. Run `python deploy_production.py` for guided configuration
-3. Upload and execute generated deployment script on server
-4. Access your production application with SSL/HTTPS
-
-See [docs/production_setup_guide.md](docs/production_setup_guide.md) for the simplified setup guide.
+### Production Features
+- 🎯 **AI Deployment Orchestrator**: Primary deployment tool with intelligent automation
+- 🔒 **Security**: SSL/HTTPS, firewall, fail2ban protection
+- 📊 **Monitoring**: Health checks, logging, and performance metrics
+- 🐘 **Database**: PostgreSQL with optimized configuration
+- 🌐 **Load Balancing**: Nginx with optimized configuration
+- 🔧 **Auto-recovery**: Intelligent error detection and resolution
 
 ## 👥 Contributing
 
