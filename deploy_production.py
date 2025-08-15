@@ -1519,6 +1519,8 @@ log_success "Deployment completed! 🚀"
         self.log(f"  HTTP via DNS Bypass: {'✅' if bypass_ok else '❌'}", "INFO")
         self.log(f"  HTTP via Direct IP: {'✅' if direct_ip_ok else '❌'}", "INFO")
         self.log("", "INFO")
+        self.log(f"🌍 Check DNS propagation globally: https://dnschecker.org/#A/{domain}", "INFO")
+        self.log("", "INFO")
         
         if dns_ok and http_ok:
             self.log("🎉 Domain verification successful - site should be accessible", "SUCCESS")
