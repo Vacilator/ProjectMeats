@@ -17,6 +17,7 @@ from apps.core.views import health_check_view
 urlpatterns = [
     # System endpoints (available at root level for easier access)
     path("health/", health_check_view, name="health-check"),
+    path("health", health_check_view, name="health-check-no-slash"),
     # Admin interface
     path("admin/", admin.site.urls),
     # API v1 endpoints
