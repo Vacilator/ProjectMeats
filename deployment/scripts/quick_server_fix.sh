@@ -37,12 +37,20 @@ fi
 
 cd $PROJECT_DIR
 
-# Create required directories
-log_info "Creating directories..."
+# Create required directories and log files with proper permissions
+log_info "Creating directories and log files..."
 mkdir -p /var/log/projectmeats
 mkdir -p /var/run/projectmeats
 mkdir -p /etc/projectmeats
 mkdir -p backend/staticfiles backend/media
+
+# Pre-create log files with proper permissions before service starts
+touch /var/log/projectmeats/error.log
+touch /var/log/projectmeats/access.log
+touch /var/log/projectmeats/post_failure.log
+touch /var/log/projectmeats/deployment_errors.log
+
+log_success "✅ Directories and log files created"
 
 # Set up Python environment if it doesn't exist
 if [[ ! -d "venv" ]]; then
@@ -125,12 +133,32 @@ else
 fi
 cd ..
 
-# Set permissions
+# Set permissions - using projectmeats:www-data for consistency
 log_info "Setting permissions..."
-chown -R www-data:www-data /var/log/projectmeats /var/run/projectmeats
-chown -R www-data:www-data $PROJECT_DIR
-chown www-data:www-data /etc/projectmeats/projectmeats.env
+
+# Create projectmeats user if it doesn't exist and add to www-data group
+if ! id -u projectmeats >/dev/null 2>&1; then
+    useradd --system --home-dir "$PROJECT_DIR" --shell /bin/bash projectmeats
+    log_success "Created projectmeats user"
+fi
+
+# Add projectmeats user to www-data group for web server compatibility
+if ! groups projectmeats | grep -q "www-data"; then
+    usermod -aG www-data projectmeats
+    log_success "Added projectmeats user to www-data group"
+fi
+
+# Set ownership using consistent projectmeats:www-data
+chown -R projectmeats:www-data /var/log/projectmeats /var/run/projectmeats
+chown -R projectmeats:www-data $PROJECT_DIR
+chown projectmeats:www-data /etc/projectmeats/projectmeats.env
+
+# Set proper permissions
+chmod 775 /var/log/projectmeats /var/run/projectmeats
+chmod 664 /var/log/projectmeats/*.log
 chmod 640 /etc/projectmeats/projectmeats.env
+
+log_success "✅ Ownership and permissions set correctly"
 
 # Install Nginx config
 log_info "Configuring Nginx..."

@@ -268,12 +268,36 @@ check_permissions() {
         return 1
     fi
     
-    # Check log directory
+    # Check log directory with enhanced diagnostics
     if [ ! -w "$LOG_DIR" ]; then
         log_error "❌ Cannot write to log directory: $LOG_DIR"
         log_to_file "ERROR: Cannot write to log directory"
         issues_found=1
+        
+        # Enhanced diagnostics for log directory permissions
+        log_info "Log directory detailed permissions:"
+        if command -v getfacl >/dev/null 2>&1; then
+            getfacl "$LOG_DIR" | tee -a "$ERROR_LOG" || true
+        fi
+        ls -la "$LOG_DIR" | tee -a "$ERROR_LOG" || true
     fi
+    
+    # Check individual log files
+    for log_file in "error.log" "access.log" "post_failure.log"; do
+        if [ -f "$LOG_DIR/$log_file" ]; then
+            if [ ! -w "$LOG_DIR/$log_file" ]; then
+                log_error "❌ Cannot write to log file: $LOG_DIR/$log_file"
+                log_to_file "ERROR: Cannot write to log file: $LOG_DIR/$log_file"
+                issues_found=1
+                
+                # Show detailed permissions for the problematic file
+                ls -la "$LOG_DIR/$log_file" | tee -a "$ERROR_LOG" || true
+            fi
+        else
+            log_warning "⚠️ Log file does not exist: $LOG_DIR/$log_file"
+            log_to_file "WARNING: Log file does not exist: $LOG_DIR/$log_file"
+        fi
+    done
     
     # Check socket directory
     if [ ! -d "/run" ]; then
@@ -342,6 +366,18 @@ run_diagnostics() {
     # Clear previous error log
     > "$ERROR_LOG"
     log_to_file "Starting service diagnostics"
+    
+    # Capture system information for diagnostics
+    log_info "Capturing system information..."
+    log_to_file "=== System Information ==="
+    log_to_file "User running diagnostics: $(whoami)"
+    log_to_file "User ID: $(id)"
+    if id projectmeats >/dev/null 2>&1; then
+        log_to_file "ProjectMeats user info: $(id projectmeats)"
+    else
+        log_to_file "ERROR: projectmeats user does not exist"
+    fi
+    log_to_file "Current PATH: $PATH"
     
     local exit_code=0
     

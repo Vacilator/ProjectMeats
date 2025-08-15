@@ -36,6 +36,13 @@ else
     log_info "projectmeats user already exists"
 fi
 
+# Ensure projectmeats user is in www-data group
+if ! groups projectmeats | grep -q "www-data"; then
+    log_info "Adding projectmeats user to www-data group..."
+    usermod -aG www-data projectmeats
+    log_success "Added projectmeats user to www-data group"
+fi
+
 # Create required directories
 log_info "Creating and setting permissions on directories..."
 
@@ -55,6 +62,22 @@ for dir in "${directories[@]}"; do
     if [ ! -d "$dir" ]; then
         mkdir -p "$dir"
         log_success "Created directory: $dir"
+    fi
+done
+
+# Pre-create log files with proper permissions before service starts
+log_info "Creating log files..."
+log_files=(
+    "/var/log/projectmeats/error.log"
+    "/var/log/projectmeats/access.log"
+    "/var/log/projectmeats/post_failure.log"
+    "/var/log/projectmeats/deployment_errors.log"
+)
+
+for log_file in "${log_files[@]}"; do
+    if [ ! -f "$log_file" ]; then
+        touch "$log_file"
+        log_success "Created log file: $log_file"
     fi
 done
 
@@ -78,6 +101,14 @@ chmod 755 "/etc/projectmeats" 2>/dev/null || true
 
 # Set file permissions for critical files
 log_info "Setting file permissions..."
+
+# Set log file permissions
+for log_file in "${log_files[@]}"; do
+    if [ -f "$log_file" ]; then
+        chmod 664 "$log_file"
+        log_success "Set permissions for log file: $log_file"
+    fi
+done
 
 # Make gunicorn executable
 if [ -f "$PROJECT_DIR/venv/bin/gunicorn" ]; then
