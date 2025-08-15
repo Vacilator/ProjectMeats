@@ -78,8 +78,10 @@ class DeploymentDiagnostic:
         return exit_code == 0 and stdout.strip() == "active"
     
     def check_port_listening(self, port):
-        """Check if a port is being listened on"""
-        exit_code, stdout, stderr = self.run_command(f"netstat -tlnp | grep :{port}")
+        """Check if a port is being listened on using ss command as specified in problem statement"""
+        """Check if a port is being listened on by running 'ss -tlnp' on the server."""
+        # Use ss -tlnp | grep :port with sudo
+        exit_code, stdout, stderr = self.run_command(f"sudo ss -tlnp | grep :{port}")
         return exit_code == 0 and stdout.strip() != ""
     
     def diagnose(self):
