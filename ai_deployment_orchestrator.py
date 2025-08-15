@@ -533,9 +533,14 @@ class AIDeploymentOrchestrator:
                 token=github_token,
                 repo="Vacilator/ProjectMeats"
             )
-            self.log("GitHub integration initialized successfully", "SUCCESS")
+            if self.github_integration.authenticated:
+                self.log("GitHub integration initialized successfully", "SUCCESS")
+            else:
+                self.log(f"GitHub integration failed authentication: {self.github_integration.auth_error}", "WARNING")
+                self.log("GitHub features (auto issue/PR creation) will be disabled", "WARNING")
         except Exception as e:
             self.log(f"Failed to initialize GitHub integration: {e}", "WARNING")
+            self.github_integration = None
     
     def reinitialize_github_integration(self):
         """Re-initialize GitHub integration after config changes (e.g., from command line args)"""
@@ -4255,10 +4260,23 @@ server {{
         exit_code, codename_output, stderr = self.execute_command("lsb_release -cs")
         if exit_code != 0:
             self.log(f"Failed to get Ubuntu codename: {stderr}", "ERROR")
-            return False
-        
-        ubuntu_codename = codename_output.strip()
-        self.log(f"Detected Ubuntu codename: {ubuntu_codename}", "DEBUG")
+            # Fallback to trying to detect Ubuntu codename from /etc/os-release
+            exit_code2, codename_output2, stderr2 = self.execute_command("grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '\"'")
+            if exit_code2 == 0 and codename_output2.strip():
+                ubuntu_codename = codename_output2.strip()
+                self.log(f"Detected Ubuntu codename from os-release: {ubuntu_codename}", "DEBUG")
+            else:
+                self.log("Could not detect Ubuntu codename, using 'jammy' as default", "WARNING")
+                ubuntu_codename = "jammy"  # Default to jammy for Ubuntu 22.04
+        else:
+            ubuntu_codename = codename_output.strip()
+            
+        # Validate ubuntu_codename is not empty or malformed
+        if not ubuntu_codename or ubuntu_codename.startswith('$') or len(ubuntu_codename) < 3:
+            self.log(f"Invalid Ubuntu codename detected: '{ubuntu_codename}', using 'jammy' as fallback", "WARNING")
+            ubuntu_codename = "jammy"
+            
+        self.log(f"Using Ubuntu codename: {ubuntu_codename}", "DEBUG")
         
         commands = [
             # Remove any old Docker versions
