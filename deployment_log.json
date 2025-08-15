@@ -102,3 +102,57 @@
 {"timestamp": "2025-08-15 11:30:53", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 11:30:53", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
 
+{"timestamp": "2025-08-15 12:10:55", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_121055.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:10:55", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:10:55", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:12:21", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_121221.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:12:21", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:12:21", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:15:34", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_121534.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:15:34", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:15:34", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:15:34", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_121534.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:15:35", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:15:35", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_121535.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:15:35", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:05", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_121705.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:05", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:05", "level": "CRITICAL", "message": "Deployment failed at step: download_project", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:06", "level": "CRITICAL", "message": "Error: Test error: Failed to download project", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:06", "level": "ERROR", "message": "\u274c Failed to create GitHub issue - @copilot will not be automatically notified", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:06", "level": "CRITICAL", "message": "Deployment failed at step: server_connection", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:07", "level": "CRITICAL", "message": "Error: Test error: Cannot connect to server", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:08", "level": "ERROR", "message": "\u274c Failed to create GitHub issue - @copilot will not be automatically notified", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:58", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_121758.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:58", "level": "INFO", "message": "GitHub token not found in environment variables or command line arguments", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:17:58", "level": "INFO", "message": "Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:19:31", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_121931.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:19:31", "level": "INFO", "message": "GitHub token not found in environment variables or command line arguments", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:19:31", "level": "INFO", "message": "Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:20:39", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_122039.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:20:39", "level": "INFO", "message": "GitHub token not found in environment variables or command line arguments", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:20:39", "level": "INFO", "message": "Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:21:47", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_122147.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:21:47", "level": "INFO", "message": "GitHub token not found in environment variables or command line arguments", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:21:47", "level": "INFO", "message": "Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:21:47", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:22:38", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_122238.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:22:38", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:22:38", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:22:38", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_122238.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:22:39", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:22:39", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_122239.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:22:39", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:23:29", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_122329.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:23:29", "level": "INFO", "message": "GitHub token not found in environment variables or command line arguments", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:23:29", "level": "INFO", "message": "Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:50", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_122650.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:50", "level": "INFO", "message": "GitHub token not found in environment variables or command line arguments", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:50", "level": "INFO", "message": "Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:50", "level": "SUCCESS", "message": "GitHub integration initialized successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:50", "level": "CRITICAL", "message": "Deployment failed at step: download_project", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:50", "level": "CRITICAL", "message": "Error: Command line test: Download failed", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:51", "level": "ERROR", "message": "\u274c Failed to create GitHub issue - @copilot will not be automatically notified", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:51", "level": "CRITICAL", "message": "Deployment failed at step: server_connection", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:52", "level": "CRITICAL", "message": "Error: Command line test: Server unreachable", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 12:26:53", "level": "ERROR", "message": "\u274c Failed to create GitHub issue - @copilot will not be automatically notified", "deployment_id": null, "step": null}

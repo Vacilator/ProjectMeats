@@ -72,4 +72,9 @@ comprehensive_prod_test.db
 test_prod.db
 
 # Log files
-*.log
+*.log# Deployment temporary files
+deployment_log.json
+logs/
+backups/
+ssl/private/
+monitoring/data/

@@ -1,0 +1,55 @@
+# ProjectMeats Production Requirements
+# Optimized for Docker production deployment
+
+# Core Django and DRF (latest stable versions)
+Django==4.2.7
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+django-environ==0.11.2
+django-filter==23.3
+
+# Database with connection pooling
+psycopg[binary]==3.2.9
+psycopg[pool]==3.2.9  # Connection pooling for better performance
+dj-database-url==2.1.0
+
+# API Documentation
+drf-spectacular==0.27.0
+
+# Production WSGI Server
+gunicorn==21.2.0
+
+# Static files and storage
+whitenoise==6.6.0
+django-storages==1.14.2  # For S3/cloud storage if needed
+
+# Caching and Session Management
+django-redis==5.4.0
+redis==5.0.1
+
+# Background Tasks
+celery==5.3.4
+celery[redis]==5.3.4
+
+# Security and Performance
+django-security==0.17.0
+django-ratelimit==4.1.0
+
+# Monitoring and Logging
+structlog==23.2.0
+django-health-check==3.17.0
+prometheus-client==0.19.0
+
+# Utilities for production
+python-decouple==3.8
+Pillow==10.2.0
+requests==2.31.0
+
+# Email backend
+django-anymail==10.2  # For transactional email services
+
+# Database migrations safety
+django-migration-linter==5.0.0
+
+# SSL/TLS and security
+cryptography==41.0.7
