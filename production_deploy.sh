@@ -85,13 +85,35 @@ if ! id -u projectmeats >/dev/null 2>&1; then
     log_success "Created projectmeats user"
 fi
 
-# Create directories
+# Add projectmeats user to www-data group for proper permissions
+if ! groups projectmeats | grep -q "www-data"; then
+    usermod -aG www-data projectmeats
+    log_success "Added projectmeats user to www-data group"
+fi
+
+# Create directories with proper permissions upfront
+log_info "Setting up log directories and permissions..."
 mkdir -p $PROJECT_DIR
 mkdir -p /var/log/projectmeats
 mkdir -p /var/run/projectmeats
-chown -R projectmeats:projectmeats $PROJECT_DIR
-chown -R projectmeats:projectmeats /var/log/projectmeats
-chown -R projectmeats:projectmeats /var/run/projectmeats
+
+# Pre-create log files with proper permissions before service starts
+touch /var/log/projectmeats/error.log
+touch /var/log/projectmeats/access.log  
+touch /var/log/projectmeats/post_failure.log
+touch /var/log/projectmeats/deployment_errors.log
+
+# Set ownership using projectmeats:www-data for web server compatibility  
+chown -R projectmeats:www-data $PROJECT_DIR
+chown -R projectmeats:www-data /var/log/projectmeats
+chown -R projectmeats:www-data /var/run/projectmeats
+
+# Set proper directory and file permissions
+chmod 775 /var/log/projectmeats
+chmod 775 /var/run/projectmeats
+chmod 664 /var/log/projectmeats/*.log
+
+log_success "✅ All directories and log files created with proper permissions"
 
 # Download/copy project files if not already present
 if [[ ! -d "$PROJECT_DIR/backend" ]]; then

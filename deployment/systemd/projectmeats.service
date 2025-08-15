@@ -34,10 +34,10 @@ ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --graceful-timeout 30 \
     projectmeats.wsgi:application
 ExecReload=/bin/kill -s HUP $MAINPID
-ExecStopPost=/bin/sh -c 'if [ -w /var/log/projectmeats/post_failure.log ]; then journalctl -u projectmeats.service -n 50 >> /var/log/projectmeats/post_failure.log; fi'
+ExecStopPost=/bin/sh -c 'if [ -w /var/log/projectmeats/ ]; then journalctl -u projectmeats.service -n 50 > /tmp/post_failure.log && mv /tmp/post_failure.log /var/log/projectmeats/post_failure.log; fi'
 KillMode=mixed
 TimeoutStopSec=5
-SuccessExitStatus=0 1
+SuccessExitStatus=0 1 2
 PrivateTmp=true
 Restart=always
 RestartSec=5
