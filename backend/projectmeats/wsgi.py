@@ -8,6 +8,15 @@ https://docs.djangoproject.com/en/4.2/howto/deployment/wsgi/
 """
 
 import os
+import sys
+import logging
+
+# Set up basic logging as fallback
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    stream=sys.stderr
+)
 
 from django.core.wsgi import get_wsgi_application
 
@@ -21,4 +30,11 @@ if not os.environ.get("DJANGO_SETTINGS_MODULE"):
         # Default to production settings for safety in deployment
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "apps.settings.production")
 
-application = get_wsgi_application()
+try:
+    application = get_wsgi_application()
+except Exception as e:
+    # Log the error to stderr so it's captured by systemd/gunicorn
+    logging.error(f"Failed to initialize WSGI application: {e}")
+    logging.error(f"Settings module: {os.environ.get('DJANGO_SETTINGS_MODULE')}")
+    logging.error(f"Python path: {sys.path}")
+    raise

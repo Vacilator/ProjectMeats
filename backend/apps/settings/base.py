@@ -174,6 +174,21 @@ CSRF_TRUSTED_ORIGINS = config(
 ).split(",")
 
 # Logging Configuration
+import os
+
+# Determine log file path - use writable location in production
+LOG_DIR = config("LOG_DIR", default="/var/log/projectmeats")
+LOG_FILE = config("DJANGO_LOG_FILE", default="django.log")
+LOG_PATH = os.path.join(LOG_DIR, LOG_FILE)
+
+# Ensure log directory exists if possible
+try:
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR, exist_ok=True)
+except (OSError, PermissionError):
+    # Fall back to console-only logging if directory creation fails
+    LOG_PATH = None
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -188,11 +203,6 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
-        "file": {
-            "class": "logging.FileHandler",
-            "filename": BASE_DIR / "debug.log",
-            "formatter": "verbose",
-        },
     },
     "root": {
         "handlers": ["console"],
@@ -200,14 +210,36 @@ LOGGING = {
     },
     "loggers": {
         "django": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": config("LOG_LEVEL", default="INFO"),
             "propagate": False,
         },
         "projectmeats": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "DEBUG",
             "propagate": False,
         },
     },
 }
+
+# Add file handler only if log path is available and writable
+if LOG_PATH:
+    try:
+        # Test if we can write to the log file
+        with open(LOG_PATH, 'a'):
+            pass
+        
+        # Add file handler if write test succeeds
+        LOGGING["handlers"]["file"] = {
+            "class": "logging.FileHandler",
+            "filename": LOG_PATH,
+            "formatter": "verbose",
+        }
+        
+        # Add file handler to loggers
+        LOGGING["loggers"]["django"]["handlers"].append("file")
+        LOGGING["loggers"]["projectmeats"]["handlers"].append("file")
+        
+    except (OSError, PermissionError):
+        # Continue with console-only logging if file is not writable
+        pass
