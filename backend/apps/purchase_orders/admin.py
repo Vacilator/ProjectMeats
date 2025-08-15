@@ -4,6 +4,7 @@ Django admin configuration for Purchase Orders.
 Provides a user-friendly admin interface for managing PurchaseOrder records
 migrated from PowerApps pro_purchaseorder.
 """
+
 from django.contrib import admin
 
 from .models import PurchaseOrder

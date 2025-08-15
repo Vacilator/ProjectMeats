@@ -4,6 +4,7 @@ Tests for Plants app.
 Test suite for Plant model, serializers, and API endpoints
 migrated from PowerApps cr7c4_plant entity.
 """
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework import status

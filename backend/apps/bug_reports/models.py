@@ -4,6 +4,7 @@ Bug Reports models for ProjectMeats.
 Handles user-submitted bug reports and integrates with GitHub Issues API
 for automatic issue creation and assignment to copilot agents.
 """
+
 from django.contrib.auth.models import User
 from django.db import models
 

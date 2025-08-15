@@ -4,6 +4,7 @@ Django admin configuration for Customers.
 Provides a user-friendly admin interface for managing Customer records
 migrated from PowerApps pro_customer.
 """
+
 from django.contrib import admin
 
 from .models import Customer

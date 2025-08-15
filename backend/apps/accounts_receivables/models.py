@@ -7,6 +7,7 @@ Original description: "This table contains records of accounts receivables infor
 PowerApps Entity Name: cr7c4_AccountsReceivables
 Django Model Name: AccountsReceivable
 """
+
 from django.core.validators import EmailValidator
 from django.db import models
 

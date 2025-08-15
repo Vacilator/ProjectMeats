@@ -7,6 +7,7 @@ Original description: "This table contains records of purchase orders including 
 PowerApps Entity Name: pro_PurchaseOrder
 Django Model Name: PurchaseOrder
 """
+
 from decimal import Decimal
 
 from django.core.validators import MinValueValidator
@@ -147,18 +148,18 @@ class PurchaseOrder(OwnedModel, StatusModel):
         errors = {}
 
         if not self.po_number or not self.po_number.strip():
-            errors[
-                "po_number"
-            ] = "Purchase Order Number is required (PowerApps required field)"
+            errors["po_number"] = (
+                "Purchase Order Number is required (PowerApps required field)"
+            )
 
         if not self.item or not self.item.strip():
             errors["item"] = "Item description is required"
 
         if self.fulfillment_date and self.purchase_date:
             if self.fulfillment_date < self.purchase_date:
-                errors[
-                    "fulfillment_date"
-                ] = "Fulfillment date cannot be before purchase date"
+                errors["fulfillment_date"] = (
+                    "Fulfillment date cannot be before purchase date"
+                )
 
         if errors:
             raise ValidationError(errors)

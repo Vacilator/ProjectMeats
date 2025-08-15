@@ -226,20 +226,20 @@ LOGGING = {
 if LOG_PATH:
     try:
         # Test if we can write to the log file
-        with open(LOG_PATH, 'a'):
+        with open(LOG_PATH, "a"):
             pass
-        
+
         # Add file handler if write test succeeds
         LOGGING["handlers"]["file"] = {
             "class": "logging.FileHandler",
             "filename": LOG_PATH,
             "formatter": "verbose",
         }
-        
+
         # Add file handler to loggers
         LOGGING["loggers"]["django"]["handlers"].append("file")
         LOGGING["loggers"]["projectmeats"]["handlers"].append("file")
-        
+
     except (OSError, PermissionError):
         # Continue with console-only logging if file is not writable
         pass

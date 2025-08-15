@@ -4,6 +4,7 @@ Tests for Customers API.
 Tests the REST API endpoints for managing Customer entities
 migrated from PowerApps pro_customer.
 """
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse

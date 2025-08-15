@@ -4,6 +4,7 @@ Bug Reports API views.
 Provides REST API endpoints for creating and managing bug reports
 with integrated GitHub issue creation.
 """
+
 import logging
 
 from django.db import transaction
@@ -15,8 +16,11 @@ from rest_framework.response import Response
 
 from .github_service import GitHubIssueService
 from .models import BugReport, BugReportStatus
-from .serializers import (BugReportCreateSerializer, BugReportListSerializer,
-                          BugReportSerializer)
+from .serializers import (
+    BugReportCreateSerializer,
+    BugReportListSerializer,
+    BugReportSerializer,
+)
 
 logger = logging.getLogger(__name__)
 

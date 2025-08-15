@@ -10,33 +10,133 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('suppliers', '0003_supplierplantmapping_plant'),
+        ("suppliers", "0003_supplierplantmapping_plant"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CarrierInfo',
+            name="CarrierInfo",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_on', models.DateTimeField(auto_now_add=True, help_text='Equivalent to PowerApps CreatedOn field')),
-                ('modified_on', models.DateTimeField(auto_now=True, help_text='Equivalent to PowerApps ModifiedOn field')),
-                ('status', models.CharField(choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active', help_text='Equivalent to PowerApps statecode/statuscode fields', max_length=20)),
-                ('name', models.CharField(help_text='Equivalent to PowerApps cr7c4_name field (Primary Name)', max_length=850)),
-                ('address', models.TextField(blank=True, help_text='Equivalent to PowerApps cr7c4_address field (Carrier address)', max_length=200, null=True)),
-                ('contact_name', models.CharField(blank=True, help_text='Equivalent to PowerApps cr7c4_contactname field (Contact person name)', max_length=850, null=True)),
-                ('release_number', models.CharField(blank=True, help_text='Equivalent to PowerApps cr7c4_releasenumber field (Release number information)', max_length=100, null=True)),
-                ('created_by', models.ForeignKey(help_text='Equivalent to PowerApps CreatedBy field', on_delete=django.db.models.deletion.PROTECT, related_name='%(class)s_created', to=settings.AUTH_USER_MODEL)),
-                ('modified_by', models.ForeignKey(help_text='Equivalent to PowerApps ModifiedBy field', on_delete=django.db.models.deletion.PROTECT, related_name='%(class)s_modified', to=settings.AUTH_USER_MODEL)),
-                ('owner', models.ForeignKey(help_text='Equivalent to PowerApps OwnerId field', on_delete=django.db.models.deletion.PROTECT, related_name='%(class)s_owned', to=settings.AUTH_USER_MODEL)),
-                ('supplier', models.ForeignKey(blank=True, help_text='Equivalent to PowerApps cr7c4_supplierid field', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='carrier_infos', to='suppliers.supplier')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "created_on",
+                    models.DateTimeField(
+                        auto_now_add=True,
+                        help_text="Equivalent to PowerApps CreatedOn field",
+                    ),
+                ),
+                (
+                    "modified_on",
+                    models.DateTimeField(
+                        auto_now=True,
+                        help_text="Equivalent to PowerApps ModifiedOn field",
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("active", "Active"), ("inactive", "Inactive")],
+                        default="active",
+                        help_text="Equivalent to PowerApps statecode/statuscode fields",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="Equivalent to PowerApps cr7c4_name field (Primary Name)",
+                        max_length=850,
+                    ),
+                ),
+                (
+                    "address",
+                    models.TextField(
+                        blank=True,
+                        help_text="Equivalent to PowerApps cr7c4_address field (Carrier address)",
+                        max_length=200,
+                        null=True,
+                    ),
+                ),
+                (
+                    "contact_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="Equivalent to PowerApps cr7c4_contactname field (Contact person name)",
+                        max_length=850,
+                        null=True,
+                    ),
+                ),
+                (
+                    "release_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="Equivalent to PowerApps cr7c4_releasenumber field (Release number information)",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        help_text="Equivalent to PowerApps CreatedBy field",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="%(class)s_created",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "modified_by",
+                    models.ForeignKey(
+                        help_text="Equivalent to PowerApps ModifiedBy field",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="%(class)s_modified",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        help_text="Equivalent to PowerApps OwnerId field",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="%(class)s_owned",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "supplier",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Equivalent to PowerApps cr7c4_supplierid field",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="carrier_infos",
+                        to="suppliers.supplier",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Carrier Info',
-                'verbose_name_plural': 'Carrier Infos',
-                'db_table': 'carrier_infos',
-                'ordering': ['name'],
-                'indexes': [models.Index(fields=['name'], name='carrier_inf_name_a287f0_idx'), models.Index(fields=['status'], name='carrier_inf_status_5cfd19_idx'), models.Index(fields=['supplier'], name='carrier_inf_supplie_b999f4_idx')],
+                "verbose_name": "Carrier Info",
+                "verbose_name_plural": "Carrier Infos",
+                "db_table": "carrier_infos",
+                "ordering": ["name"],
+                "indexes": [
+                    models.Index(fields=["name"], name="carrier_inf_name_a287f0_idx"),
+                    models.Index(
+                        fields=["status"], name="carrier_inf_status_5cfd19_idx"
+                    ),
+                    models.Index(
+                        fields=["supplier"], name="carrier_inf_supplie_b999f4_idx"
+                    ),
+                ],
             },
         ),
     ]

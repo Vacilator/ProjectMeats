@@ -4,8 +4,9 @@ Serializers for Contact Information API.
 Handles serialization/deserialization between Django models and JSON API responses.
 Migrated from PowerApps pro_contactinfo entity.
 """
-from rest_framework import serializers
+
 from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
 
 from .models import ContactInfo
 

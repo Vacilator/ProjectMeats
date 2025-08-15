@@ -1,11 +1,11 @@
 """
 URL configuration for Suppliers app.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (SupplierLocationViewSet, SupplierPlantMappingViewSet,
-                    SupplierViewSet)
+from .views import SupplierLocationViewSet, SupplierPlantMappingViewSet, SupplierViewSet
 
 # Create router and register viewsets
 router = DefaultRouter()

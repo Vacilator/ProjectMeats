@@ -7,33 +7,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts_receivables', '0001_initial'),
+        ("accounts_receivables", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='accountsreceivable',
-            index=models.Index(fields=['name'], name='ar_name_idx'),
+            model_name="accountsreceivable",
+            index=models.Index(fields=["name"], name="ar_name_idx"),
         ),
         migrations.AddIndex(
-            model_name='accountsreceivable',
-            index=models.Index(fields=['status'], name='ar_status_idx'),
+            model_name="accountsreceivable",
+            index=models.Index(fields=["status"], name="ar_status_idx"),
         ),
         migrations.AddIndex(
-            model_name='accountsreceivable',
-            index=models.Index(fields=['email'], name='ar_email_idx'),
+            model_name="accountsreceivable",
+            index=models.Index(fields=["email"], name="ar_email_idx"),
         ),
         migrations.AddIndex(
-            model_name='accountsreceivable',
-            index=models.Index(fields=['created_on'], name='ar_created_idx'),
+            model_name="accountsreceivable",
+            index=models.Index(fields=["created_on"], name="ar_created_idx"),
         ),
         migrations.AddIndex(
-            model_name='accountsreceivable',
-            index=models.Index(fields=['status', 'name'], name='ar_status_name_idx'),
+            model_name="accountsreceivable",
+            index=models.Index(fields=["status", "name"], name="ar_status_name_idx"),
         ),
         migrations.AddConstraint(
-            model_name='accountsreceivable',
-            constraint=models.CheckConstraint(check=models.Q(name__isnull=False) & ~models.Q(name=''), name='ar_name_not_empty'),
+            model_name="accountsreceivable",
+            constraint=models.CheckConstraint(
+                check=models.Q(name__isnull=False) & ~models.Q(name=""),
+                name="ar_name_not_empty",
+            ),
         ),
     ]

@@ -12,6 +12,7 @@ Endpoints:
 - DELETE /api/v1/purchase-orders/{id}/ - Delete purchase order
 - GET /api/v1/purchase-orders/migration_info/ - PowerApps migration info
 """
+
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -23,9 +24,11 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from .models import PurchaseOrder
-from .serializers import (PurchaseOrderCreateSerializer,
-                          PurchaseOrderDetailSerializer,
-                          PurchaseOrderListSerializer)
+from .serializers import (
+    PurchaseOrderCreateSerializer,
+    PurchaseOrderDetailSerializer,
+    PurchaseOrderListSerializer,
+)
 
 
 @extend_schema_view(

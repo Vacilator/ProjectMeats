@@ -7,14 +7,15 @@ but can be configured via environment variables.
 """
 
 import os
+
 from decouple import config
 
 # Determine which settings module to use based on environment
-ENVIRONMENT = config('DJANGO_ENV', default='production')
+ENVIRONMENT = config("DJANGO_ENV", default="production")
 
-if ENVIRONMENT == 'development':
+if ENVIRONMENT == "development":
     from .development import *
-elif ENVIRONMENT == 'production':
+elif ENVIRONMENT == "production":
     from .production import *
 else:
     # Default to production settings for safety

@@ -11,6 +11,7 @@ Endpoints:
 - PUT /api/v1/contacts/{id}/ - Update contact info
 - DELETE /api/v1/contacts/{id}/ - Delete contact info
 """
+
 from django.contrib.auth.models import User
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -19,9 +20,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import ContactInfo
-from .serializers import (ContactInfoCreateSerializer,
-                          ContactInfoDetailSerializer,
-                          ContactInfoListSerializer)
+from .serializers import (
+    ContactInfoCreateSerializer,
+    ContactInfoDetailSerializer,
+    ContactInfoListSerializer,
+)
 
 
 @extend_schema_view(

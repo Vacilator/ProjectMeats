@@ -4,6 +4,7 @@ Carrier Info API views for ProjectMeats.
 RESTful API endpoints for managing carrier information records
 migrated from PowerApps cr7c4_carrierinfo entity.
 """
+
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
@@ -12,9 +13,11 @@ from rest_framework.response import Response
 from apps.core.views import PowerAppsModelViewSet
 
 from .models import CarrierInfo
-from .serializers import (CarrierInfoCreateSerializer,
-                          CarrierInfoDetailSerializer,
-                          CarrierInfoListSerializer)
+from .serializers import (
+    CarrierInfoCreateSerializer,
+    CarrierInfoDetailSerializer,
+    CarrierInfoListSerializer,
+)
 
 
 @extend_schema_view(

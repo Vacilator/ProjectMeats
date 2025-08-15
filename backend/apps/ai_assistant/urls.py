@@ -4,12 +4,18 @@ URL configuration for AI Assistant app.
 Provides REST API endpoints for chat functionality, document processing,
 and AI-powered business intelligence.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (AIConfigurationViewSet, ChatBotAPIViewSet,
-                    ChatMessageViewSet, ChatSessionViewSet,
-                    ProcessingTaskViewSet, UploadedDocumentViewSet)
+from .views import (
+    AIConfigurationViewSet,
+    ChatBotAPIViewSet,
+    ChatMessageViewSet,
+    ChatSessionViewSet,
+    ProcessingTaskViewSet,
+    UploadedDocumentViewSet,
+)
 
 # Create router for ViewSets
 router = DefaultRouter()

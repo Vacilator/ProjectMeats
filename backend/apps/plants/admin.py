@@ -4,6 +4,7 @@ Django admin configuration for Plants app.
 Provides admin interface for managing Plant entities
 migrated from PowerApps cr7c4_plant.
 """
+
 from django.contrib import admin
 
 from .models import Plant

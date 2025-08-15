@@ -4,6 +4,7 @@ GitHub integration service for creating bug report issues.
 Handles creation of GitHub issues with auto-assignment to copilot
 and proper formatting for bug report data.
 """
+
 import json
 import os
 from typing import Dict, List

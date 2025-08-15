@@ -5,6 +5,7 @@ This module provides a pluggable architecture for integrating with various
 AI providers (OpenAI, Azure OpenAI, Anthropic, etc.) for chat responses
 and document processing in the meat market business context.
 """
+
 import hashlib
 import logging
 import time
@@ -254,9 +255,11 @@ class MockAIProvider(AIProviderInterface):
                 entities["certifications"].append(
                     {
                         "certification": cert,
-                        "type": "food_safety"
-                        if cert in ["USDA", "FDA", "HACCP", "FSIS"]
-                        else "quality",
+                        "type": (
+                            "food_safety"
+                            if cert in ["USDA", "FDA", "HACCP", "FSIS"]
+                            else "quality"
+                        ),
                         "confidence": 0.95,
                     }
                 )
@@ -1231,9 +1234,9 @@ class AIService:
 
             # Prepare metadata
             metadata = {
-                "provider": provider.config.provider
-                if hasattr(provider, "config")
-                else "mock",
+                "provider": (
+                    provider.config.provider if hasattr(provider, "config") else "mock"
+                ),
                 "model": result.get("model", "unknown"),
                 "processing_time": processing_time,
                 "usage": result.get("usage", {}),

@@ -4,6 +4,7 @@ Django app configuration for Carriers.
 Defines the configuration for the carriers app which handles
 carrier information migrated from PowerApps cr7c4_carrierinfo entity.
 """
+
 from django.apps import AppConfig
 
 

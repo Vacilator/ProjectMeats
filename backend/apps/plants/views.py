@@ -11,6 +11,7 @@ Endpoints:
 - PUT /api/v1/plants/{id}/ - Update plant
 - DELETE /api/v1/plants/{id}/ - Delete plant
 """
+
 from django.contrib.auth.models import User
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -19,8 +20,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Plant
-from .serializers import (PlantCreateSerializer, PlantDetailSerializer,
-                          PlantListSerializer)
+from .serializers import (
+    PlantCreateSerializer,
+    PlantDetailSerializer,
+    PlantListSerializer,
+)
 
 
 @extend_schema_view(
