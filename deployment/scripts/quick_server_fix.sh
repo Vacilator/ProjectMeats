@@ -49,6 +49,7 @@ touch /var/log/projectmeats/error.log
 touch /var/log/projectmeats/access.log
 touch /var/log/projectmeats/post_failure.log
 touch /var/log/projectmeats/deployment_errors.log
+touch /var/log/projectmeats/django.log
 
 log_success "✅ Directories and log files created"
 
@@ -193,32 +194,63 @@ log_info "Starting ProjectMeats service with diagnostics..."
 if ! systemctl start projectmeats; then
     log_error "Failed to start ProjectMeats service"
     
-    # Run enhanced diagnostics
-    log_info "Running enhanced service diagnostics..."
-    if [ -f "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" ]; then
-        "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" "$PROJECT_DIR" 2>&1 | tee -a /var/log/projectmeats/deployment_errors.log
-    else
-        log_warning "Enhanced diagnostics not available, using basic checks..."
+    # Check for logging configuration errors and attempt recovery
+    log_info "Checking for Django logging configuration issues..."
+    if journalctl -u projectmeats -n 20 --no-pager | grep -q "Unable to configure.*logging handler"; then
+        log_warning "Detected Django logging configuration error - attempting recovery..."
         
-        log_info "Checking service status..."
-        systemctl status projectmeats --no-pager -l
-        log_info "Checking recent logs..."
-        journalctl -xeu projectmeats -n 30 --no-pager | tee -a /var/log/projectmeats/deployment_errors.log
+        # Ensure log directory exists and is writable
+        mkdir -p /var/log/projectmeats
+        chown -R projectmeats:www-data /var/log/projectmeats
+        chmod 775 /var/log/projectmeats
         
-        # Check if critical files exist
-        log_info "Verifying critical files..."
-        if [[ ! -f "/etc/projectmeats/projectmeats.env" ]]; then
-            log_error "Missing environment file: /etc/projectmeats/projectmeats.env"
-        fi
-        if [[ ! -f "/opt/projectmeats/venv/bin/gunicorn" ]]; then
-            log_error "Missing gunicorn: /opt/projectmeats/venv/bin/gunicorn"
-        fi
-        if [[ ! -f "/opt/projectmeats/backend/projectmeats/wsgi.py" ]]; then
-            log_error "Missing WSGI file: /opt/projectmeats/backend/projectmeats/wsgi.py"
+        # Create Django log file if it doesn't exist
+        touch /var/log/projectmeats/django.log
+        chown projectmeats:www-data /var/log/projectmeats/django.log
+        chmod 664 /var/log/projectmeats/django.log
+        
+        # Test if logging is now working
+        if sudo -u projectmeats test -w /var/log/projectmeats/django.log; then
+            log_success "Django log file is now writable - retrying service start..."
+            systemctl reset-failed projectmeats
+            if systemctl start projectmeats; then
+                log_success "ProjectMeats service started successfully after logging fix"
+            else
+                log_error "Service still failed after logging fix - continuing with diagnostics..."
+            fi
+        else
+            log_error "Unable to make Django log file writable - continuing with diagnostics..."
         fi
     fi
     
-    log_warning "Service failed to start - check /var/log/projectmeats/deployment_errors.log for details"
+    # Run enhanced diagnostics if service still failed
+    if ! systemctl is-active --quiet projectmeats; then
+        log_info "Running enhanced service diagnostics..."
+        if [ -f "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" ]; then
+            "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" "$PROJECT_DIR" 2>&1 | tee -a /var/log/projectmeats/deployment_errors.log
+        else
+            log_warning "Enhanced diagnostics not available, using basic checks..."
+            
+            log_info "Checking service status..."
+            systemctl status projectmeats --no-pager -l
+            log_info "Checking recent logs..."
+            journalctl -xeu projectmeats -n 30 --no-pager | tee -a /var/log/projectmeats/deployment_errors.log
+            
+            # Check if critical files exist
+            log_info "Verifying critical files..."
+            if [[ ! -f "/etc/projectmeats/projectmeats.env" ]]; then
+                log_error "Missing environment file: /etc/projectmeats/projectmeats.env"
+            fi
+            if [[ ! -f "/opt/projectmeats/venv/bin/gunicorn" ]]; then
+                log_error "Missing gunicorn: /opt/projectmeats/venv/bin/gunicorn"
+            fi
+            if [[ ! -f "/opt/projectmeats/backend/projectmeats/wsgi.py" ]]; then
+                log_error "Missing WSGI file: /opt/projectmeats/backend/projectmeats/wsgi.py"
+            fi
+        fi
+        
+        log_warning "Service failed to start - check /var/log/projectmeats/deployment_errors.log for details"
+    fi
 else
     log_success "ProjectMeats service started successfully"
 fi

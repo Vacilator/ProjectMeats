@@ -72,6 +72,7 @@ log_files=(
     "/var/log/projectmeats/access.log"
     "/var/log/projectmeats/post_failure.log"
     "/var/log/projectmeats/deployment_errors.log"
+    "/var/log/projectmeats/django.log"
 )
 
 for log_file in "${log_files[@]}"; do

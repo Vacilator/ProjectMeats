@@ -134,6 +134,34 @@ except Exception as e:
         return 1
     fi
     
+    # Test Django logging configuration
+    log_info "Testing Django logging configuration..."
+    python -c "
+import os
+import django
+from django.conf import settings
+from django.core.management import execute_from_command_line
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'apps.settings.production')
+django.setup()
+
+try:
+    import logging
+    logger = logging.getLogger('django')
+    logger.info('Logging configuration test successful')
+    print('✅ Django logging configuration is valid')
+except Exception as e:
+    print(f'❌ Django logging configuration failed: {e}')
+    exit(1)
+" 2>&1 | tee -a "$ERROR_LOG"
+    
+    if [ $? -ne 0 ]; then
+        log_error "Django logging configuration test failed"
+        log_to_file "ERROR: Django logging configuration failed"
+        # Don't return 1 here - this is not a critical failure, just a warning
+        log_warning "Continuing despite logging configuration issues"
+    fi
+    
     # Test socket-based Gunicorn
     log_info "Testing Gunicorn with Unix socket..."
     timeout 10s "$PROJECT_DIR/venv/bin/gunicorn" \
