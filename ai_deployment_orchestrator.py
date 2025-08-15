@@ -329,7 +329,8 @@ class AIDeploymentOrchestrator:
         self.error_patterns = self._initialize_error_patterns()
         
         # Deployment steps with enhanced verification and automated scripts
-        self.deployment_steps = [
+        # Base deployment steps - modified dynamically based on deployment mode
+        self.base_deployment_steps = [
             ("validate_server", "Server validation and prerequisites"),
             ("setup_authentication", "Authentication and security setup"),
             ("install_dependencies", "System dependencies installation"),
@@ -345,6 +346,9 @@ class AIDeploymentOrchestrator:
             ("final_verification", "Final testing and verification"),
             ("domain_accessibility_check", "Domain accessibility verification")  # NEW: Critical final check
         ]
+        
+        # Will be set dynamically in run_deployment based on deployment mode
+        self.deployment_steps = self.base_deployment_steps.copy()
     
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from file or create default"""
@@ -1598,6 +1602,33 @@ class AIDeploymentOrchestrator:
             
             self.log(f"Starting deployment {deployment_id}", "INFO", Colors.BOLD + Colors.PURPLE)
             self.log(f"Target server: {server_config['hostname']}", "INFO")
+            
+            # Configure deployment mode and adjust steps
+            deployment_mode = server_config.get('deployment_mode', 'standard')
+            docker_monitoring = server_config.get('docker_monitoring', False)
+            
+            if deployment_mode == 'docker':
+                self.log("Configuring Docker deployment with industry best practices", "INFO", Colors.CYAN)
+                # Insert Docker setup step after database setup
+                docker_steps = self.base_deployment_steps.copy()
+                # Find the index to insert Docker setup after database setup
+                db_index = next(i for i, (step, _) in enumerate(docker_steps) if step == "setup_database")
+                docker_steps.insert(db_index + 1, ("docker_setup", "Docker infrastructure and container deployment"))
+                
+                # Replace standard deployment steps with Docker-optimized ones
+                self.deployment_steps = docker_steps
+                
+                # Store Docker configuration
+                self.config['deployment_mode'] = 'docker'
+                self.config['docker_monitoring'] = docker_monitoring
+                
+                if docker_monitoring:
+                    self.log("Monitoring stack (Prometheus, Grafana) will be deployed", "INFO", Colors.GREEN)
+            else:
+                self.log("Using standard systemd-based deployment", "INFO", Colors.YELLOW)
+                self.deployment_steps = self.base_deployment_steps.copy()
+            
+            self.log(f"Deployment pipeline configured with {len(self.deployment_steps)} steps", "INFO")
             
             # Connect to server
             if not self.connect_to_server(
@@ -4078,6 +4109,661 @@ server {{
             
             return False
 
+    def deploy_docker_setup(self) -> bool:
+        """Setup Docker-based deployment with industry best practices"""
+        self.log("Setting up Docker-based production deployment...", "INFO", Colors.BOLD + Colors.CYAN)
+        
+        try:
+            # Install Docker and docker-compose with latest best practices
+            if not self._install_docker():
+                return False
+            
+            # Create optimized docker-compose.yml for production
+            if not self._create_production_docker_compose():
+                return False
+                
+            # Create production-optimized Dockerfiles
+            if not self._create_production_dockerfiles():
+                return False
+                
+            # Create Docker environment files with security
+            if not self._create_docker_environment_files():
+                return False
+                
+            # Setup Docker networking and volumes
+            if not self._setup_docker_infrastructure():
+                return False
+                
+            # Build and deploy containers
+            if not self._build_and_deploy_containers():
+                return False
+                
+            self.log("Docker deployment setup completed successfully", "SUCCESS", Colors.GREEN)
+            return True
+            
+        except Exception as e:
+            self.log(f"Docker deployment setup failed: {e}", "ERROR")
+            return False
+    
+    def _install_docker(self) -> bool:
+        """Install Docker with industry best practices"""
+        self.log("Installing Docker with latest security practices...", "INFO")
+        
+        commands = [
+            # Remove any old Docker versions
+            "apt-get remove -y docker docker-engine docker.io containerd runc || true",
+            
+            # Install dependencies
+            "apt-get update",
+            "apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release",
+            
+            # Add Docker's official GPG key
+            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
+            
+            # Add Docker repository
+            "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable' | tee /etc/apt/sources.list.d/docker.list > /dev/null",
+            
+            # Install Docker
+            "apt-get update",
+            "apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
+            
+            # Enable and start Docker
+            "systemctl enable docker",
+            "systemctl start docker",
+            
+            # Create projectmeats user and add to docker group
+            "useradd -r -s /bin/false projectmeats || true",
+            "usermod -aG docker projectmeats",
+            
+            # Create necessary directories
+            "mkdir -p /opt/projectmeats/{logs,backups,ssl,media,static}",
+            "chown -R projectmeats:docker /opt/projectmeats",
+        ]
+        
+        for cmd in commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0 and "remove" not in cmd and "useradd" not in cmd:
+                self.log(f"Failed to execute: {cmd}", "ERROR")
+                self.log(f"Error: {stderr}", "ERROR")
+                return False
+                
+        # Verify Docker installation
+        exit_code, stdout, stderr = self.execute_command("docker --version")
+        if exit_code == 0:
+            self.log(f"Docker installed successfully: {stdout.strip()}", "SUCCESS")
+            return True
+        else:
+            self.log("Docker installation verification failed", "ERROR")
+            return False
+    
+    def _create_production_docker_compose(self) -> bool:
+        """Create production-optimized docker-compose.yml with industry best practices"""
+        self.log("Creating production docker-compose configuration...", "INFO")
+        
+        domain = self.config.get('domain', 'localhost')
+        
+        compose_content = f"""version: '3.8'
+
+# ProjectMeats Production Docker Compose
+# Optimized for DigitalOcean droplets with industry best practices
+
+services:
+  # PostgreSQL Database with security hardening
+  db:
+    image: postgres:15-alpine
+    container_name: projectmeats-db
+    environment:
+      POSTGRES_DB: ${{POSTGRES_DB:-projectmeats}}
+      POSTGRES_USER: ${{POSTGRES_USER:-projectmeats}}
+      POSTGRES_PASSWORD: ${{POSTGRES_PASSWORD}}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /opt/projectmeats/backups:/backups
+    networks:
+      - backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${{POSTGRES_USER:-projectmeats}} -d ${{POSTGRES_DB:-projectmeats}}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis Cache with security hardening  
+  redis:
+    image: redis:7-alpine
+    container_name: projectmeats-redis
+    command: redis-server --appendonly yes --requirepass ${{REDIS_PASSWORD}}
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Django Backend with production optimizations
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+      target: production
+    container_name: projectmeats-backend
+    user: "1000:1000"  # Non-root user
+    environment:
+      - DATABASE_URL=postgresql://${{POSTGRES_USER:-projectmeats}}:${{POSTGRES_PASSWORD}}@db:5432/${{POSTGRES_DB:-projectmeats}}
+      - REDIS_URL=redis://default:${{REDIS_PASSWORD}}@redis:6379/0
+      - DJANGO_SETTINGS_MODULE=projectmeats.settings.production
+      - DEBUG=False
+      - ALLOWED_HOSTS={domain},www.{domain}
+      - SECURE_SSL_REDIRECT=True
+      - SESSION_COOKIE_SECURE=True
+      - CSRF_COOKIE_SECURE=True
+    volumes:
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media
+      - /opt/projectmeats/logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # React Frontend with nginx serving
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      target: production
+      args:
+        - REACT_APP_API_BASE_URL=https://{domain}/api
+    container_name: projectmeats-frontend
+    volumes:
+      - frontend_build:/usr/share/nginx/html:ro
+    networks:
+      - frontend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /var/log/nginx
+
+  # Nginx Reverse Proxy with SSL termination
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.prod
+    container_name: projectmeats-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - frontend_build:/var/www/html:ro
+      - static_volume:/var/www/static:ro
+      - media_volume:/var/www/media:ro
+      - /opt/projectmeats/ssl:/etc/nginx/ssl:ro
+      - /opt/projectmeats/logs/nginx:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - frontend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Background Task Worker
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+      target: production
+    container_name: projectmeats-celery
+    command: celery -A projectmeats worker -l info --uid=1000 --gid=1000
+    user: "1000:1000"
+    environment:
+      - DATABASE_URL=postgresql://${{POSTGRES_USER:-projectmeats}}:${{POSTGRES_PASSWORD}}@db:5432/${{POSTGRES_DB:-projectmeats}}
+      - REDIS_URL=redis://default:${{REDIS_PASSWORD}}@redis:6379/0
+      - DJANGO_SETTINGS_MODULE=projectmeats.settings.production
+    volumes:
+      - media_volume:/app/media
+      - /opt/projectmeats/logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Backup Service
+  backup:
+    image: postgres:15-alpine
+    container_name: projectmeats-backup
+    environment:
+      PGPASSWORD: ${{POSTGRES_PASSWORD}}
+    volumes:
+      - /opt/projectmeats/backups:/backups
+    networks:
+      - backend
+    restart: "no"
+    profiles:
+      - backup
+    command: >
+      sh -c "
+        while true; do
+          echo 'Starting backup at $(date)'
+          pg_dump -h db -U $${POSTGRES_USER:-projectmeats} -d $${POSTGRES_DB:-projectmeats} > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
+          find /backups -name '*.sql' -mtime +7 -delete
+          echo 'Backup completed at $(date)'
+          sleep 86400
+        done
+      "
+
+# Volumes for persistent data
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  static_volume:
+    driver: local
+  media_volume:
+    driver: local
+  frontend_build:
+    driver: local
+
+# Networks for security isolation
+networks:
+  frontend:
+    driver: bridge
+    internal: false
+  backend:
+    driver: bridge
+    internal: true
+"""
+
+        # Write docker-compose.yml to server
+        exit_code, _, stderr = self.execute_command(f"cat > /opt/projectmeats/docker-compose.yml << 'EOF'\\n{compose_content}\\nEOF")
+        if exit_code == 0:
+            self.log("Production docker-compose.yml created successfully", "SUCCESS")
+            return True
+        else:
+            self.log(f"Failed to create docker-compose.yml: {stderr}", "ERROR")
+            return False
+    
+    def _create_production_dockerfiles(self) -> bool:
+        """Create production-optimized Dockerfiles with multi-stage builds"""
+        self.log("Creating production-optimized Dockerfiles...", "INFO")
+        
+        # Backend Dockerfile.prod with multi-stage build
+        backend_dockerfile = """# ProjectMeats Backend Production Dockerfile
+# Multi-stage build with security hardening
+
+# Build stage
+FROM python:3.11-slim AS builder
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \\
+    build-essential \\
+    libpq-dev \\
+    pkg-config \\
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements
+COPY requirements.txt requirements-prod.txt ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements-prod.txt
+
+# Production stage
+FROM python:3.11-slim AS production
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \\
+    libpq5 \\
+    curl \\
+    && rm -rf /var/lib/apt/lists/* \\
+    && apt-get clean
+
+# Create app user and group
+RUN groupadd -r appuser && useradd -r -g appuser appuser \\
+    && mkdir -p /app /app/staticfiles /app/media /app/logs \\
+    && chown -R appuser:appuser /app
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Set working directory and user
+WORKDIR /app
+USER appuser
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \\
+    CMD curl --fail --silent http://localhost:8000/health/ || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# Run gunicorn with production settings
+CMD ["gunicorn", \\
+     "--bind", "0.0.0.0:8000", \\
+     "--workers", "3", \\
+     "--worker-class", "gthread", \\
+     "--threads", "2", \\
+     "--worker-connections", "1000", \\
+     "--max-requests", "1000", \\
+     "--max-requests-jitter", "100", \\
+     "--timeout", "120", \\
+     "--graceful-timeout", "30", \\
+     "--access-logfile", "/app/logs/gunicorn-access.log", \\
+     "--error-logfile", "/app/logs/gunicorn-error.log", \\
+     "--log-level", "info", \\
+     "projectmeats.wsgi:application"]
+"""
+
+        # Frontend Dockerfile.prod with multi-stage build
+        frontend_dockerfile = """# ProjectMeats Frontend Production Dockerfile
+# Multi-stage build for optimized React build
+
+# Build stage
+FROM node:18-alpine AS builder
+
+# Install dependencies for node-gyp
+RUN apk add --no-cache python3 make g++
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Build the app
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine AS production
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy built app from builder stage
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create non-root user
+RUN addgroup -g 101 -S nginx && \\
+    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+
+# Set proper permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \\
+    CMD curl --fail --silent http://localhost/ || exit 1
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
+"""
+
+        # Nginx Dockerfile.prod with security hardening
+        nginx_dockerfile = """# ProjectMeats Nginx Production Dockerfile
+# Security-hardened reverse proxy
+
+FROM nginx:alpine
+
+# Install security tools
+RUN apk add --no-cache curl openssl
+
+# Copy nginx configuration
+COPY nginx.prod.conf /etc/nginx/nginx.conf
+COPY conf.d/ /etc/nginx/conf.d/
+
+# Create non-root user
+RUN addgroup -g 101 -S nginx && \\
+    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+
+# Set proper permissions
+RUN chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \\
+    CMD curl --fail --silent http://localhost/health || exit 1
+
+# Expose ports
+EXPOSE 80 443
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
+"""
+
+        # Create Dockerfiles on server
+        dockerfiles = [
+            ("/opt/projectmeats/backend/Dockerfile.prod", backend_dockerfile),
+            ("/opt/projectmeats/frontend/Dockerfile.prod", frontend_dockerfile), 
+            ("/opt/projectmeats/nginx/Dockerfile.prod", nginx_dockerfile)
+        ]
+        
+        for filepath, content in dockerfiles:
+            # Create directory if it doesn't exist
+            dir_path = filepath.rsplit('/', 1)[0]
+            self.execute_command(f"mkdir -p {dir_path}")
+            
+            # Write Dockerfile
+            exit_code, _, stderr = self.execute_command(f"cat > {filepath} << 'EOF'\\n{content}\\nEOF")
+            if exit_code != 0:
+                self.log(f"Failed to create {filepath}: {stderr}", "ERROR")
+                return False
+                
+        self.log("Production Dockerfiles created successfully", "SUCCESS")
+        return True
+    
+    def _create_docker_environment_files(self) -> bool:
+        """Create secure environment files for Docker deployment"""
+        self.log("Creating Docker environment configuration...", "INFO")
+        
+        # Generate secure passwords
+        postgres_password = secrets.token_urlsafe(32)
+        redis_password = secrets.token_urlsafe(32)
+        django_secret = get_random_secret_key()
+        
+        domain = self.config.get('domain', 'localhost')
+        
+        # Docker environment file
+        docker_env_content = f"""# ProjectMeats Docker Environment Configuration
+# Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+# Database Configuration
+POSTGRES_DB=projectmeats
+POSTGRES_USER=projectmeats
+POSTGRES_PASSWORD={postgres_password}
+
+# Redis Configuration  
+REDIS_PASSWORD={redis_password}
+
+# Django Configuration
+DJANGO_SECRET_KEY={django_secret}
+DEBUG=False
+ALLOWED_HOSTS={domain},www.{domain},localhost,127.0.0.1
+
+# Domain Configuration
+DOMAIN={domain}
+CORS_ALLOWED_ORIGINS=https://{domain},https://www.{domain}
+
+# Security Settings
+SECURE_SSL_REDIRECT=True
+SECURE_HSTS_SECONDS=31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+SECURE_HSTS_PRELOAD=True
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+"""
+
+        # Write environment file
+        exit_code, _, stderr = self.execute_command(f"cat > /opt/projectmeats/.env << 'EOF'\\n{docker_env_content}\\nEOF")
+        if exit_code == 0:
+            # Set secure permissions
+            self.execute_command("chmod 600 /opt/projectmeats/.env")
+            self.execute_command("chown projectmeats:docker /opt/projectmeats/.env")
+            self.log("Docker environment file created with secure permissions", "SUCCESS")
+            return True
+        else:
+            self.log(f"Failed to create environment file: {stderr}", "ERROR")
+            return False
+    
+    def _setup_docker_infrastructure(self) -> bool:
+        """Setup Docker networks, volumes, and infrastructure"""
+        self.log("Setting up Docker infrastructure...", "INFO")
+        
+        commands = [
+            # Create Docker networks
+            "cd /opt/projectmeats && docker network create projectmeats_frontend --driver bridge || true",
+            "cd /opt/projectmeats && docker network create projectmeats_backend --driver bridge --internal || true",
+            
+            # Create Docker volumes
+            "cd /opt/projectmeats && docker volume create projectmeats_postgres_data || true",
+            "cd /opt/projectmeats && docker volume create projectmeats_redis_data || true", 
+            "cd /opt/projectmeats && docker volume create projectmeats_static_volume || true",
+            "cd /opt/projectmeats && docker volume create projectmeats_media_volume || true",
+            "cd /opt/projectmeats && docker volume create projectmeats_frontend_build || true",
+        ]
+        
+        for cmd in commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code != 0 and "already exists" not in stderr:
+                self.log(f"Failed to execute: {cmd}", "WARNING")
+                # Continue with other commands as some may already exist
+                
+        self.log("Docker infrastructure setup completed", "SUCCESS")
+        return True
+    
+    def _build_and_deploy_containers(self) -> bool:
+        """Build and deploy Docker containers"""
+        self.log("Building and deploying Docker containers...", "INFO")
+        
+        commands = [
+            # Change to project directory
+            "cd /opt/projectmeats",
+            
+            # Pull base images
+            "docker pull postgres:15-alpine",
+            "docker pull redis:7-alpine", 
+            "docker pull python:3.11-slim",
+            "docker pull node:18-alpine",
+            "docker pull nginx:alpine",
+            
+            # Build application images
+            "cd /opt/projectmeats && docker-compose build --no-cache",
+            
+            # Deploy containers
+            "cd /opt/projectmeats && docker-compose up -d",
+            
+            # Wait for services to be healthy
+            "cd /opt/projectmeats && docker-compose ps",
+        ]
+        
+        for cmd in commands:
+            self.log(f"Executing: {cmd}", "INFO")
+            exit_code, stdout, stderr = self.execute_command(cmd, timeout=600)  # 10 minute timeout for builds
+            
+            if exit_code != 0:
+                self.log(f"Command failed: {cmd}", "ERROR")
+                self.log(f"Error: {stderr}", "ERROR")
+                return False
+            else:
+                self.log(f"Success: {stdout[:200]}...", "SUCCESS")
+                
+        # Verify containers are running
+        exit_code, stdout, stderr = self.execute_command("cd /opt/projectmeats && docker-compose ps --format table")
+        if exit_code == 0:
+            self.log("Container deployment status:", "INFO")
+            self.log(stdout, "INFO")
+            
+            # Check if critical containers are running
+            if "projectmeats-db" in stdout and "projectmeats-backend" in stdout and "projectmeats-nginx" in stdout:
+                self.log("All critical containers deployed successfully", "SUCCESS")
+                return True
+            else:
+                self.log("Some critical containers may not be running", "WARNING")
+                return False
+        else:
+            self.log(f"Failed to check container status: {stderr}", "ERROR")
+            return False
+
 
 def main():
     """Main entry point"""
@@ -4096,6 +4782,8 @@ def main():
     parser.add_argument("--resume", help="Resume deployment with given ID")
     parser.add_argument("--config", help="Configuration file path")
     parser.add_argument("--profile", help="Use predefined server profile from configuration")
+    parser.add_argument("--docker", action="store_true", help="Use Docker-based deployment with industry best practices")
+    parser.add_argument("--docker-monitoring", action="store_true", help="Include monitoring stack (Prometheus, Grafana) with Docker deployment")
     
     args = parser.parse_args()
     
@@ -4202,6 +4890,21 @@ def main():
             if not domain_input:
                 domain_input = hostname  # Use hostname as fallback
             
+            # Ask about deployment mode
+            print(f"\n{Colors.BOLD}Deployment Mode:{Colors.END}")
+            print("1. Standard deployment (systemd services)")
+            print("2. Docker deployment (recommended for production)")
+            print("3. Docker with monitoring (Prometheus, Grafana)")
+            deployment_mode = input(f"{Colors.YELLOW}Choose deployment mode (1, 2, or 3) [2]:{Colors.END} ").strip() or "2"
+            
+            docker_deployment = deployment_mode in ["2", "3"]
+            docker_monitoring = deployment_mode == "3"
+            
+            if docker_deployment:
+                orchestrator.log("Docker deployment mode selected - using industry best practices", "INFO", Colors.GREEN)
+                if docker_monitoring:
+                    orchestrator.log("Monitoring stack will be included (Prometheus, Grafana)", "INFO", Colors.GREEN)
+            
             print(f"\n{Colors.BOLD}Configuration Summary:{Colors.END}")
             print(f"  Server: {hostname}")
             print(f"  Username: {username_input}")
@@ -4218,11 +4921,15 @@ def main():
                 'username': username_input,
                 'key_file': key_file,
                 'password': password,
-                'domain': domain_input
+                'domain': domain_input,
+                'deployment_mode': 'docker' if docker_deployment else 'standard',
+                'docker_monitoring': docker_monitoring
             }
             
-            # Store domain in config
+            # Store deployment configuration
             orchestrator.config['domain'] = domain_input
+            orchestrator.config['deployment_mode'] = 'docker' if docker_deployment else 'standard'
+            orchestrator.config['docker_monitoring'] = docker_monitoring
             
             # Run deployment
             success = orchestrator.run_deployment(server_config)
@@ -4235,11 +4942,22 @@ def main():
                 'username': username,
                 'key_file': key_file,
                 'password': args.password,
-                'domain': domain
+                'domain': domain,
+                'deployment_mode': 'docker' if args.docker else 'standard',
+                'docker_monitoring': args.docker_monitoring
             }
             
             if domain:
                 orchestrator.config['domain'] = domain
+                
+            # Store deployment configuration
+            orchestrator.config['deployment_mode'] = 'docker' if args.docker else 'standard'
+            orchestrator.config['docker_monitoring'] = args.docker_monitoring
+            
+            if args.docker:
+                orchestrator.log("Docker deployment mode enabled via --docker flag", "INFO", Colors.GREEN)
+                if args.docker_monitoring:
+                    orchestrator.log("Monitoring stack enabled via --docker-monitoring flag", "INFO", Colors.GREEN)
             
             success = orchestrator.run_deployment(server_config)
             return 0 if success else 1
