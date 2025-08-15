@@ -16,12 +16,29 @@ services:
 
   backend:
     build: ./backend
-    command: gunicorn --bind 0.0.0.0:8000 projectmeats.wsgi:application --workers=4
+    command: >
+      gunicorn 
+      --bind 0.0.0.0:8000 
+      --workers 3
+      --worker-class gthread
+      --threads 2
+      --worker-connections 1000
+      --max-requests 1000
+      --max-requests-jitter 100
+      --access-logfile /var/log/projectmeats/access.log
+      --error-logfile /var/log/projectmeats/error.log
+      --log-level info
+      --timeout 120
+      --graceful-timeout 30
+      --user projectmeats
+      projectmeats.wsgi:application
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+    env_file: 
+      - .env.prod
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
@@ -37,8 +54,10 @@ services:
     volumes:
       - static_files:/app/backend/staticfiles
       - media_files:/app/backend/media
+      - log_files:/var/log/projectmeats
+    user: "projectmeats"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/health/" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -71,3 +90,4 @@ volumes:
   postgres_data:
   static_files:
   media_files:
+  log_files:

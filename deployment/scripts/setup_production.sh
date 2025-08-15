@@ -110,17 +110,30 @@ LOG_LEVEL=INFO
 EOF
     fi
     
-    # Generate a secret key
+    # Generate a secret key and escape special characters for sed
     SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())" 2>/dev/null || echo "django-insecure-$(openssl rand -hex 25)")
-    sed -i "s/your-super-secret-key-change-this-in-production/$SECRET_KEY/" /etc/projectmeats/projectmeats.env
-    sed -i "s/temp-key-change-me/$SECRET_KEY/" /etc/projectmeats/projectmeats.env
+    # Escape special characters for sed
+    ESCAPED_SECRET_KEY=$(printf '%s\n' "$SECRET_KEY" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    
+    sed -i "s/your-super-secret-key-change-this-in-production/$ESCAPED_SECRET_KEY/" /etc/projectmeats/projectmeats.env
+    sed -i "s/temp-key-change-me/$ESCAPED_SECRET_KEY/" /etc/projectmeats/projectmeats.env
     sed -i "s/your_db_password/ProjectMeats2024!/" /etc/projectmeats/projectmeats.env
     
-    # Set proper permissions
-    chown www-data:www-data /etc/projectmeats/projectmeats.env
+    # Set proper permissions - use projectmeats user
+    chown projectmeats:www-data /etc/projectmeats/projectmeats.env
     chmod 640 /etc/projectmeats/projectmeats.env
     
-    log_warning "Environment file created at /etc/projectmeats/projectmeats.env"
+    # Validate environment file syntax
+    log_info "Validating environment file syntax..."
+    if bash -n /etc/projectmeats/projectmeats.env; then
+        log_success "✓ Environment file syntax is valid"
+    else
+        log_error "✗ Environment file syntax error detected"
+        cat /etc/projectmeats/projectmeats.env
+        exit 1
+    fi
+    
+    log_warning "Environment file created and validated at /etc/projectmeats/projectmeats.env"
     log_warning "Please review and update the configuration values!"
 fi
 

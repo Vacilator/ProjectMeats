@@ -16,6 +16,7 @@ Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
 Environment=PYTHONPATH=/opt/projectmeats/backend
 EnvironmentFile=-/etc/projectmeats/projectmeats.env
 EnvironmentFile=-/opt/projectmeats/.env.production
+ExecStartPre=/opt/projectmeats/deployment/scripts/pre_start_service.sh
 ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --bind 127.0.0.1:8000 \
     --workers 3 \
@@ -33,11 +34,13 @@ ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --graceful-timeout 30 \
     projectmeats.wsgi:application
 ExecReload=/bin/kill -s HUP $MAINPID
+ExecStopPost=/bin/sh -c 'journalctl -u projectmeats.service -n 50 >> /var/log/projectmeats/post_failure.log'
 KillMode=mixed
 TimeoutStopSec=5
+SuccessExitStatus=0 1
 PrivateTmp=true
-Restart=on-failure
-RestartSec=10
+Restart=always
+RestartSec=5
 
 # Security settings
 NoNewPrivileges=true
