@@ -7,6 +7,8 @@ migrated from PowerApps/Dataverse.
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import User
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, status, viewsets
@@ -320,6 +322,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 )
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
+@csrf_exempt
 def login_view(request):
     """User login endpoint."""
     serializer = AuthLoginSerializer(data=request.data)
@@ -380,6 +383,7 @@ def logout_view(request):
 )
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
+@csrf_exempt
 def signup_view(request):
     """User signup endpoint."""
     serializer = AuthSignupSerializer(data=request.data)

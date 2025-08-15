@@ -18,9 +18,10 @@ SECRET_KEY = config(
     "SECRET_KEY", default="django-insecure-dev-key-change-in-production"
 )
 DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,testserver").split(
-    ","
-)
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", 
+    default="localhost,127.0.0.1,testserver,meatscentral.com,www.meatscentral.com,0.0.0.0"
+).split(",")
 
 # Prevent automatic slash redirects on health endpoints (fixes 301 redirects)
 # Do not set APPEND_SLASH globally. To prevent automatic slash redirects on health endpoints,
@@ -63,6 +64,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "apps.core.middleware.DisableCSRFForAPIMiddleware",  # Custom middleware to disable CSRF for API
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -166,7 +168,7 @@ SPECTACULAR_SETTINGS = {
 # CORS Configuration for React Frontend
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001",
+    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com,http://www.meatscentral.com",
 ).split(",")
 
 CORS_ALLOW_CREDENTIALS = True
@@ -174,7 +176,7 @@ CORS_ALLOW_CREDENTIALS = True
 # CSRF Configuration
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001",
+    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com,http://www.meatscentral.com",
 ).split(",")
 
 # Logging Configuration
