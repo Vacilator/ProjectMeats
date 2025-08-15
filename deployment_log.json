@@ -89,3 +89,16 @@
 {"timestamp": "2025-08-15 11:37:34", "level": "SUCCESS", "message": "Django application is responding via Unix socket", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 11:37:34", "level": "INFO", "message": "Verifying Django service with TCP configuration...", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 11:37:34", "level": "WARNING", "message": "Django application not responding on port 8000", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_112716.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:54", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_112754.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:54", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:54", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:29:36", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_112936.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:29:36", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:29:36", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:30:53", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113053.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:30:53", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:30:53", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+
