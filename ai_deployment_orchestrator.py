@@ -538,6 +538,10 @@ class AIDeploymentOrchestrator:
             else:
                 self.log(f"GitHub integration failed authentication: {self.github_integration.auth_error}", "WARNING")
                 self.log("GitHub features (auto issue/PR creation) will be disabled", "WARNING")
+                if "401" in str(self.github_integration.auth_error) or "Bad credentials" in str(self.github_integration.auth_error):
+                    self.log("To enable GitHub features, set a valid GITHUB_TOKEN environment variable:", "INFO")
+                    self.log("  export GITHUB_TOKEN=your_github_pat_here", "INFO")
+                    self.log("  OR use --github-token parameter", "INFO")
         except Exception as e:
             self.log(f"Failed to initialize GitHub integration: {e}", "WARNING")
             self.github_integration = None
