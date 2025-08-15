@@ -4,10 +4,12 @@ Core serializers for ProjectMeats.
 Base serializer classes that provide common functionality for all entities
 migrated from PowerApps/Dataverse.
 """
+
 from typing import Optional
+
 from django.contrib.auth.models import User
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
 
 from .models import UserProfile
 
@@ -278,5 +280,5 @@ class AuthSignupSerializer(serializers.Serializer):
 
 class AuthLogoutSerializer(serializers.Serializer):
     """Serializer for user logout (no fields required)."""
-    
+
     pass

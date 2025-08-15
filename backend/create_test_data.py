@@ -26,8 +26,7 @@ from apps.contacts.models import ContactInfo
 from apps.customers.models import Customer
 from apps.plants.models import Plant
 from apps.purchase_orders.models import PurchaseOrder
-from apps.suppliers.models import (Supplier, SupplierLocation,
-                                   SupplierPlantMapping)
+from apps.suppliers.models import Supplier, SupplierLocation, SupplierPlantMapping
 
 
 def create_users():
@@ -114,18 +113,18 @@ def create_suppliers(users, accounts_receivables):
             "name": "Prime Beef Suppliers Inc",
             "delivery_type_profile": True,
             "credit_application_date": timezone.now() - timedelta(days=30),
-            "accounts_receivable": accounts_receivables[0]
-            if accounts_receivables
-            else None,
+            "accounts_receivable": (
+                accounts_receivables[0] if accounts_receivables else None
+            ),
             "status": "active",
         },
         {
             "name": "Global Pork Distributors",
             "delivery_type_profile": False,
             "credit_application_date": timezone.now() - timedelta(days=15),
-            "accounts_receivable": accounts_receivables[1]
-            if len(accounts_receivables) > 1
-            else None,
+            "accounts_receivable": (
+                accounts_receivables[1] if len(accounts_receivables) > 1 else None
+            ),
             "status": "active",
         },
         {
@@ -139,9 +138,9 @@ def create_suppliers(users, accounts_receivables):
             "name": "Inactive Meat Supplier",
             "delivery_type_profile": False,
             "credit_application_date": timezone.now() - timedelta(days=60),
-            "accounts_receivable": accounts_receivables[2]
-            if len(accounts_receivables) > 2
-            else None,
+            "accounts_receivable": (
+                accounts_receivables[2] if len(accounts_receivables) > 2 else None
+            ),
             "status": "inactive",
         },
     ]

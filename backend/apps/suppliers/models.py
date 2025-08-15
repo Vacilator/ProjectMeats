@@ -7,6 +7,7 @@ Original description: "This table contains records of supplier information"
 PowerApps Entity Name: cr7c4_Supplier
 Django Model Name: Supplier
 """
+
 from django.db import models
 
 from apps.core.models import OwnedModel, StatusModel

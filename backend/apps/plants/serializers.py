@@ -4,8 +4,9 @@ Serializers for Plants API.
 Handles serialization/deserialization between Django models and JSON API responses.
 Migrated from PowerApps cr7c4_plant entity.
 """
-from rest_framework import serializers
+
 from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
 
 from .models import Plant
 

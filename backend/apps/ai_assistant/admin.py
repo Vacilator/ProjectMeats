@@ -4,12 +4,18 @@ Admin interface for AI Assistant models.
 Provides Django admin interface for managing chat sessions, messages,
 uploaded documents, and AI configurations.
 """
+
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import (AIConfiguration, ChatMessage, ChatSession, ProcessingTask,
-                     UploadedDocument)
+from .models import (
+    AIConfiguration,
+    ChatMessage,
+    ChatSession,
+    ProcessingTask,
+    UploadedDocument,
+)
 
 
 @admin.register(ChatSession)

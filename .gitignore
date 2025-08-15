@@ -58,3 +58,18 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Deployment state and logs
+deployment_state.json
+deployment_log*.json
+cookies.txt
+ai_deployment_config.local.json
+
+# Database files (development)
+*.db
+*.sqlite3
+comprehensive_prod_test.db
+test_prod.db
+
+# Log files
+*.log

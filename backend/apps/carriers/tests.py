@@ -4,6 +4,7 @@ Tests for Carrier Info functionality.
 Tests for carrier information models, API endpoints, and business logic
 migrated from PowerApps cr7c4_carrierinfo entity.
 """
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework import status

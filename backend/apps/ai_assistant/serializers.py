@@ -4,13 +4,20 @@ Serializers for AI Assistant models.
 Provides REST API serialization for chat sessions, messages,
 document uploads, and AI configurations.
 """
-from typing import Optional
-from django.contrib.auth.models import User
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_field
 
-from .models import (AIConfiguration, ChatMessage, ChatSession, ProcessingTask,
-                     UploadedDocument)
+from typing import Optional
+
+from django.contrib.auth.models import User
+from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
+
+from .models import (
+    AIConfiguration,
+    ChatMessage,
+    ChatSession,
+    ProcessingTask,
+    UploadedDocument,
+)
 
 
 class UserBasicSerializer(serializers.ModelSerializer):

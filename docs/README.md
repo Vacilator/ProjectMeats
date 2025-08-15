@@ -1,33 +1,38 @@
-# ProjectMeats Documentation Index
+# ProjectMeats Documentation
 
-Welcome to the complete ProjectMeats documentation. This index provides organized access to all documentation resources for setup, development, deployment, and maintenance.
+This directory contains comprehensive documentation for ProjectMeats.
 
-## 🚀 Getting Started
+## 📚 Available Documentation
 
-**New to ProjectMeats?** Start with these essential documents:
+### Setup & Development
+- **[Setup & Development Guide](setup-and-development.md)** - Complete setup and development instructions
+- **[Development Environment Setup](dev_environment_setup.md)** - Development environment configuration
 
-1. **[README.md](../README.md)** - Project overview and quick start
-2. **[Complete Setup Guide](setup_guide.md)** - Comprehensive setup for all platforms
-3. **[System Architecture](../SYSTEM_ARCHITECTURE.md)** - Technical architecture overview
+### AI Features
+- **[AI Assistant Setup](ai_assistant_setup.md)** - Complete AI configuration guide  
+- **[AI Assistant Quick Start](ai_assistant_quick_start.md)** - Quick AI setup guide
+- **[AI Assistant Documentation](ai_assistant_documentation.md)** - Detailed AI features and usage
+- **[AI Deployment Guide](ai_deployment_guide.md)** - AI deployment system documentation
 
-## 📚 Documentation Categories
-
-### Setup & Installation
-- **[Complete Setup Guide](setup_guide.md)** - All-in-one setup guide for Windows, macOS, Linux
-- **[README.md - Quick Setup](../README.md#-quick-setup)** - Get running in minutes
-- **[README.md - Developer Setup](../README.md#-developer-setup)** - Development environment
-
-### Production Deployment  
-- **[Production Deployment Guide](production_deployment.md)** - Enterprise production deployment
-- **[System Architecture](../SYSTEM_ARCHITECTURE.md)** - Technical architecture and requirements
-- **[Optimization Report](../OPTIMIZATION_REPORT.md)** - Performance and security analysis
-
-### API & Development
+### Technical Reference
 - **[API Reference](api_reference.md)** - Complete REST API documentation
-- **[Migration Mapping](migration_mapping.md)** - PowerApps to Django migration details
-- **[GitHub Copilot Guide](copilot_usage_guide.md)** - AI-enhanced development
+- **[Migration Mapping](migration_mapping.md)** - PowerApps to Django migration mappings
+- **[Architecture Guide](architecture.md)** - System architecture and design decisions
 
-### Project Management
+### Deployment & Operations
+- **[Deployment Authentication Guide](deployment_authentication_guide.md)** - Authentication for deployments
+
+### Troubleshooting
+- **[Troubleshooting Guide](troubleshooting.md)** - Common issues and solutions
+- **[Systemd Deployment Troubleshooting](systemd-deployment-troubleshooting.md)** - Systemd-specific issues
+- **[HTTP 404 Fix Summary](http_404_fix_summary.md)** - Fixing 404 errors
+
+### Development Tools
+- **[Agent TODO System](agent_todo_system.md)** - Development task management system
+
+---
+
+**Need help?** Start with the [Setup & Development Guide](setup-and-development.md) or check the main [README](../README.md).
 - **[Agent Activity Log](agent_activity_log.md)** - Development activity tracking (required for all agents)
 - **[Agent Quick Start](agent_quick_start.md)** - Essential guide for new developers
 - **[Copilot Developer Guidelines](copilot_developer_guidelines.md)** - AI development best practices

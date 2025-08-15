@@ -3,6 +3,7 @@ Pagination utilities for ProjectMeats API.
 
 Provides enhanced pagination classes that match PowerApps data loading patterns.
 """
+
 from collections import OrderedDict
 
 from rest_framework.pagination import PageNumberPagination

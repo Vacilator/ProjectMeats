@@ -4,6 +4,7 @@ Django admin configuration for Accounts Receivables.
 Provides a user-friendly admin interface for managing AccountsReceivable records
 migrated from PowerApps cr7c4_accountsreceivables.
 """
+
 from django.contrib import admin
 
 from .models import AccountsReceivable

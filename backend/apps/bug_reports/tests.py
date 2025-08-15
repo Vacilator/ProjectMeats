@@ -3,6 +3,7 @@ Bug Reports tests.
 
 Tests for the bug reporting feature including GitHub integration.
 """
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse

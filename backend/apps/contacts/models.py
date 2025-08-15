@@ -7,6 +7,7 @@ Original description: "Contact information management"
 PowerApps Entity Name: pro_ContactInfo
 Django Model Name: ContactInfo
 """
+
 from django.core.validators import EmailValidator
 from django.db import models
 

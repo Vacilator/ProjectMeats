@@ -4,10 +4,14 @@ Serializers for Carrier Info API.
 Handles serialization/deserialization between Django models and JSON API responses.
 Migrated from PowerApps cr7c4_carrierinfo entity.
 """
+
 from rest_framework import serializers
 
-from apps.core.serializers import (BaseCreateSerializer, BaseDetailSerializer,
-                                   BaseListSerializer)
+from apps.core.serializers import (
+    BaseCreateSerializer,
+    BaseDetailSerializer,
+    BaseListSerializer,
+)
 
 from .models import CarrierInfo
 

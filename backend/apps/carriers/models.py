@@ -7,6 +7,7 @@ Original description: "This table contains records of carrier information"
 PowerApps Entity Name: cr7c4_CarrierInfo
 Django Model Name: CarrierInfo
 """
+
 from django.db import models
 
 from apps.core.models import OwnedModel, StatusModel

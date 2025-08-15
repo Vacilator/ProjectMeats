@@ -4,6 +4,7 @@ Tests for AI Assistant functionality.
 Comprehensive test suite for chat sessions, message handling,
 document processing, and AI service integration.
 """
+
 import uuid
 
 from django.contrib.auth.models import User
@@ -13,9 +14,15 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from .models import (AIConfiguration, ChatMessage, ChatSession,
-                     ChatSessionStatusChoices, DocumentTypeChoices, 
-                     MessageTypeChoices, UploadedDocument)
+from .models import (
+    AIConfiguration,
+    ChatMessage,
+    ChatSession,
+    ChatSessionStatusChoices,
+    DocumentTypeChoices,
+    MessageTypeChoices,
+    UploadedDocument,
+)
 from .services.ai_service import MockAIProvider, ai_service
 
 

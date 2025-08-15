@@ -11,6 +11,7 @@ Key Features:
 - Entity extraction and database integration
 - Context-aware responses for meat industry workflows
 """
+
 import uuid
 
 from django.contrib.auth.models import User

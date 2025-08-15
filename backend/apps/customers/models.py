@@ -7,6 +7,7 @@ Original description: "Customer information management"
 PowerApps Entity Name: pro_Customer
 Django Model Name: Customer
 """
+
 from django.db import models
 
 from apps.core.models import OwnedModel, StatusModel

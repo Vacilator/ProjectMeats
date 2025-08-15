@@ -4,6 +4,7 @@ Views for AI Assistant functionality.
 Provides REST API endpoints for chat interactions, document uploads,
 and AI-powered business intelligence for meat market operations.
 """
+
 import logging
 import time
 
@@ -15,18 +16,29 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import (AIConfiguration, ChatMessage, ChatSession,
-                     DocumentProcessingStatusChoices, MessageTypeChoices,
-                     ProcessingTask, UploadedDocument)
-from .serializers import (AIConfigurationSerializer, ChatBotRequestSerializer,
-                          ChatBotResponseSerializer,
-                          ChatMessageCreateSerializer, ChatMessageSerializer,
-                          ChatSessionDetailSerializer,
-                          ChatSessionListSerializer,
-                          DocumentProcessingRequestSerializer,
-                          DocumentProcessingResponseSerializer,
-                          DocumentUploadSerializer, ProcessingTaskSerializer,
-                          UploadedDocumentSerializer)
+from .models import (
+    AIConfiguration,
+    ChatMessage,
+    ChatSession,
+    DocumentProcessingStatusChoices,
+    MessageTypeChoices,
+    ProcessingTask,
+    UploadedDocument,
+)
+from .serializers import (
+    AIConfigurationSerializer,
+    ChatBotRequestSerializer,
+    ChatBotResponseSerializer,
+    ChatMessageCreateSerializer,
+    ChatMessageSerializer,
+    ChatSessionDetailSerializer,
+    ChatSessionListSerializer,
+    DocumentProcessingRequestSerializer,
+    DocumentProcessingResponseSerializer,
+    DocumentUploadSerializer,
+    ProcessingTaskSerializer,
+    UploadedDocumentSerializer,
+)
 from .services.ai_service import ai_service
 
 logger = logging.getLogger(__name__)

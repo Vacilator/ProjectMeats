@@ -4,6 +4,7 @@ Tests for Suppliers API.
 Tests the REST API endpoints for managing Supplier entities
 migrated from PowerApps cr7c4_supplier.
 """
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse

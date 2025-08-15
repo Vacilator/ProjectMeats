@@ -4,8 +4,9 @@ Serializers for Customers API.
 Handles serialization/deserialization between Django models and JSON API responses.
 Migrated from PowerApps pro_customer entity.
 """
-from rest_framework import serializers
+
 from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
 
 from .models import Customer
 

@@ -11,6 +11,7 @@ Endpoints:
 - PUT /api/v1/suppliers/{id}/ - Update supplier
 - DELETE /api/v1/suppliers/{id}/ - Delete supplier
 """
+
 from django.contrib.auth.models import User
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -19,14 +20,17 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Supplier, SupplierLocation, SupplierPlantMapping
-from .serializers import (SupplierCreateSerializer, SupplierDetailSerializer,
-                          SupplierListSerializer,
-                          SupplierLocationCreateSerializer,
-                          SupplierLocationDetailSerializer,
-                          SupplierLocationListSerializer,
-                          SupplierPlantMappingCreateSerializer,
-                          SupplierPlantMappingDetailSerializer,
-                          SupplierPlantMappingListSerializer)
+from .serializers import (
+    SupplierCreateSerializer,
+    SupplierDetailSerializer,
+    SupplierListSerializer,
+    SupplierLocationCreateSerializer,
+    SupplierLocationDetailSerializer,
+    SupplierLocationListSerializer,
+    SupplierPlantMappingCreateSerializer,
+    SupplierPlantMappingDetailSerializer,
+    SupplierPlantMappingListSerializer,
+)
 
 
 @extend_schema_view(

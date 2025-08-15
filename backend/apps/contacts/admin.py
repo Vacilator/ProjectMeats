@@ -4,6 +4,7 @@ Django admin configuration for Contact Information.
 Provides a user-friendly admin interface for managing ContactInfo records
 migrated from PowerApps pro_contactinfo.
 """
+
 from django.contrib import admin
 
 from .models import ContactInfo

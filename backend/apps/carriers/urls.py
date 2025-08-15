@@ -4,6 +4,7 @@ URL configuration for Carrier Info API.
 Defines URL patterns for the carrier info endpoints
 migrated from PowerApps cr7c4_carrierinfo entity.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 

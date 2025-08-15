@@ -16,8 +16,13 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from .models import UserProfile
-from .serializers import (AuthLoginSerializer, AuthLogoutSerializer, AuthSignupSerializer,
-                          UserProfileCreateSerializer, UserProfileSerializer)
+from .serializers import (
+    AuthLoginSerializer,
+    AuthLogoutSerializer,
+    AuthSignupSerializer,
+    UserProfileCreateSerializer,
+    UserProfileSerializer,
+)
 
 
 class PowerAppsModelViewSet(viewsets.ModelViewSet):

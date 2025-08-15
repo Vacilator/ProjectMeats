@@ -7,6 +7,7 @@ Original description: "This table contains records of plant information"
 PowerApps Entity Name: cr7c4_Plant
 Django Model Name: Plant
 """
+
 from django.db import models
 
 from apps.core.models import OwnedModel, StatusModel

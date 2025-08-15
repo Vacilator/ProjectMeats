@@ -4,6 +4,7 @@ Tests for Contact Information API.
 Tests the REST API endpoints for managing ContactInfo entities
 migrated from PowerApps pro_contactinfo.
 """
+
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status

@@ -4,6 +4,7 @@ Django admin configuration for Carrier Info.
 Provides Django admin interface for managing carrier information records
 migrated from PowerApps cr7c4_carrierinfo entity.
 """
+
 from django.contrib import admin
 
 from .models import CarrierInfo

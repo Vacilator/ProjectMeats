@@ -7,15 +7,15 @@ For more information on this file, see
 https://docs.djangoproject.com/en/4.2/howto/deployment/wsgi/
 """
 
+import logging
 import os
 import sys
-import logging
 
 # Set up basic logging as fallback
 logging.basicConfig(
     level=logging.ERROR,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    stream=sys.stderr
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    stream=sys.stderr,
 )
 
 from django.core.wsgi import get_wsgi_application

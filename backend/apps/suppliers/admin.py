@@ -4,6 +4,7 @@ Django admin configuration for Suppliers.
 Provides a user-friendly admin interface for managing Supplier records
 migrated from PowerApps cr7c4_supplier.
 """
+
 from django.contrib import admin
 
 from .models import Supplier, SupplierPlantMapping

@@ -11,6 +11,7 @@ Endpoints:
 - PUT /api/v1/customers/{id}/ - Update customer
 - DELETE /api/v1/customers/{id}/ - Delete customer
 """
+
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
@@ -19,8 +20,11 @@ from rest_framework.response import Response
 from apps.core.views import PowerAppsModelViewSet
 
 from .models import Customer
-from .serializers import (CustomerCreateSerializer, CustomerDetailSerializer,
-                          CustomerListSerializer)
+from .serializers import (
+    CustomerCreateSerializer,
+    CustomerDetailSerializer,
+    CustomerListSerializer,
+)
 
 
 @extend_schema_view(

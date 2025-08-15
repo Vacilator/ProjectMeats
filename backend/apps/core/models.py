@@ -4,6 +4,7 @@ Core models and utilities for ProjectMeats.
 Base models that provide common functionality for all entities
 migrated from PowerApps/Dataverse.
 """
+
 from django.contrib.auth.models import User
 from django.db import models
 
