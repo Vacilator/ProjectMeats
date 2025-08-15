@@ -21,7 +21,9 @@ def test_django_health_endpoints():
     
     # Check for both health paths
     health_with_slash = 'path("health/"' in content
-    health_without_slash = 'path("health"' in content and 'path("health/"' not in content.replace('path("health/"', 'X')
+    # Check for both health paths using regex for robustness
+    health_with_slash = bool(re.search(r'path\(\s*["\']health/["\']', content))
+    health_without_slash = bool(re.search(r'path\(\s*["\']health["\']', content)) and not health_with_slash
     
     if health_with_slash and health_without_slash:
         print("✅ Both /health and /health/ endpoints configured")
