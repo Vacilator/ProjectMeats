@@ -517,11 +517,15 @@ class AIDeploymentOrchestrator:
             self.log("GitHub integration not available (missing github_integration module)", "WARNING")
             return
         
-        # Check for GitHub token
+        # Check for GitHub token from environment variables first, then config
         github_token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_PAT')
         if not github_token:
-            self.log("GitHub token not found in environment variables", "INFO")
-            self.log("Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "INFO")
+            # Check config for token set via command line arguments
+            github_token = self.config.get('github', {}).get('token')
+        
+        if not github_token:
+            self.log("GitHub token not found in environment variables or command line arguments", "INFO")
+            self.log("Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "INFO")
             return
         
         try:
@@ -532,6 +536,10 @@ class AIDeploymentOrchestrator:
             self.log("GitHub integration initialized successfully", "SUCCESS")
         except Exception as e:
             self.log(f"Failed to initialize GitHub integration: {e}", "WARNING")
+    
+    def reinitialize_github_integration(self):
+        """Re-initialize GitHub integration after config changes (e.g., from command line args)"""
+        self._setup_github_integration()
     
     def _initialize_error_patterns(self) -> List[ErrorPattern]:
         """Initialize error detection patterns with improved specificity"""
@@ -4898,6 +4906,8 @@ def main():
         orchestrator.config['github']['user'] = args.github_user
         orchestrator.config['github']['token'] = args.github_token
         orchestrator.log("GitHub authentication configured from command line", "SUCCESS")
+        # Re-initialize GitHub integration now that we have the token
+        orchestrator.reinitialize_github_integration()
     
     # Load profile settings if specified
     profile_settings = {}
