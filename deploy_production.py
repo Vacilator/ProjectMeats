@@ -1390,40 +1390,23 @@ log_success "Deployment completed! 🚀"
         resolved_ip = None
         
         def parse_dig_output_enhanced(domain):
-            """Enhanced DNS parsing as specified in problem statement"""
+            """Enhanced DNS parsing as specified in problem statement: 'dig +short A domain'"""
             try:
                 # Use the exact parsing method from problem statement:
-                # dig domain A | grep '^domain.' | awk '{print $5}'
+                # dig +short A domain
                 dig_result = subprocess.run(
-                    ['dig', domain, 'A'],
+                    ['dig', '+short', 'A', domain],
                     capture_output=True,
                     text=True,
                     timeout=30
                 )
                 
                 if dig_result.returncode == 0:
-                    # Parse with grep and awk as suggested
-                    grep_cmd = f"grep '^{domain}\\.' <<< '{dig_result.stdout}' | awk '{{print $5}}'"
-                    parse_result = subprocess.run(
-                        ['bash', '-c', grep_cmd],
-                        capture_output=True,
-                        text=True,
-                        timeout=10
-                    )
-                    
-                    if parse_result.returncode == 0:
-                        ip = parse_result.stdout.strip()
-                        if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip):
-                            return ip
+                    # The +short flag gives us just the IP address
+                    ip = dig_result.stdout.strip()
+                    if ip and re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip):
+                        return ip
                 
-                # Fallback to simpler parsing
-                lines = [line.strip() for line in dig_result.stdout.strip().split('\n') 
-                        if line.strip() and not line.startswith(';')]
-                
-                for line in lines:
-                    if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', line):
-                        return line
-                        
                 return None
             except Exception as e:
                 self.log(f"Enhanced DNS parsing error: {e}", "WARNING")
@@ -1472,12 +1455,13 @@ log_success "Deployment completed! 🚀"
             except Exception as e:
                 self.log(f"DNS bypass test error: {e}", "ERROR")
         
-        # Step 3: External connectivity test with original DNS (if resolved)
+        # Step 3: External connectivity test with improved curl command from problem statement
         http_ok = False
         if resolved_ip:
             self.log("Testing external HTTP connectivity with DNS...", "INFO")
             try:
-                cmd = ['curl', '-m', '10', '-I', f'http://{domain}']
+                # Use curl -m 10 http://domain/health -I as specified in problem statement
+                cmd = ['curl', '-m', '10', f'http://{domain}/health', '-I']
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
                 
                 if result.returncode == 0:
@@ -1490,6 +1474,25 @@ log_success "Deployment completed! 🚀"
                 else:
                     self.log("❌ External HTTP connectivity failed", "ERROR")
                     self.log(f"Curl error: {result.stderr.strip()}", "WARNING")
+                    
+                    # On fail, log tail /var/log/nginx/error.log as specified
+                    self.log("Checking nginx error log...", "INFO")
+                    try:
+                        error_log_result = subprocess.run(
+                            ['tail', '/var/log/nginx/error.log'],
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
+                        if error_log_result.returncode == 0 and error_log_result.stdout.strip():
+                            self.log("Recent nginx errors:", "WARNING")
+                            for line in error_log_result.stdout.strip().split('\n')[-5:]:  # Last 5 lines
+                                self.log(f"  {line}", "WARNING")
+                        else:
+                            self.log("No nginx errors found", "INFO")
+                    except Exception as e:
+                        self.log(f"Could not check nginx logs: {e}", "WARNING")
+                        
             except Exception as e:
                 self.log(f"External connectivity test error: {e}", "ERROR")
         
@@ -1553,7 +1556,7 @@ log_success "Deployment completed! 🚀"
             self.log("", "INFO")
             self.log("🔧 Server Troubleshooting:", "INFO")
             self.log("  1. Check if nginx is running: systemctl status nginx", "INFO")
-            self.log("  2. Check if port 80 is listening: ss -tuln | grep :80", "INFO")
+            self.log("  2. Check if port 80 is listening: sudo ss -tuln | grep :80", "INFO")
             self.log("  3. Check firewall: ufw status", "INFO")
             self.log("  4. Check nginx configuration: nginx -t", "INFO")
         
