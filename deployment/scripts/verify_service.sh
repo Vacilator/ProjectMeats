@@ -33,7 +33,7 @@ echo ""
 # View recent logs
 log_info "Viewing recent projectmeats.service logs..."
 echo ""
-sudo journalctl -u projectmeats.service -f
+sudo journalctl -u projectmeats.service -n 15 --no-pager
 
 # Alternative commands for reference:
 echo ""
