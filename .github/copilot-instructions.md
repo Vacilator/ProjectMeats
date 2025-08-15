@@ -130,6 +130,15 @@ class ModelNameViewSet(viewsets.ModelViewSet):
 - **Frontend Tests**: `cd frontend && npm test`
 - **Linting**: `cd backend && black . && flake8 .` or `cd frontend && npm run lint`
 
+## Production Deployment (PRIMARY TOOL)
+- **AI Deployment Orchestrator**: `python ai_deployment_orchestrator.py` (MAIN PRODUCTION DEPLOYMENT TOOL)
+  - Interactive setup: `python ai_deployment_orchestrator.py --interactive`
+  - Automated deployment: `python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --auto`
+  - With GitHub auth: `python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --github-user=USERNAME --github-token=TOKEN`
+  - **This is the primary tool used by the user for production deployments**
+  - **All recent deployment fixes and enhancements are integrated into this tool**
+  - **Future deployment changes should be applied to this orchestrator**
+
 ## File Locations
 - **Backend**: `/backend/` - Django application
 - **Frontend**: `/frontend/` - React TypeScript application
@@ -146,6 +155,9 @@ Check `docs/migration_mapping.md` for current entity migration status and `docs/
 4. Maintain comprehensive test coverage
 5. Update documentation when adding new entities
 6. Log significant changes in `docs/agent_activity_log.md`
+7. **DEPLOYMENT**: Use `ai_deployment_orchestrator.py` as the primary production deployment tool
+8. **DEPLOYMENT FIXES**: Recent deployment fixes (socket permissions, nginx config, health endpoints, DNS resolution) are integrated into the AI orchestrator
+9. **FUTURE CHANGES**: Apply deployment-related changes to the AI orchestrator, not standalone scripts
 
 ## Security Considerations
 - Use Django's built-in security features
