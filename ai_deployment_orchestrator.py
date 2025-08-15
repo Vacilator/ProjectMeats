@@ -4251,14 +4251,42 @@ server {{
         """Install Docker with industry best practices"""
         self.log("Installing Docker with latest security practices...", "INFO")
         
-        # First, get the Ubuntu codename to build the proper repository URL
+        # Clean up any existing malformed Docker repository entries first
+        self.log("Cleaning up any malformed Docker repository entries...", "DEBUG")
+        cleanup_commands = [
+            # Remove any malformed Docker repository files
+            "rm -f /etc/apt/sources.list.d/docker.list",
+            "rm -f /etc/apt/sources.list.d/docker.list.save",
+            # Clean apt cache
+            "apt-get clean",
+            # Remove any malformed entries from sources.list that contain $(lsb_release
+            "sed -i '/docker.*$(lsb_release/d' /etc/apt/sources.list || true"
+        ]
+        
+        for cmd in cleanup_commands:
+            exit_code, _, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Cleanup command '{cmd}' had issues: {stderr}", "DEBUG")
+        
+        # Get the Ubuntu codename with better error handling and validation
+        self.log("Detecting Ubuntu version...", "DEBUG")
         exit_code, codename_output, stderr = self.execute_command("lsb_release -cs")
         if exit_code != 0:
-            self.log(f"Failed to get Ubuntu codename: {stderr}", "ERROR")
+            self.log(f"Failed to get Ubuntu codename with lsb_release: {stderr}", "ERROR")
+            # Try alternative method to get codename
+            exit_code, codename_output, stderr = self.execute_command("cat /etc/os-release | grep VERSION_CODENAME | cut -d= -f2")
+            if exit_code != 0:
+                self.log(f"Failed to get Ubuntu codename from os-release: {stderr}", "ERROR")
+                return False
+        
+        ubuntu_codename = codename_output.strip().strip('"')  # Remove any quotes
+        
+        # Validate the codename looks reasonable (alphabetic, no spaces or special chars)
+        if not ubuntu_codename or not ubuntu_codename.isalpha() or len(ubuntu_codename) < 3:
+            self.log(f"Invalid Ubuntu codename detected: '{ubuntu_codename}'. Cannot proceed with Docker installation.", "ERROR")
             return False
         
-        ubuntu_codename = codename_output.strip()
-        self.log(f"Detected Ubuntu codename: {ubuntu_codename}", "DEBUG")
+        self.log(f"Detected Ubuntu codename: {ubuntu_codename}", "INFO")
         
         commands = [
             # Remove any old Docker versions
@@ -4271,7 +4299,7 @@ server {{
             # Add Docker's official GPG key
             "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
             
-            # Add Docker repository with proper Ubuntu codename
+            # Add Docker repository with properly validated Ubuntu codename
             f"echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {ubuntu_codename} stable' | tee /etc/apt/sources.list.d/docker.list > /dev/null",
             
             # Install Docker
