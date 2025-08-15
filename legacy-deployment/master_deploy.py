@@ -1258,6 +1258,10 @@ enabled = true
 
     def create_docker_compose_file(self):
         """Create optimized docker-compose.yml for production"""
+        # Ensure required config values are defined with secure defaults
+        app_user = self.config.get('app_user', 'projectmeats')
+        backup_dir = self.config.get('backup_dir', '/opt/projectmeats/backups')
+        
         compose_content = f"""version: '3.8'
 
 services:
@@ -1266,16 +1270,16 @@ services:
     image: postgres:13
     environment:
       POSTGRES_DB: projectmeats
-      POSTGRES_USER: {self.config['app_user']}
+      POSTGRES_USER: {app_user}
       POSTGRES_PASSWORD: ${{POSTGRES_PASSWORD}}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - {self.config['backup_dir']}:/backups
+      - {backup_dir}:/backups
     networks:
       - projectmeats_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U {self.config['app_user']}"]
+      test: ["CMD-SHELL", "pg_isready -U {app_user}"]
       interval: 30s
       timeout: 10s
       retries: 3
