@@ -106,7 +106,7 @@ def test_port_checking_modernization():
         content = file_obj.read_text()
         
         # Count occurrences
-        ss_port80_count = len(re.findall(r'ss.*:80', content))
+        ss_port80_count = len(re.findall(r'\bss\b.*:80', content))
         netstat_port80_count = len(re.findall(r'netstat.*:80', content))
         
         print(f"Testing {file_path}:")
