@@ -5,7 +5,7 @@ Documentation=https://github.com/Vacilator/ProjectMeats
 [Socket]
 ListenStream=/run/projectmeats.sock
 SocketUser=projectmeats
-SocketGroup=projectmeats
+SocketGroup=www-data
 SocketMode=0660
 
 [Install]

@@ -47,8 +47,22 @@ sudo systemctl enable projectmeats.service
 log_success "ProjectMeats service enabled"
 
 log_info "Starting projectmeats.service..."
-sudo systemctl start projectmeats.service
-log_success "ProjectMeats service started"
+if sudo systemctl start projectmeats.service; then
+    log_success "ProjectMeats service started"
+else
+    log_error "Failed to start ProjectMeats service"
+    
+    # Run enhanced diagnostics if available
+    if [ -f "/opt/projectmeats/deployment/scripts/diagnose_service.sh" ]; then
+        log_info "Running enhanced diagnostics..."
+        /opt/projectmeats/deployment/scripts/diagnose_service.sh /opt/projectmeats
+    else
+        log_info "Checking service status and logs..."
+        sudo systemctl status projectmeats.service --no-pager -l
+        sudo journalctl -xeu projectmeats.service -n 20 --no-pager
+    fi
+    exit 1
+fi
 
 echo ""
 log_success "All services configured and started successfully!"
