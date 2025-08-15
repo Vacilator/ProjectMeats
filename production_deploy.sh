@@ -383,6 +383,33 @@ rm -f /etc/nginx/sites-enabled/default
 # Test nginx configuration
 nginx -t
 
+if [ $? -ne 0 ]; then
+    log_error "Nginx configuration test failed!"
+    log_error "Please check the configuration above for errors"
+    exit 1
+fi
+
+log_success "Nginx configuration test passed"
+
+# Ensure nginx is started and verify port 80 binding
+systemctl restart nginx
+systemctl enable nginx
+
+# Wait a moment for nginx to start
+sleep 3
+
+# Verify port 80 is listening
+log_info "Verifying port 80 is listening..."
+if ss -tuln | grep -q ":80 "; then
+    log_success "✅ Port 80 (HTTP) is listening"
+    ss -tuln | grep ":80 "
+else
+    log_error "❌ Port 80 (HTTP) is not listening after nginx start"
+    log_error "Checking nginx status..."
+    systemctl status nginx --no-pager -l
+    log_error "Nginx may have failed to bind to port 80"
+fi
+
 # Set up firewall
 log_header "🔥 Configuring Firewall"
 ufw allow OpenSSH

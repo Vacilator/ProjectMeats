@@ -385,6 +385,106 @@ parse_errors() {
     fi
 }
 
+# Network connectivity and port diagnostics
+check_network_connectivity() {
+    log_header "🌐 Network Connectivity Check"
+    
+    # Check if ports are listening
+    log_info "Checking listening ports..."
+    
+    # Check port 80 (HTTP)
+    if sudo ss -tuln | grep -q ":80 "; then
+        log_success "✅ Port 80 (HTTP) is listening"
+        sudo ss -tuln | grep ":80 " | tee -a "$ERROR_LOG"
+    else
+        log_error "❌ Port 80 (HTTP) is not listening"
+        log_to_file "ERROR: Port 80 not listening"
+        log_info "💡 Possible solutions:"
+        log_info "   - Check nginx configuration: sudo nginx -t"
+        log_info "   - Restart nginx: sudo systemctl restart nginx"
+        log_info "   - Check nginx status: sudo systemctl status nginx"
+    fi
+    
+    # Check port 443 (HTTPS)
+    if sudo ss -tuln | grep -q ":443 "; then
+        log_success "✅ Port 443 (HTTPS) is listening"
+        sudo ss -tuln | grep ":443 " | tee -a "$ERROR_LOG"
+    else
+        log_warning "⚠️ Port 443 (HTTPS) is not listening (expected if SSL not configured)"
+    fi
+    
+    # Check port 8000 (Django backend)
+    if sudo ss -tuln | grep -q ":8000 "; then
+        log_success "✅ Port 8000 (Django backend) is listening"
+        sudo ss -tuln | grep ":8000 " | tee -a "$ERROR_LOG"
+    elif sudo ss -x | grep -q "/run/projectmeats.sock"; then
+        log_success "✅ Django backend running on Unix socket"
+        sudo ss -x | grep "projectmeats.sock" | tee -a "$ERROR_LOG"
+    else
+        log_error "❌ Django backend not accessible on port 8000 or Unix socket"
+        log_to_file "ERROR: Django backend not listening"
+    fi
+    
+    # Check firewall status
+    log_info "Checking firewall configuration..."
+    if command -v ufw >/dev/null 2>&1; then
+        log_info "UFW Status:"
+        sudo ufw status verbose | tee -a "$ERROR_LOG"
+    else
+        log_warning "UFW not available, checking iptables..."
+        if command -v iptables >/dev/null 2>&1; then
+            sudo iptables -L INPUT -v -n | head -10 | tee -a "$ERROR_LOG"
+        fi
+    fi
+    
+    # Test local connectivity
+    log_info "Testing local connectivity..."
+    
+    # Test localhost HTTP
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost/ | grep -q "200\|404\|302"; then
+        log_success "✅ Local HTTP responding"
+    else
+        log_error "❌ Local HTTP not responding"
+        log_to_file "ERROR: Local HTTP not responding"
+    fi
+    
+    # Test health endpoint internally
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost/health/ | grep -q "200"; then
+        log_success "✅ Health endpoint responding locally"
+    else
+        log_warning "⚠️ Health endpoint not responding locally"
+    fi
+    
+    # DNS and external connectivity check
+    log_info "Testing DNS resolution..."
+    local domain="${DOMAIN:-meatscentral.com}"
+    
+    if command -v dig >/dev/null 2>&1; then
+        log_info "DNS resolution for $domain:"
+        dig +short A "$domain" | tee -a "$ERROR_LOG"
+        
+        # Check if domain resolves to expected IP
+        local resolved_ip=$(dig +short A "$domain" | head -1)
+        if [ -n "$resolved_ip" ] && [ "$resolved_ip" != "" ]; then
+            log_success "✅ DNS resolves to: $resolved_ip"
+            
+            # Test external connectivity with resolved IP
+            log_info "Testing external connectivity to resolved IP..."
+            if timeout 10 curl -s -o /dev/null -w "%{http_code}" --resolve "$domain:80:$resolved_ip" "http://$domain" | grep -q "200\|404\|302"; then
+                log_success "✅ External HTTP connectivity working"
+            else
+                log_error "❌ External HTTP connectivity failed"
+                log_to_file "ERROR: External HTTP connectivity failed"
+            fi
+        else
+            log_error "❌ DNS resolution failed for $domain"
+            log_to_file "ERROR: DNS resolution failed for $domain"
+        fi
+    else
+        log_warning "⚠️ dig command not available for DNS testing"
+    fi
+}
+
 # Main diagnostic function
 run_diagnostics() {
     log_header "🚀 ProjectMeats Service Diagnostics"
@@ -428,6 +528,9 @@ run_diagnostics() {
     
     # Analyze errors
     parse_errors
+    
+    # Network diagnostics
+    check_network_connectivity
     
     log_header "📋 Diagnostic Summary"
     if [ $exit_code -eq 0 ]; then

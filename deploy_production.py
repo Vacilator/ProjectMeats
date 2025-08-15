@@ -27,6 +27,7 @@ import getpass
 import secrets
 import subprocess
 import platform
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 import re
@@ -1201,6 +1202,206 @@ log_success "Deployment completed! 🚀"
         return script
     
     def create_management_scripts(self):
+        """Create server management and monitoring scripts"""
+        # ... (existing implementation continues below)
+
+    def check_dns_configuration(self, server_ip="167.99.155.140"):
+        """
+        Check if domain A record matches server IP and wait for DNS propagation if needed.
+        
+        Args:
+            server_ip (str): Expected server IP address
+            
+        Returns:
+            bool: True if DNS is properly configured, False otherwise
+        """
+        if not self.config.get('domain') or self.config['domain'] == 'localhost':
+            self.log("Skipping DNS check for localhost deployment", "INFO")
+            return True
+            
+        domain = self.config['domain']
+        self.log(f"🔍 Checking DNS configuration for {domain}", "INFO")
+        
+        # Check if dig command is available
+        try:
+            subprocess.run(['dig', '--version'], 
+                         capture_output=True, check=True, timeout=10)
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+            self.log("Warning: 'dig' command not found. DNS check will be skipped.", "WARNING")
+            self.log(f"Please manually verify that {domain} points to {server_ip}", "WARNING")
+            return True
+        
+        max_attempts = 5  # 5 minutes total with 1-minute intervals
+        attempt = 0
+        
+        while attempt < max_attempts:
+            try:
+                # Use dig to get A record
+                result = subprocess.run(
+                    ['dig', '+short', 'A', domain],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                
+                if result.returncode == 0:
+                    ips = [line.strip() for line in result.stdout.strip().split('\n') 
+                          if line.strip() and not line.startswith(';')]
+                    
+                    if not ips or ips == ['']:
+                        self.log(f"No A record found for {domain}", "WARNING")
+                    elif server_ip in ips:
+                        self.log(f"✅ DNS correctly configured: {domain} -> {server_ip}", "SUCCESS")
+                        return True
+                    else:
+                        self.log(f"DNS mismatch: {domain} -> {ips} (expected {server_ip})", "WARNING")
+                else:
+                    self.log(f"DNS query failed: {result.stderr}", "WARNING")
+                    
+            except subprocess.TimeoutExpired:
+                self.log("DNS query timed out", "WARNING")
+            except Exception as e:
+                self.log(f"DNS check error: {e}", "WARNING")
+            
+            attempt += 1
+            if attempt < max_attempts:
+                self.log(f"DNS not yet propagated. Waiting 60 seconds... (attempt {attempt}/{max_attempts})", "INFO")
+                time.sleep(60)
+        
+        # DNS check failed or not matching
+        self.log("⚠️  DNS Configuration Issue Detected", "WARNING")
+        self.log("", "INFO")
+        self.log("DNS is not properly configured. Your site may not be accessible externally.", "WARNING")
+        self.log("Please configure DNS manually:", "INFO")
+        self.log(f"  1. Go to your domain registrar (GoDaddy, Namecheap, etc.)", "INFO")
+        self.log(f"  2. Add an A record: {domain} -> {server_ip}", "INFO")
+        self.log(f"  3. If using www, add: www.{domain} -> {server_ip}", "INFO")
+        self.log("  4. DNS propagation can take up to 48 hours", "INFO")
+        self.log("", "INFO")
+        
+        # Ask if user wants to continue anyway
+        if self.confirm("Continue deployment without proper DNS? (site won't be externally accessible)", False):
+            return True
+        else:
+            self.log("Deployment cancelled. Please configure DNS first.", "ERROR")
+            return False
+
+    def verify_domain_accessibility(self, server_ip="167.99.155.140"):
+        """
+        Comprehensive domain accessibility verification with proper DNS parsing and external testing.
+        
+        Args:
+            server_ip (str): Expected server IP address
+            
+        Returns:
+            bool: True if domain is accessible, False otherwise
+        """
+        if not self.config.get('domain') or self.config['domain'] == 'localhost':
+            self.log("Skipping domain verification for localhost deployment", "INFO")
+            return True
+        
+        domain = self.config['domain']
+        self.log(f"🌐 Verifying domain accessibility for {domain}", "INFO")
+        
+        # Step 1: Enhanced DNS parsing
+        dns_ok = False
+        resolved_ip = None
+        
+        try:
+            # Use dig +short A domain | head -1 for proper parsing
+            result = subprocess.run(
+                ['dig', '+short', 'A', domain],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                # Parse output correctly - get first non-empty line that looks like an IP
+                lines = [line.strip() for line in result.stdout.strip().split('\n') 
+                        if line.strip() and not line.startswith(';')]
+                
+                for line in lines:
+                    # Check if line looks like an IPv4 address
+                    if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', line):
+                        resolved_ip = line
+                        break
+                
+                if resolved_ip:
+                    if resolved_ip == server_ip:
+                        self.log(f"✅ DNS correctly resolves: {domain} -> {resolved_ip}", "SUCCESS")
+                        dns_ok = True
+                    else:
+                        self.log(f"❌ DNS mismatch: {domain} -> {resolved_ip} (expected {server_ip})", "ERROR")
+                        self.log("Check your DNS configuration - A record may be pointing to wrong IP", "WARNING")
+                else:
+                    self.log(f"❌ No valid A record found for {domain}", "ERROR")
+                    self.log("DNS query output:", "INFO")
+                    self.log(result.stdout.strip(), "INFO")
+            else:
+                self.log(f"DNS query failed: {result.stderr.strip()}", "ERROR")
+        except Exception as e:
+            self.log(f"DNS verification error: {e}", "ERROR")
+        
+        # Step 2: External connectivity test with bypass DNS option
+        http_ok = False
+        
+        if resolved_ip:
+            self.log("Testing external HTTP connectivity...", "INFO")
+            try:
+                # Test with curl --resolve to bypass DNS issues
+                cmd = [
+                    'curl', '-m', '10', '--resolve', f'{domain}:80:{resolved_ip}',
+                    '-I', f'http://{domain}'
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+                
+                if result.returncode == 0:
+                    # Check for successful HTTP status codes
+                    if any(code in result.stdout for code in ['200 OK', '404', '302', '301']):
+                        self.log("✅ External HTTP connectivity working", "SUCCESS")
+                        http_ok = True
+                    else:
+                        self.log(f"HTTP response received but status unclear:", "WARNING")
+                        self.log(result.stdout.split('\n')[0], "INFO")
+                else:
+                    self.log("❌ External HTTP connectivity failed", "ERROR")
+                    self.log(f"Curl error: {result.stderr.strip()}", "WARNING")
+            except Exception as e:
+                self.log(f"External connectivity test error: {e}", "ERROR")
+        
+        # Step 3: Direct IP test
+        if not http_ok and server_ip:
+            self.log(f"Testing direct IP connectivity to {server_ip}...", "INFO")
+            try:
+                result = subprocess.run([
+                    'curl', '-m', '10', '-I', f'http://{server_ip}'
+                ], capture_output=True, text=True, timeout=15)
+                
+                if result.returncode == 0:
+                    self.log("✅ Direct IP connectivity working", "SUCCESS")
+                    if not dns_ok:
+                        self.log("Server is accessible but DNS needs to be configured", "WARNING")
+                else:
+                    self.log("❌ Direct IP connectivity failed", "ERROR")
+                    self.log("Check if HTTP server is running and firewall allows port 80", "WARNING")
+            except Exception as e:
+                self.log(f"Direct IP test error: {e}", "ERROR")
+        
+        # Summary and recommendations
+        if dns_ok and http_ok:
+            self.log("🎉 Domain verification successful - site should be accessible", "SUCCESS")
+            return True
+        elif not dns_ok:
+            self.log("🔧 DNS Configuration Required", "WARNING")
+            self.log(f"Please configure DNS: {domain} A record -> {server_ip}", "INFO")
+            self.log("Refer to dns_setup_guide.md for detailed instructions", "INFO")
+        elif not http_ok:
+            self.log("🔧 HTTP Server Configuration Issue", "WARNING") 
+            self.log("DNS resolves correctly but HTTP server is not responding", "WARNING")
+            self.log("Check nginx configuration and ensure it's listening on port 80", "INFO")
+        
+        return False
         """Create management and maintenance scripts"""
         try:
             scripts_dir = self.project_root / "scripts"
@@ -1346,6 +1547,11 @@ tail -10 /home/projectmeats/logs/gunicorn_error.log
                 self.log("Configuration cancelled. Please run the script again.", "INFO")
                 return 1
             
+            # Post-deployment DNS verification (only for production deployments)
+            if not self.is_local_setup:
+                if not self.check_dns_configuration():
+                    return 1
+            
             # Generate configuration files
             if not self.create_environment_file():
                 self.log("Failed to create environment file. Deployment setup failed.", "ERROR")
@@ -1361,6 +1567,12 @@ tail -10 /home/projectmeats/logs/gunicorn_error.log
             
             # Show next steps
             self.show_next_steps()
+            
+            # Final domain accessibility verification (for production deployments)
+            if not self.is_local_setup:
+                self.log("\n" + "="*60, "INFO")
+                self.log("🔍 Performing final domain accessibility verification...", "INFO")
+                self.verify_domain_accessibility()
             
             self.log("🎉 Production deployment setup completed successfully!", "SUCCESS")
             return 0
