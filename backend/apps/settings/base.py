@@ -23,8 +23,8 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,testserver"
 )
 
 # Prevent automatic slash redirects on health endpoints (fixes 301 redirects)
-# Do not set APPEND_SLASH globally. To prevent automatic slash redirects on health endpoints,
-# handle this in urls.py by defining both '/health' and '/health/' routes, or use custom middleware.
+# Disable APPEND_SLASH to prevent 301 redirects that cause deployment verification failures
+APPEND_SLASH = False
 
 # Application definition
 DJANGO_APPS = [

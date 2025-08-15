@@ -456,10 +456,10 @@ def auth_status_view(request):
     tags=["System"],
     responses={200: {"description": "System is healthy"}},
 )
-@api_view(["GET"])
+@api_view(["GET", "HEAD"])
 @permission_classes([permissions.AllowAny])
 def health_check_view(request):
-    """Simple health check endpoint."""
+    """Simple health check endpoint that supports both GET and HEAD requests for deployment verification."""
     return Response(
         {"status": "healthy", "service": "ProjectMeats Backend"},
         status=status.HTTP_200_OK,

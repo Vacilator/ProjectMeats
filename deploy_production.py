@@ -1637,8 +1637,8 @@ log_success "Deployment completed! 🚀"
         if resolved_ip:
             self.log("Testing external HTTP connectivity with DNS...", "INFO")
             try:
-                # Use curl -m 10 http://domain/health -I as specified in problem statement
-                cmd = ["curl", "-m", "10", f"http://{domain}/health", "-I"]
+                # Use curl -m 10 http://domain/health -I -L as specified in problem statement (follow redirects)
+                cmd = ["curl", "-m", "10", f"http://{domain}/health", "-I", "-L"]
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
 
                 if result.returncode == 0:
