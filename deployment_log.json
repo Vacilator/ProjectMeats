@@ -22,3 +22,12 @@
 {"timestamp": "2025-08-09 08:33:07", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-09 08:33:07", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-09 08:33:07", "level": "WARNING", "message": "Error detected: Node.js package conflicts detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_112716.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:54", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_112754.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:54", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:27:54", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:29:36", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_112936.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:29:36", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:29:36", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
