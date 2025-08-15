@@ -1289,8 +1289,13 @@ class AIDeploymentOrchestrator:
         exit_code, stdout, stderr = self.execute_command("test -d /opt/projectmeats/frontend/build && test -f /opt/projectmeats/frontend/build/index.html")
         components_status["frontend_build"] = (exit_code == 0)
         
-        # Check database setup
-        exit_code, stdout, stderr = self.execute_command("sudo -u postgres psql -d projectmeats -c 'SELECT 1;' -t >/dev/null 2>&1")
+        # Check database setup using actual credentials if available
+        db_name, db_user, db_password = self._load_database_credentials()
+        if db_name and db_user:
+            exit_code, stdout, stderr = self.execute_command(f"sudo -u postgres psql -d '{db_name}' -c 'SELECT 1;' -t >/dev/null 2>&1")
+        else:
+            # Fallback to generic PostgreSQL test
+            exit_code, stdout, stderr = self.execute_command("sudo -u postgres psql -c 'SELECT 1;' -t >/dev/null 2>&1")
         components_status["database_setup"] = (exit_code == 0)
         
         # Check static files
@@ -3526,7 +3531,7 @@ server {{
         return True
     
     def deploy_final_verification(self) -> bool:
-        """Final verification"""
+        """Final verification with enhanced database connectivity testing"""
         self.log("Running final verification...", "INFO")
         
         # Check services
@@ -3550,12 +3555,8 @@ server {{
             self.log(f"Nginx configuration test failed: {stderr}", "ERROR")
             return False
         
-        # Test database connectivity
-        exit_code, stdout, stderr = self.execute_command(
-            "sudo -u postgres psql -d projectmeats -c \"SELECT 1;\" -t"
-        )
-        if exit_code != 0:
-            self.log("Database connectivity test failed", "ERROR")
+        # Enhanced database connectivity test with credential validation
+        if not self._test_database_connectivity():
             return False
         
         # Test localhost health endpoint first
@@ -3624,6 +3625,185 @@ server {{
         self.log("Final verification completed successfully", "SUCCESS")
         return True
     
+    def _test_database_connectivity(self) -> bool:
+        """Enhanced database connectivity test using actual credentials"""
+        self.log("Testing database connectivity with actual credentials...", "INFO")
+        
+        # First, try to load database credentials from the credentials file
+        db_name, db_user, db_password = self._load_database_credentials()
+        
+        if not db_name or not db_user:
+            self.log("Could not load database credentials, using fallback test", "WARNING")
+            return self._fallback_database_test()
+        
+        # Validate environment variables are set correctly
+        if not self._validate_database_environment(db_name, db_user, db_password):
+            self.log("Database environment validation failed", "WARNING")
+        
+        # Test 1: Direct PostgreSQL connection test
+        self.log(f"Test 1: Testing direct connection to database '{db_name}' as user '{db_user}'", "INFO")
+        exit_code, stdout, stderr = self.execute_command(
+            f"PGPASSWORD='{db_password}' psql -h localhost -U '{db_user}' -d '{db_name}' -c 'SELECT 1;' -t"
+        )
+        if exit_code == 0:
+            self.log("✓ Direct database connection successful", "SUCCESS")
+            return True
+        else:
+            self.log(f"✗ Direct database connection failed (exit code {exit_code})", "ERROR")
+            if stderr:
+                self.log(f"  Error details: {stderr.strip()}", "ERROR")
+            
+        # Test 2: Try with postgres user as fallback
+        self.log(f"Test 2: Testing database connection via postgres user", "INFO")
+        exit_code, stdout, stderr = self.execute_command(
+            f"sudo -u postgres psql -d '{db_name}' -c 'SELECT 1;' -t"
+        )
+        if exit_code == 0:
+            self.log("✓ Database connection via postgres user successful", "SUCCESS")
+            return True
+        else:
+            self.log(f"✗ Database connection via postgres user failed (exit code {exit_code})", "ERROR")
+            if stderr:
+                self.log(f"  Error details: {stderr.strip()}", "ERROR")
+        
+        # Test 3: Check if database exists
+        self.log(f"Test 3: Verifying database '{db_name}' exists", "INFO")
+        exit_code, stdout, stderr = self.execute_command(
+            f"sudo -u postgres psql -lqt | cut -d \\| -f 1 | grep -qw '{db_name}'"
+        )
+        if exit_code == 0:
+            self.log(f"✓ Database '{db_name}' exists", "INFO")
+        else:
+            self.log(f"✗ Database '{db_name}' does not exist", "ERROR")
+            
+        # Test 4: Check PostgreSQL server status
+        self.log("Test 4: Checking PostgreSQL server status", "INFO")
+        exit_code, stdout, stderr = self.execute_command("pg_isready -h localhost -p 5432")
+        if exit_code == 0:
+            self.log("✓ PostgreSQL server is ready", "INFO")
+        else:
+            self.log("✗ PostgreSQL server is not ready", "ERROR")
+            
+        # Provide diagnostic information
+        self.log("Database connectivity test failed. Diagnostics:", "ERROR")
+        self._diagnose_database_connectivity_issues(db_name, db_user)
+        
+        return False
+    
+    def _load_database_credentials(self) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """Load database credentials from the admin credentials file"""
+        try:
+            self.log("Loading database credentials from /opt/projectmeats/admin/database_credentials.json", "INFO")
+            exit_code, stdout, stderr = self.execute_command(
+                "cat /opt/projectmeats/admin/database_credentials.json 2>/dev/null || echo 'FILE_NOT_FOUND'"
+            )
+            
+            if exit_code != 0 or "FILE_NOT_FOUND" in stdout:
+                self.log("Database credentials file not found", "WARNING")
+                return None, None, None
+            
+            try:
+                import json
+                creds = json.loads(stdout.strip())
+                db_name = creds.get('database_name')
+                db_user = creds.get('database_user') 
+                db_password = creds.get('database_password')
+                
+                if db_name and db_user and db_password:
+                    # Mask password in log for security
+                    masked_password = db_password[:3] + '*' * (len(db_password) - 6) + db_password[-3:] if len(db_password) > 6 else '*' * len(db_password)
+                    self.log(f"Loaded credentials - DB: {db_name}, User: {db_user}, Password: {masked_password}", "SUCCESS")
+                    return db_name, db_user, db_password
+                else:
+                    self.log("Incomplete credentials in database_credentials.json", "WARNING")
+                    return None, None, None
+                    
+            except json.JSONDecodeError as e:
+                self.log(f"Invalid JSON in database credentials file: {e}", "ERROR")
+                return None, None, None
+                
+        except Exception as e:
+            self.log(f"Error loading database credentials: {e}", "WARNING")
+            return None, None, None
+    
+    def _validate_database_environment(self, db_name: str, db_user: str, db_password: str) -> bool:
+        """Validate that environment variables match the actual database configuration"""
+        self.log("Validating database environment variables...", "INFO")
+        
+        # Check if DATABASE_URL is set correctly
+        expected_db_url = f"postgres://{db_user}:{db_password}@localhost:5432/{db_name}"
+        exit_code, stdout, stderr = self.execute_command(
+            "grep DATABASE_URL /opt/projectmeats/.env.production 2>/dev/null || echo 'NOT_FOUND'"
+        )
+        
+        if exit_code == 0 and "NOT_FOUND" not in stdout:
+            env_db_url = stdout.strip().split('=', 1)[1] if '=' in stdout else ""
+            # Mask passwords for comparison log
+            masked_expected = expected_db_url.replace(db_password, '*' * len(db_password))
+            masked_actual = env_db_url.replace(db_password, '*' * len(db_password)) if db_password in env_db_url else env_db_url
+            
+            self.log(f"Expected DATABASE_URL: {masked_expected}", "INFO")
+            self.log(f"Actual DATABASE_URL:   {masked_actual}", "INFO")
+            
+            if expected_db_url in env_db_url or env_db_url in expected_db_url:
+                self.log("✓ DATABASE_URL appears to be correctly configured", "SUCCESS")
+                return True
+            else:
+                self.log("✗ DATABASE_URL does not match expected configuration", "WARNING")
+                return False
+        else:
+            self.log("✗ DATABASE_URL not found in environment file", "WARNING")
+            return False
+    
+    def _fallback_database_test(self) -> bool:
+        """Fallback database connectivity test using postgres user"""
+        self.log("Running fallback database connectivity test...", "INFO")
+        
+        # Try to connect to any database to test PostgreSQL connectivity
+        exit_code, stdout, stderr = self.execute_command(
+            "sudo -u postgres psql -c 'SELECT version();' -t"
+        )
+        if exit_code == 0:
+            self.log("✓ PostgreSQL is accessible via postgres user", "SUCCESS")
+            return True
+        else:
+            self.log(f"✗ PostgreSQL fallback test failed: {stderr}", "ERROR")
+            return False
+    
+    def _diagnose_database_connectivity_issues(self, db_name: str, db_user: str):
+        """Provide diagnostic information for database connectivity issues"""
+        self.log("Running database connectivity diagnostics...", "INFO")
+        
+        # Check PostgreSQL process
+        exit_code, stdout, stderr = self.execute_command("pgrep -f postgres")
+        if exit_code == 0:
+            self.log("✓ PostgreSQL processes are running", "INFO")
+        else:
+            self.log("✗ No PostgreSQL processes found", "ERROR")
+        
+        # Check PostgreSQL service status
+        exit_code, stdout, stderr = self.execute_command("systemctl status postgresql --no-pager -l")
+        if exit_code == 0:
+            self.log(f"PostgreSQL service status: {stdout[:200]}...", "INFO")
+        else:
+            self.log(f"PostgreSQL service status check failed: {stderr}", "ERROR")
+        
+        # Check PostgreSQL configuration
+        exit_code, stdout, stderr = self.execute_command("sudo -u postgres psql -c '\\l' -t | head -10")
+        if exit_code == 0:
+            self.log(f"Available databases: {stdout.strip()}", "INFO")
+        else:
+            self.log("Could not list databases", "ERROR")
+        
+        # Check pg_hba.conf for authentication issues
+        exit_code, stdout, stderr = self.execute_command(
+            "grep -v '^#' /etc/postgresql/*/main/pg_hba.conf | grep -v '^$' | head -5"
+        )
+        if exit_code == 0:
+            self.log(f"PostgreSQL auth config (pg_hba.conf): {stdout.strip()}", "INFO")
+        else:
+            self.log("Could not read PostgreSQL authentication configuration", "WARNING")
+
     def deploy_domain_accessibility_check(self) -> bool:
         """CRITICAL: Verify domain accessibility - this determines real deployment success"""
         self.log("Performing critical domain accessibility check...", "INFO", Colors.BOLD + Colors.YELLOW)
