@@ -11,14 +11,10 @@ from .base import *
 DEBUG = False
 
 # Production allowed hosts - controlled by environment
-ALLOWED_HOSTS = (
-    config("ALLOWED_HOSTS", default="").split(",")
-_allowed_hosts = config("ALLOWED_HOSTS", default="")
-ALLOWED_HOSTS = (
-    _allowed_hosts.split(",")
-    if _allowed_hosts
-    else []
-)
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", 
+    default="meatscentral.com,www.meatscentral.com"
+).split(",")
 
 # Production static files configuration (Approach A)
 STATIC_URL = "/django_static/"
@@ -64,13 +60,13 @@ LOGGING["loggers"]["django"]["level"] = "INFO"
 # Production CORS origins (update with your domain)
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="https://meatscentral.com",
+    default="https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com,http://www.meatscentral.com",
 ).split(",")
 
 # Production CSRF trusted origins (update with your domain)
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="https://meatscentral.com,http://meatscentral.com",
+    default="https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com,http://www.meatscentral.com",
 ).split(",")
 
 # Production REST Framework permissions
