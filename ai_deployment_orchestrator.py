@@ -2239,6 +2239,19 @@ class AIDeploymentOrchestrator:
         """Setup authentication and security"""
         self.log("Setting up authentication...", "INFO")
         
+        # Clean up any malformed Docker repository entries before first apt update
+        self.log("Cleaning up any malformed Docker repository entries...", "DEBUG")
+        cleanup_commands = [
+            "rm -f /etc/apt/sources.list.d/docker.list",
+            "rm -f /etc/apt/sources.list.d/docker.list.save",
+            "sed -i '/docker.*$(lsb_release/d' /etc/apt/sources.list || true"
+        ]
+        
+        for cmd in cleanup_commands:
+            exit_code, _, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Cleanup command '{cmd}' had issues: {stderr}", "DEBUG")
+        
         # Update system
         exit_code, stdout, stderr = self.execute_command("apt update")
         if exit_code != 0:
