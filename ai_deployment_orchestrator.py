@@ -1121,20 +1121,92 @@ class AIDeploymentOrchestrator:
             self.log("Django service still not running after fix", "ERROR")
             return False
         
-        # Check if Django is responding
+        # Detect if using socket or TCP configuration
+        if self._detect_socket_service_configuration():
+            return self._verify_socket_service()
+        else:
+            return self._verify_tcp_service()
+    
+    def _verify_socket_service(self) -> bool:
+        """Verify Django service when using Unix socket configuration"""
+        self.log("Verifying Django service with Unix socket configuration...", "INFO")
+        
+        # First check if socket file exists
+        exit_code, stdout, stderr = self.execute_command("test -S /run/projectmeats.sock")
+        if exit_code != 0:
+            self.log("Unix socket file /run/projectmeats.sock does not exist", "ERROR")
+            return False
+        
+        # Test socket accessibility directly
+        exit_code, stdout, stderr = self.execute_command(
+            "timeout 15 curl -f --connect-timeout 5 --unix-socket /run/projectmeats.sock http://localhost/ >/dev/null 2>&1"
+        )
+        if exit_code == 0:
+            self.log("Django application is responding via Unix socket", "SUCCESS")
+            return True
+        
+        # If direct socket test fails, try health endpoint
+        exit_code, stdout, stderr = self.execute_command(
+            "timeout 15 curl -f --connect-timeout 5 --unix-socket /run/projectmeats.sock http://localhost/health >/dev/null 2>&1"
+        )
+        if exit_code == 0:
+            self.log("Django application is responding via Unix socket (health endpoint)", "SUCCESS")
+            return True
+        
+        # If socket tests fail, try through nginx if configured
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active nginx")
+        if exit_code == 0:
+            self.log("Socket direct access failed, testing through nginx...", "INFO")
+            exit_code, stdout, stderr = self.execute_command(
+                "timeout 15 curl -f --connect-timeout 5 http://localhost/ >/dev/null 2>&1"
+            )
+            if exit_code == 0:
+                self.log("Django application is responding through nginx", "SUCCESS")
+                return True
+        
+        self.log("Django application not responding via Unix socket", "WARNING")
+        self._log_socket_diagnostic_info()
+        return False
+    
+    def _verify_tcp_service(self) -> bool:
+        """Verify Django service when using TCP configuration"""
+        self.log("Verifying Django service with TCP configuration...", "INFO")
+        
+        # Check if Django is responding on TCP port 8000
         exit_code, stdout, stderr = self.execute_command(
             "timeout 15 curl -f --connect-timeout 5 http://127.0.0.1:8000/ >/dev/null 2>&1"
         )
         if exit_code == 0:
-            self.log("Django application is now responding on port 8000", "SUCCESS")
+            self.log("Django application is responding on port 8000", "SUCCESS")
             return True
         else:
-            self.log("Django application still not responding after fix", "WARNING")
+            self.log("Django application not responding on port 8000", "WARNING")
             # Check service logs for more information
             exit_code2, logs, stderr2 = self.execute_command("journalctl -u projectmeats -n 5 --no-pager")
             if exit_code2 == 0:
                 self.log(f"Recent Django service logs: {logs[-200:]}", "INFO")
             return False
+    
+    def _log_socket_diagnostic_info(self) -> None:
+        """Log diagnostic information for socket service issues"""
+        self.log("Gathering socket diagnostic information...", "INFO")
+        
+        # Check socket permissions
+        exit_code, stdout, stderr = self.execute_command("ls -la /run/projectmeats.sock")
+        if exit_code == 0:
+            self.log(f"Socket permissions: {stdout.strip()}", "INFO")
+        
+        # Check service logs
+        exit_code, logs, stderr = self.execute_command("journalctl -u projectmeats -n 5 --no-pager")
+        if exit_code == 0:
+            self.log(f"Recent Django service logs: {logs[-200:]}", "INFO")
+            
+        # Check if socket service exists
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active projectmeats.socket")
+        if exit_code == 0:
+            self.log("Socket service is active", "INFO")
+        else:
+            self.log("Socket service is not active", "WARNING")
     
     def _detect_socket_service_configuration(self) -> bool:
         """Detect if the new Unix socket-based SystemD service configuration is available"""

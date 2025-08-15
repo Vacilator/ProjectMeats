@@ -22,6 +22,73 @@
 {"timestamp": "2025-08-09 08:33:07", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-09 08:33:07", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-09 08:33:07", "level": "WARNING", "message": "Error detected: Node.js package conflicts detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:34:46", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113446.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:34:46", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:34:46", "level": "DEBUG", "message": "Executing: echo 'test'", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:34:46", "level": "DEBUG", "message": "[STDOUT] Command output line 1", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:34:46", "level": "DEBUG", "message": "[STDOUT] Command output line 2", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:34:46", "level": "SUCCESS", "message": "Command completed successfully", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:34:46", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113446.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:34:46", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:35", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113535.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:35", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:35", "level": "INFO", "message": "Verifying Django service fix...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:40", "level": "INFO", "message": "Verifying Django service fix...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113545.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Detecting SystemD socket service configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "SUCCESS", "message": "\u2713 Unix socket SystemD service configuration detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Will use socket-based deployment architecture", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113545.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Verifying Django service with Unix socket configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Socket direct access failed, testing through nginx...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "SUCCESS", "message": "Django application is responding through nginx", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113545.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Verifying Django service with Unix socket configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "WARNING", "message": "Django application not responding via Unix socket", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Gathering socket diagnostic information...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Socket service is active", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113545.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "INFO", "message": "Verifying Django service with TCP configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:35:45", "level": "SUCCESS", "message": "Django application is responding on port 8000", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:35", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113635.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:35", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:35", "level": "INFO", "message": "Verifying Django service fix...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:40", "level": "INFO", "message": "Verifying Django service fix...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113645.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Detecting SystemD socket service configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "SUCCESS", "message": "\u2713 Unix socket SystemD service configuration detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Will use socket-based deployment architecture", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113645.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Verifying Django service with Unix socket configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Socket direct access failed, testing through nginx...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "SUCCESS", "message": "Django application is responding through nginx", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113645.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Verifying Django service with Unix socket configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "SUCCESS", "message": "Django application is responding via Unix socket", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113645.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "INFO", "message": "Verifying Django service with TCP configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:36:45", "level": "SUCCESS", "message": "Django application is responding on port 8000", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:29", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113729.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:29", "level": "WARNING", "message": "GitHub integration not available (missing github_integration module)", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:29", "level": "INFO", "message": "Detecting SystemD socket service configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:29", "level": "SUCCESS", "message": "\u2713 Unix socket SystemD service configuration detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:29", "level": "INFO", "message": "Will use socket-based deployment architecture", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:29", "level": "INFO", "message": "Verifying Django service fix...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:34", "level": "INFO", "message": "Detecting SystemD socket service configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:34", "level": "SUCCESS", "message": "\u2713 Unix socket SystemD service configuration detected", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:34", "level": "INFO", "message": "Will use socket-based deployment architecture", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:34", "level": "INFO", "message": "Verifying Django service with Unix socket configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:34", "level": "SUCCESS", "message": "Django application is responding via Unix socket", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:34", "level": "INFO", "message": "Verifying Django service with TCP configuration...", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 11:37:34", "level": "WARNING", "message": "Django application not responding on port 8000", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_112716.log", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 11:27:16", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
@@ -34,3 +101,4 @@
 {"timestamp": "2025-08-15 11:30:53", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_113053.log", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 11:30:53", "level": "INFO", "message": "GitHub token not found in environment variables", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 11:30:53", "level": "INFO", "message": "Set GITHUB_TOKEN or GITHUB_PAT for GitHub integration features", "deployment_id": null, "step": null}
+
