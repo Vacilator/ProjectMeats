@@ -1208,6 +1208,7 @@ log_success "Deployment completed! 🚀"
     def check_dns_configuration(self, server_ip="167.99.155.140"):
         """
         Check if domain A record matches server IP and wait for DNS propagation if needed.
+        Now includes DigitalOcean API integration for automatic DNS setup.
         
         Args:
             server_ip (str): Expected server IP address
@@ -1231,32 +1232,58 @@ log_success "Deployment completed! 🚀"
             self.log(f"Please manually verify that {domain} points to {server_ip}", "WARNING")
             return True
         
-        max_attempts = 5  # 5 minutes total with 1-minute intervals
-        attempt = 0
-        
-        while attempt < max_attempts:
+        # Function to parse dig output properly
+        def parse_dig_output(domain):
+            """Parse dig output using improved method from problem statement"""
             try:
-                # Use dig to get A record
+                # Use the improved parsing from problem statement
                 result = subprocess.run(
-                    ['dig', '+short', 'A', domain],
+                    ['dig', domain, 'A'],
                     capture_output=True,
                     text=True,
                     timeout=30
                 )
                 
                 if result.returncode == 0:
-                    ips = [line.strip() for line in result.stdout.strip().split('\n') 
-                          if line.strip() and not line.startswith(';')]
+                    # Parse with grep and awk as suggested in problem statement
+                    grep_result = subprocess.run(
+                        ['grep', f'^{domain}\\.', result.stdout],
+                        capture_output=True,
+                        text=True,
+                        input=result.stdout
+                    )
                     
-                    if not ips or ips == ['']:
-                        self.log(f"No A record found for {domain}", "WARNING")
-                    elif server_ip in ips:
-                        self.log(f"✅ DNS correctly configured: {domain} -> {server_ip}", "SUCCESS")
+                    if grep_result.returncode == 0:
+                        lines = grep_result.stdout.strip().split('\n')
+                        for line in lines:
+                            parts = line.split()
+                            if len(parts) >= 5 and parts[3] == 'A':
+                                ip = parts[4]
+                                # Validate IP format
+                                if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip):
+                                    return ip
+                return None
+            except Exception as e:
+                self.log(f"DNS parsing error: {e}", "WARNING")
+                return None
+        
+        max_attempts = 10  # 10 minutes total with 1-minute intervals as specified
+        attempt = 0
+        
+        while attempt < max_attempts:
+            try:
+                # Parse DNS resolution
+                resolved_ip = parse_dig_output(domain)
+                
+                if resolved_ip:
+                    if resolved_ip == server_ip:
+                        self.log(f"✅ DNS correctly configured: {domain} -> {resolved_ip}", "SUCCESS")
                         return True
                     else:
-                        self.log(f"DNS mismatch: {domain} -> {ips} (expected {server_ip})", "WARNING")
+                        self.log(f"DNS mismatch: {domain} -> {resolved_ip} (expected {server_ip})", "WARNING")
+                        self.log("This could indicate the domain is pointed to a different server", "INFO")
                 else:
-                    self.log(f"DNS query failed: {result.stderr}", "WARNING")
+                    self.log(f"No A record found for {domain}", "WARNING")
                     
             except subprocess.TimeoutExpired:
                 self.log("DNS query timed out", "WARNING")
@@ -1268,16 +1295,70 @@ log_success "Deployment completed! 🚀"
                 self.log(f"DNS not yet propagated. Waiting 60 seconds... (attempt {attempt}/{max_attempts})", "INFO")
                 time.sleep(60)
         
-        # DNS check failed or not matching
+        # DNS check failed - offer automated solution
         self.log("⚠️  DNS Configuration Issue Detected", "WARNING")
         self.log("", "INFO")
+        
+        # Check for DO_TOKEN environment variable for automated DNS setup
+        do_token = os.environ.get('DO_TOKEN')
+        if do_token:
+            self.log("DigitalOcean token found - attempting automatic DNS configuration...", "INFO")
+            
+            try:
+                # Use the dns_config.sh script for automated setup
+                dns_script_path = Path(__file__).parent / 'dns_config.sh'
+                if dns_script_path.exists():
+                    result = subprocess.run([
+                        'bash', str(dns_script_path),
+                        '--domain', domain,
+                        '--ip', server_ip,
+                        '--do-token', do_token
+                    ], capture_output=True, text=True, timeout=600)
+                    
+                    if result.returncode == 0:
+                        self.log("✅ Automatic DNS configuration completed!", "SUCCESS")
+                        
+                        # Re-verify DNS after automated setup
+                        self.log("Re-verifying DNS configuration...", "INFO")
+                        time.sleep(30)  # Wait 30 seconds for initial propagation
+                        
+                        for verify_attempt in range(3):
+                            resolved_ip = parse_dig_output(domain)
+                            if resolved_ip == server_ip:
+                                self.log(f"✅ DNS verification successful: {domain} -> {resolved_ip}", "SUCCESS")
+                                return True
+                            
+                            if verify_attempt < 2:
+                                self.log("Waiting for DNS propagation...", "INFO")
+                                time.sleep(60)
+                        
+                        self.log("DNS setup completed but propagation may still be in progress", "INFO")
+                        self.log(f"Monitor propagation at: https://dnschecker.org/#A/{domain}", "INFO")
+                        
+                        # Ask user if they want to continue
+                        if self.confirm("Continue deployment while DNS propagates?", True):
+                            return True
+                    else:
+                        self.log(f"Automatic DNS setup failed: {result.stderr}", "ERROR")
+                        self.log("Falling back to manual configuration instructions", "INFO")
+                else:
+                    self.log("DNS configuration script not found", "WARNING")
+            except Exception as e:
+                self.log(f"Error during automatic DNS setup: {e}", "ERROR")
+        
+        # Provide manual DNS configuration instructions
         self.log("DNS is not properly configured. Your site may not be accessible externally.", "WARNING")
-        self.log("Please configure DNS manually:", "INFO")
+        self.log("", "INFO")
+        self.log("🔧 Manual DNS Configuration Required:", "INFO")
         self.log(f"  1. Go to your domain registrar (GoDaddy, Namecheap, etc.)", "INFO")
         self.log(f"  2. Add an A record: {domain} -> {server_ip}", "INFO")
         self.log(f"  3. If using www, add: www.{domain} -> {server_ip}", "INFO")
         self.log("  4. DNS propagation can take up to 48 hours", "INFO")
+        self.log(f"  5. Monitor propagation: https://dnschecker.org/#A/{domain}", "INFO")
         self.log("", "INFO")
+        
+        if not do_token:
+            self.log("💡 For automatic DNS setup, set DO_TOKEN environment variable with your DigitalOcean API token", "INFO")
         
         # Ask if user wants to continue anyway
         if self.confirm("Continue deployment without proper DNS? (site won't be externally accessible)", False):
@@ -1289,6 +1370,7 @@ log_success "Deployment completed! 🚀"
     def verify_domain_accessibility(self, server_ip="167.99.155.140"):
         """
         Comprehensive domain accessibility verification with proper DNS parsing and external testing.
+        Now includes improved DNS parsing and curl --resolve bypass testing.
         
         Args:
             server_ip (str): Expected server IP address
@@ -1303,61 +1385,102 @@ log_success "Deployment completed! 🚀"
         domain = self.config['domain']
         self.log(f"🌐 Verifying domain accessibility for {domain}", "INFO")
         
-        # Step 1: Enhanced DNS parsing
+        # Step 1: Enhanced DNS parsing using improved method from problem statement
         dns_ok = False
         resolved_ip = None
         
-        try:
-            # Use dig +short A domain | head -1 for proper parsing
-            result = subprocess.run(
-                ['dig', '+short', 'A', domain],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if result.returncode == 0:
-                # Parse output correctly - get first non-empty line that looks like an IP
-                lines = [line.strip() for line in result.stdout.strip().split('\n') 
+        def parse_dig_output_enhanced(domain):
+            """Enhanced DNS parsing as specified in problem statement"""
+            try:
+                # Use the exact parsing method from problem statement:
+                # dig domain A | grep '^domain.' | awk '{print $5}'
+                dig_result = subprocess.run(
+                    ['dig', domain, 'A'],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                
+                if dig_result.returncode == 0:
+                    # Parse with grep and awk as suggested
+                    grep_cmd = f"grep '^{domain}\\.' <<< '{dig_result.stdout}' | awk '{{print $5}}'"
+                    parse_result = subprocess.run(
+                        ['bash', '-c', grep_cmd],
+                        capture_output=True,
+                        text=True,
+                        timeout=10
+                    )
+                    
+                    if parse_result.returncode == 0:
+                        ip = parse_result.stdout.strip()
+                        if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip):
+                            return ip
+                
+                # Fallback to simpler parsing
+                lines = [line.strip() for line in dig_result.stdout.strip().split('\n') 
                         if line.strip() and not line.startswith(';')]
                 
                 for line in lines:
-                    # Check if line looks like an IPv4 address
                     if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', line):
-                        resolved_ip = line
-                        break
-                
-                if resolved_ip:
-                    if resolved_ip == server_ip:
-                        self.log(f"✅ DNS correctly resolves: {domain} -> {resolved_ip}", "SUCCESS")
-                        dns_ok = True
-                    else:
-                        self.log(f"❌ DNS mismatch: {domain} -> {resolved_ip} (expected {server_ip})", "ERROR")
-                        self.log("Check your DNS configuration - A record may be pointing to wrong IP", "WARNING")
+                        return line
+                        
+                return None
+            except Exception as e:
+                self.log(f"Enhanced DNS parsing error: {e}", "WARNING")
+                return None
+        
+        try:
+            resolved_ip = parse_dig_output_enhanced(domain)
+            
+            if resolved_ip:
+                if resolved_ip == server_ip:
+                    self.log(f"✅ DNS correctly resolves: {domain} -> {resolved_ip}", "SUCCESS")
+                    dns_ok = True
                 else:
-                    self.log(f"❌ No valid A record found for {domain}", "ERROR")
-                    self.log("DNS query output:", "INFO")
-                    self.log(result.stdout.strip(), "INFO")
+                    self.log(f"❌ DNS mismatch: {domain} -> {resolved_ip} (expected {server_ip})", "ERROR")
+                    self.log("Check your DNS configuration - A record may be pointing to wrong IP", "WARNING")
             else:
-                self.log(f"DNS query failed: {result.stderr.strip()}", "ERROR")
+                self.log(f"❌ No valid A record found for {domain}", "ERROR")
+                self.log(f"Check external DNS status: https://dnschecker.org/#A/{domain}", "INFO")
         except Exception as e:
             self.log(f"DNS verification error: {e}", "ERROR")
         
-        # Step 2: External connectivity test with bypass DNS option
-        http_ok = False
-        
-        if resolved_ip:
-            self.log("Testing external HTTP connectivity...", "INFO")
+        # Step 2: DNS Bypass Test using curl --resolve (from problem statement)
+        bypass_ok = False
+        if server_ip:
+            self.log(f"Testing HTTP connectivity bypassing DNS (--resolve)...", "INFO")
             try:
-                # Test with curl --resolve to bypass DNS issues
+                # Use curl --resolve as specified in problem statement
                 cmd = [
-                    'curl', '-m', '10', '--resolve', f'{domain}:80:{resolved_ip}',
-                    '-I', f'http://{domain}'
+                    'curl', '--resolve', f'{domain}:80:{server_ip}',
+                    '-m', '10', '-I', f'http://{domain}'
                 ]
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
                 
                 if result.returncode == 0:
                     # Check for successful HTTP status codes
+                    if any(code in result.stdout for code in ['200 OK', '404', '302', '301']):
+                        self.log("✅ HTTP connectivity works (DNS bypass test)", "SUCCESS")
+                        bypass_ok = True
+                    else:
+                        self.log(f"HTTP response received but status unclear:", "WARNING")
+                        self.log(result.stdout.split('\n')[0], "INFO")
+                else:
+                    self.log("❌ HTTP connectivity failed even with DNS bypass", "ERROR")
+                    self.log(f"This indicates server/nginx/firewall issues", "WARNING")
+                    self.log(f"Curl error: {result.stderr.strip()}", "WARNING")
+            except Exception as e:
+                self.log(f"DNS bypass test error: {e}", "ERROR")
+        
+        # Step 3: External connectivity test with original DNS (if resolved)
+        http_ok = False
+        if resolved_ip:
+            self.log("Testing external HTTP connectivity with DNS...", "INFO")
+            try:
+                cmd = ['curl', '-m', '10', '-I', f'http://{domain}']
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+                
+                if result.returncode == 0:
                     if any(code in result.stdout for code in ['200 OK', '404', '302', '301']):
                         self.log("✅ External HTTP connectivity working", "SUCCESS")
                         http_ok = True
@@ -1370,8 +1493,9 @@ log_success "Deployment completed! 🚀"
             except Exception as e:
                 self.log(f"External connectivity test error: {e}", "ERROR")
         
-        # Step 3: Direct IP test
-        if not http_ok and server_ip:
+        # Step 4: Direct IP test
+        direct_ip_ok = False
+        if server_ip:
             self.log(f"Testing direct IP connectivity to {server_ip}...", "INFO")
             try:
                 result = subprocess.run([
@@ -1380,29 +1504,62 @@ log_success "Deployment completed! 🚀"
                 
                 if result.returncode == 0:
                     self.log("✅ Direct IP connectivity working", "SUCCESS")
-                    if not dns_ok:
-                        self.log("Server is accessible but DNS needs to be configured", "WARNING")
+                    direct_ip_ok = True
                 else:
                     self.log("❌ Direct IP connectivity failed", "ERROR")
                     self.log("Check if HTTP server is running and firewall allows port 80", "WARNING")
             except Exception as e:
                 self.log(f"Direct IP test error: {e}", "ERROR")
         
-        # Summary and recommendations
+        # Step 5: Summary and recommendations
+        self.log("", "INFO")
+        self.log("📊 Domain Accessibility Summary:", "INFO")
+        self.log(f"  DNS Resolution: {'✅' if dns_ok else '❌'}", "INFO")
+        self.log(f"  HTTP via Domain: {'✅' if http_ok else '❌'}", "INFO")
+        self.log(f"  HTTP via DNS Bypass: {'✅' if bypass_ok else '❌'}", "INFO")
+        self.log(f"  HTTP via Direct IP: {'✅' if direct_ip_ok else '❌'}", "INFO")
+        self.log("", "INFO")
+        self.log(f"🌍 Check DNS propagation globally: https://dnschecker.org/#A/{domain}", "INFO")
+        self.log("", "INFO")
+        
         if dns_ok and http_ok:
             self.log("🎉 Domain verification successful - site should be accessible", "SUCCESS")
             return True
-        elif not dns_ok:
-            self.log("🔧 DNS Configuration Required", "WARNING")
-            self.log(f"Please configure DNS: {domain} A record -> {server_ip}", "INFO")
-            self.log("Refer to dns_setup_guide.md for detailed instructions", "INFO")
-        elif not http_ok:
-            self.log("🔧 HTTP Server Configuration Issue", "WARNING") 
-            self.log("DNS resolves correctly but HTTP server is not responding", "WARNING")
-            self.log("Check nginx configuration and ensure it's listening on port 80", "INFO")
+        elif bypass_ok or direct_ip_ok:
+            if not dns_ok:
+                self.log("🔧 DNS Configuration Required", "WARNING")
+                self.log(f"Server is running but DNS needs configuration: {domain} -> {server_ip}", "INFO")
+                self.log(f"Check DNS propagation: https://dnschecker.org/#A/{domain}", "INFO")
+            else:
+                self.log("🔧 DNS Propagation in Progress", "INFO")
+                self.log("Server responds to bypass tests, DNS may still be propagating", "INFO")
+            
+            # Offer to continue since server is working
+            if self.confirm("Server is accessible but DNS needs work. Continue anyway?", True):
+                return True
+        else:
+            self.log("🔧 Server Configuration Issue", "WARNING")
+            self.log("Neither DNS nor direct access working - check server/nginx/firewall", "ERROR")
+        
+        # Provide manual troubleshooting info
+        if not dns_ok:
+            self.log("", "INFO")
+            self.log("🔧 DNS Troubleshooting:", "INFO")
+            self.log(f"  1. Configure DNS: {domain} A record -> {server_ip}", "INFO")
+            self.log(f"  2. Monitor propagation: https://dnschecker.org/#A/{domain}", "INFO")
+            self.log("  3. DNS can take up to 48 hours to propagate globally", "INFO")
+        
+        if not direct_ip_ok:
+            self.log("", "INFO")
+            self.log("🔧 Server Troubleshooting:", "INFO")
+            self.log("  1. Check if nginx is running: systemctl status nginx", "INFO")
+            self.log("  2. Check if port 80 is listening: ss -tuln | grep :80", "INFO")
+            self.log("  3. Check firewall: ufw status", "INFO")
+            self.log("  4. Check nginx configuration: nginx -t", "INFO")
         
         return False
-        """Create management and maintenance scripts"""
+
+    def create_management_scripts(self):
         try:
             scripts_dir = self.project_root / "scripts"
             scripts_dir.mkdir(exist_ok=True)
