@@ -562,6 +562,17 @@ class AIDeploymentOrchestrator:
                 recovery_function="fix_repository_issues_recovery",
                 description="Docker repository configuration issues"
             ),
+                pattern=r"E: The repository.*docker\.com.*Release.*404.*Not Found",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="fix_repository_issues_recovery",
+                description="Docker repository Release file 404 error"
+            ),
+            ErrorPattern(
+                pattern=r"docker\.com.*\$\(lsb_release.*Release",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="fix_repository_issues_recovery",
+                description="Malformed lsb_release pattern in Docker repository configuration"
+            ),
             ErrorPattern(
                 pattern=r"apt.*update.*failed.*exit.*code.*100|W: Failed to fetch.*docker\.com.*404",
                 severity=ErrorSeverity.HIGH,
