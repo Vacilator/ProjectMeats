@@ -37,6 +37,8 @@ help:
 	@echo "  make test      - Run all tests (backend + frontend)"
 	@echo "  make test-backend  - Run Django tests only"
 	@echo "  make test-frontend - Run React tests only"
+	@echo "  make test-deployment - Test deployment configuration"
+	@echo "  make test-service   - Run service diagnostics (requires sudo)"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make format    - Format code (black, isort)"
@@ -116,6 +118,15 @@ test-backend:
 test-frontend:
 	@echo "🧪 Running React tests..."
 	cd frontend && npm test -- --watchAll=false
+
+# Deployment testing
+test-deployment:
+	@echo "🧪 Testing deployment configuration..."
+	./deployment/scripts/test_service_start.sh
+
+test-service:
+	@echo "🔍 Running service diagnostics..."
+	sudo ./deployment/scripts/diagnose_service.sh
 
 # Code quality
 format:

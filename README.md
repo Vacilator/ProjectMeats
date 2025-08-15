@@ -357,6 +357,56 @@ make test
 
 **Test Status**: ✅ 95+ backend tests covering all business entities
 
+## 🛠️ Troubleshooting
+
+### Service Startup Issues
+
+If the Django service fails to start during deployment:
+
+```bash
+# Run comprehensive diagnostics
+sudo ./deployment/scripts/diagnose_service.sh
+
+# Test deployment configuration
+make test-deployment
+
+# Fix permissions if needed
+sudo ./deployment/scripts/fix_permissions.sh
+
+# Check service status
+sudo systemctl status projectmeats
+sudo journalctl -xeu projectmeats -n 50
+```
+
+### Common Issues
+
+**Service won't start:**
+- Check `/var/log/projectmeats/deployment_errors.log` for detailed logs
+- Verify dependencies: `pip install -r backend/requirements.txt --upgrade`
+- Ensure environment files exist: `/etc/projectmeats/projectmeats.env`
+- Fix permissions: `sudo ./deployment/scripts/fix_permissions.sh`
+
+**Port binding errors:**
+- Check if another service is using port 8000: `lsof -i :8000`
+- Use fallback service: Copy `deployment/systemd/projectmeats-port.service` to `/etc/systemd/system/`
+
+**Environment variable issues:**
+- Verify `DJANGO_SETTINGS_MODULE=apps.settings.production` in environment file
+- Check database URL format: `DATABASE_URL=postgres://user:pass@localhost/db`
+
+### Manual Testing
+
+```bash
+# Test Django configuration
+cd backend && python manage.py check --deploy
+
+# Test WSGI application
+cd backend && python -c "from projectmeats.wsgi import application; print('OK')"
+
+# Test Gunicorn manually
+cd backend && ../venv/bin/gunicorn --bind 127.0.0.1:8001 projectmeats.wsgi:application
+```
+
 ## 📚 Documentation
 
 ### Quick Start Guides
