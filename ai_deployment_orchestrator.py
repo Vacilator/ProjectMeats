@@ -4528,7 +4528,7 @@ server {{
             "apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release",
             
             # Add Docker's official GPG key
-            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
+            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --batch --yes --quiet --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
             
             # Add Docker repository with properly validated Ubuntu codename
             f"echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {ubuntu_codename} stable' | tee /etc/apt/sources.list.d/docker.list > /dev/null",
