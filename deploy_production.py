@@ -1351,33 +1351,18 @@ log_success "Deployment completed! 🚀"
 
         # Function to parse dig output properly
         def parse_dig_output(domain):
-            """Parse dig output using improved method from problem statement"""
+            """Parse dig output using improved method from problem statement: 'dig +short A domain'"""
             try:
-                # Use the improved parsing from problem statement
+                # Use the exact parsing method from problem statement: dig +short A domain
                 result = subprocess.run(
-                    ["dig", domain, "A"], capture_output=True, text=True, timeout=30
+                    ["dig", "+short", "A", domain], capture_output=True, text=True, timeout=30
                 )
 
                 if result.returncode == 0:
-                    # Parse with grep and awk as suggested in problem statement
-                    grep_result = subprocess.run(
-                        ["grep", f"^{domain}\\.", result.stdout],
-                        capture_output=True,
-                        text=True,
-                        input=result.stdout,
-                    )
-
-                    if grep_result.returncode == 0:
-                        lines = grep_result.stdout.strip().split("\n")
-                        for line in lines:
-                            parts = line.split()
-                            if len(parts) >= 5 and parts[3] == "A":
-                                ip = parts[4]
-                                # Validate IP format
-                                if re.match(
-                                    r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip
-                                ):
-                                    return ip
+                    # The +short flag gives us just the IP address, no complex parsing needed
+                    ip = result.stdout.strip()
+                    if ip and re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
+                        return ip
                 return None
             except Exception as e:
                 self.log(f"DNS parsing error: {e}", "WARNING")
