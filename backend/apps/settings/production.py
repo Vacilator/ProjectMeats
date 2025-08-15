@@ -13,7 +13,10 @@ DEBUG = False
 # Production allowed hosts - controlled by environment
 ALLOWED_HOSTS = (
     config("ALLOWED_HOSTS", default="").split(",")
-    if config("ALLOWED_HOSTS", default="")
+_allowed_hosts = config("ALLOWED_HOSTS", default="")
+ALLOWED_HOSTS = (
+    _allowed_hosts.split(",")
+    if _allowed_hosts
     else []
 )
 
