@@ -263,7 +263,7 @@ upstream django_backend {
 }
 
 server {
-    listen 80;
+    listen 80 default_server;
     server_name $DOMAIN www.$DOMAIN;
     root $PROJECT_DIR/frontend/build;
     index index.html;
@@ -380,7 +380,8 @@ EOF
 ln -sf /etc/nginx/sites-available/projectmeats /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 
-# Test nginx configuration
+# Test nginx configuration before restart
+log_info "Testing nginx configuration..."
 nginx -t
 
 if [ $? -ne 0 ]; then
@@ -391,30 +392,102 @@ fi
 
 log_success "Nginx configuration test passed"
 
-# Ensure nginx is started and verify port 80 binding
+# Enhanced nginx restart and port binding verification
+log_info "Restarting nginx with enhanced verification..."
 systemctl restart nginx
 systemctl enable nginx
 
 # Wait a moment for nginx to start
-sleep 3
+sleep 5
 
-# Verify port 80 is listening
-log_info "Verifying port 80 is listening..."
-if ss -tuln | grep -q ":80 "; then
-    log_success "✅ Port 80 (HTTP) is listening"
-    ss -tuln | grep ":80 "
+# Enhanced port binding verification using privileged check as specified
+log_info "Performing enhanced port 80 binding verification..."
+
+# Check if port 80 is listening with detailed output
+if command -v ss >/dev/null 2>&1; then
+    log_info "Checking port 80 with ss command..."
+    ss_output=$(ss -tuln | grep ":80 ")
+    if [ -n "$ss_output" ]; then
+        log_success "✅ Port 80 (HTTP) is listening"
+        echo "$ss_output" | while read line; do
+            log_info "  $line"
+        done
+    else
+        log_error "❌ Port 80 (HTTP) is not listening after nginx restart"
+        
+        # Additional diagnostics
+        log_info "Running additional diagnostics..."
+        log_info "Nginx status:"
+        systemctl status nginx --no-pager -l || true
+        
+        log_info "Checking all nginx processes:"
+        ps aux | grep nginx | grep -v grep || true
+        
+        log_info "Checking nginx configuration files:"
+        nginx -T | grep -E "(listen|server_name)" || true
+        
+        log_info "Checking if another service is using port 80:"
+        netstat -tuln | grep ":80 " || log_info "  No other services on port 80"
+        
+        log_error "Nginx may have failed to bind to port 80"
+        log_error "This could be due to:"
+        log_error "  1. Another service already using port 80"
+        log_error "  2. Nginx configuration errors"
+        log_error "  3. Permission issues"
+        log_error "  4. Firewall blocking the port"
+    fi
 else
-    log_error "❌ Port 80 (HTTP) is not listening after nginx start"
-    log_error "Checking nginx status..."
-    systemctl status nginx --no-pager -l
-    log_error "Nginx may have failed to bind to port 80"
+    log_warning "ss command not available, using netstat fallback"
+    if netstat -tuln 2>/dev/null | grep -q ":80 "; then
+        log_success "✅ Port 80 (HTTP) is listening (netstat check)"
+        netstat -tuln | grep ":80 "
+    else
+        log_error "❌ Port 80 (HTTP) is not listening (netstat check)"
+    fi
 fi
 
-# Set up firewall
+# Test nginx configuration again after restart
+log_info "Verifying nginx is properly configured and running..."
+if nginx -t >/dev/null 2>&1; then
+    log_success "✅ Nginx configuration is valid"
+else
+    log_error "❌ Nginx configuration has errors after restart"
+    nginx -t
+fi
+
+# Check nginx service status
+if systemctl is-active --quiet nginx; then
+    log_success "✅ Nginx service is active and running"
+else
+    log_error "❌ Nginx service is not active"
+    systemctl status nginx --no-pager -l
+fi
+
+# Set up firewall with enhanced configuration
 log_header "🔥 Configuring Firewall"
+log_info "Configuring UFW firewall rules..."
+
+# Ensure UFW is installed
+if ! command -v ufw >/dev/null 2>&1; then
+    log_info "Installing UFW firewall..."
+    apt-get update -qq
+    apt-get install -y ufw
+fi
+
+# Configure firewall rules
+ufw default deny incoming
+ufw default allow outgoing
 ufw allow OpenSSH
 ufw allow 'Nginx Full'
 ufw --force enable
+
+# Reload UFW to ensure rules are properly applied
+log_info "Reloading UFW firewall rules..."
+ufw reload
+
+# Verify firewall status
+log_info "UFW firewall status:"
+ufw status verbose
 
 # Start services with fallback logic
 log_header "🚀 Starting Services"
