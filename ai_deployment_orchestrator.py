@@ -562,11 +562,6 @@ class AIDeploymentOrchestrator:
                 recovery_function="fix_repository_issues_recovery",
                 description="Docker repository configuration issues"
             ),
-                pattern=r"E: The repository.*docker\.com.*Release.*404.*Not Found",
-                severity=ErrorSeverity.HIGH,
-                recovery_function="fix_repository_issues_recovery",
-                description="Docker repository Release file 404 error"
-            ),
             ErrorPattern(
                 pattern=r"docker\.com.*\$\(lsb_release.*Release",
                 severity=ErrorSeverity.HIGH,
