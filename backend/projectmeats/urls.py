@@ -20,6 +20,7 @@ from apps.core.views import health_check_view
 urlpatterns = [
     # System endpoints (available at root level for easier access)
     path("health/", health_check_view, name="health-check"),
+    path("health", health_check_view, name="health-check-no-slash"),
     # API health endpoint (for deployment scripts)
     path("api/health", health_check_view, name="api-health-check"),
     # Admin interface

@@ -1825,8 +1825,8 @@ class AIDeploymentOrchestrator:
                     self.log(f"Domain resolves to IP: {ip}", "INFO")
                     break
         
-        # Check if nginx is listening on port 80
-        exit_code, stdout, stderr = self.execute_command("netstat -tlnp | grep :80")
+        # Check if nginx is listening on port 80 (using ss as per problem statement)
+        exit_code, stdout, stderr = self.execute_command("ss -tlnp | grep :80")
         if exit_code != 0:
             self.log("X No process listening on port 80", "ERROR")
         else:

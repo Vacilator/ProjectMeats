@@ -285,7 +285,7 @@ if command -v ss >/dev/null 2>&1; then
         nginx -T | grep -E "(listen|server_name)" || true
         
         log_info "Checking if another service is using port 80:"
-        netstat -tuln | grep ":80 " || log_info "  No other services on port 80"
+        ss -tuln | grep ":80 " || log_info "  No other services on port 80"
         
         log_error "Nginx may have failed to bind to port 80"
         log_error "This could be due to:"
