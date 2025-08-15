@@ -557,6 +557,18 @@ class AIDeploymentOrchestrator:
                 description="Package repository needs update"
             ),
             ErrorPattern(
+                pattern=r"E: The repository.*docker\.com.*Release.*404.*Not Found|docker\.com.*\$\(lsb_release.*Release",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="fix_repository_issues_recovery",
+                description="Docker repository configuration issues"
+            ),
+            ErrorPattern(
+                pattern=r"apt.*update.*failed.*exit.*code.*100|W: Failed to fetch.*docker\.com.*404",
+                severity=ErrorSeverity.HIGH,
+                recovery_function="fix_repository_issues_recovery", 
+                description="Repository fetch failures causing apt update to fail"
+            ),
+            ErrorPattern(
                 pattern=r"Permission denied.*(/opt/|/home/|/etc/|systemctl|chmod|chown)",
                 severity=ErrorSeverity.HIGH,
                 recovery_function="fix_permissions",
@@ -894,10 +906,164 @@ class AIDeploymentOrchestrator:
         return False
     
     def update_package_lists(self) -> bool:
-        """Update package repository lists"""
+        """Update package repository lists with repository validation and fixes"""
         self.log("Updating package lists...", "INFO")
+        
+        # First, validate and fix any repository issues
+        if not self.validate_and_fix_repositories():
+            self.log("Repository validation failed, but attempting apt update anyway", "WARNING")
+        
+        # Run apt update
         exit_code, stdout, stderr = self.execute_command("apt update")
+        
+        if exit_code != 0:
+            # Check if it's a repository issue and try to fix it
+            if "Release" in stderr or "repository" in stderr.lower() or "404" in stderr:
+                self.log("Detected repository configuration issues, attempting fixes...", "WARNING")
+                if self.fix_repository_issues(stderr):
+                    self.log("Repository issues fixed, retrying apt update...", "INFO")
+                    exit_code, stdout, stderr = self.execute_command("apt update")
+        
         return exit_code == 0
+
+    def validate_and_fix_repositories(self) -> bool:
+        """Validate and fix common repository configuration issues"""
+        self.log("Validating repository configurations...", "INFO")
+        
+        try:
+            # Check for common Docker repository misconfigurations
+            self.fix_docker_repository_config()
+            
+            # Clean up any duplicate or malformed repository entries
+            self.cleanup_repository_lists()
+            
+            return True
+        except Exception as e:
+            self.log(f"Repository validation failed: {e}", "ERROR")
+            return False
+
+    def fix_docker_repository_config(self) -> bool:
+        """Fix common Docker repository configuration issues"""
+        self.log("Checking Docker repository configuration...", "DEBUG")
+        
+        # Common Docker repository files that might be misconfigured
+        docker_sources = [
+            "/etc/apt/sources.list.d/docker.list",
+            "/etc/apt/sources.list.d/download_docker_com_linux_ubuntu.list"
+        ]
+        
+        for source_file in docker_sources:
+            # Check if file exists and has issues
+            exit_code, stdout, stderr = self.execute_command(f"test -f {source_file}")
+            if exit_code == 0:
+                # Read the file content
+                exit_code, content, stderr = self.execute_command(f"cat {source_file}")
+                if exit_code == 0 and "$(lsb_release" in content:
+                    # Check if it's malformed (various patterns)
+                    malformed_patterns = [
+                        "$(lsb_release Release",    # Missing closing ) and -cs
+                        "$(lsb_release)",           # Missing -cs flag  
+                        "$(lsb_release -cs ",       # Missing closing )
+                        "$(lsb_release -c)",        # Wrong flag (should be -cs)
+                    ]
+                    
+                    is_malformed = any(pattern in content for pattern in malformed_patterns)
+                    if is_malformed:
+                        self.log(f"Found malformed Docker repository in {source_file}, fixing...", "WARNING")
+                        
+                        # Remove the problematic Docker repository
+                        self.execute_command(f"rm -f {source_file}")
+                        self.log(f"Removed problematic Docker repository file: {source_file}", "INFO")
+        
+        # Also check main sources.list for Docker entries
+        exit_code, content, stderr = self.execute_command("cat /etc/apt/sources.list")
+        if exit_code == 0 and "docker.com" in content:
+            # Check for malformed entries in main sources.list
+            malformed_patterns = [
+                "$(lsb_release Release",    # The exact pattern from the error
+                "$(lsb_release)",           # Missing -cs flag  
+                "$(lsb_release -cs ",       # Missing closing )
+                "$(lsb_release -c)",        # Wrong flag
+            ]
+            
+            for pattern in malformed_patterns:
+                if pattern in content:
+                    self.log(f"Found malformed Docker repository in main sources.list: {pattern}", "WARNING")
+                    # Create a fixed version by removing the malformed line
+                    self.execute_command(f"sed -i '/docker.com.*{re.escape(pattern)}/d' /etc/apt/sources.list")
+                    break
+        
+        return True
+
+    def cleanup_repository_lists(self) -> bool:
+        """Clean up repository lists to remove problematic entries"""
+        self.log("Cleaning up repository lists...", "DEBUG")
+        
+        commands = [
+            # Remove any files with various malformed lsb_release syntax patterns
+            "find /etc/apt/sources.list.d/ -name '*.list' -exec grep -l '$(lsb_release Release' {} \\; | xargs -r rm -f",
+            "find /etc/apt/sources.list.d/ -name '*.list' -exec grep -l '$(lsb_release)' {} \\; | xargs -r rm -f", 
+            "find /etc/apt/sources.list.d/ -name '*.list' -exec grep -l '$(lsb_release -cs ' {} \\; | xargs -r rm -f",
+            # Clean package cache to avoid issues
+            "apt clean",
+            # Remove any duplicate repository entries
+            "sort -u /etc/apt/sources.list -o /etc/apt/sources.list || true"
+        ]
+        
+        for cmd in commands:
+            self.execute_command(cmd)
+        
+        return True
+
+    def fix_repository_issues(self, error_output: str) -> bool:
+        """Fix specific repository issues based on error output"""
+        self.log(f"Analyzing repository error: {error_output[:200]}...", "DEBUG")
+        
+        fixed = False
+        
+        # Fix Docker repository 404 errors
+        if "docker.com" in error_output and "404" in error_output:
+            self.log("Detected Docker repository 404 error, removing problematic repository...", "WARNING")
+            
+            # Remove all Docker repository configurations
+            commands = [
+                "rm -f /etc/apt/sources.list.d/docker.list",
+                "rm -f /etc/apt/sources.list.d/download_docker_com_linux_ubuntu.list",
+                "sed -i '/docker.com/d' /etc/apt/sources.list"
+            ]
+            
+            for cmd in commands:
+                self.execute_command(cmd)
+            fixed = True
+        
+        # Fix malformed lsb_release references
+        if "$(lsb_release" in error_output and "Release" in error_output:
+            self.log("Detected malformed lsb_release syntax, cleaning up...", "WARNING")
+            self.fix_docker_repository_config()
+            fixed = True
+        
+        # Clean up if we made fixes
+        if fixed:
+            self.execute_command("apt clean")
+            self.log("Repository cleanup completed", "INFO")
+        
+        return fixed
+
+    def fix_repository_issues_recovery(self) -> bool:
+        """Recovery function for repository configuration issues"""
+        self.log("Executing repository issues recovery...", "WARNING")
+        
+        try:
+            # Comprehensive repository cleanup and fix
+            if self.validate_and_fix_repositories():
+                # Try to update package lists again
+                return self.update_package_lists()
+            else:
+                self.log("Repository validation failed during recovery", "ERROR")
+                return False
+        except Exception as e:
+            self.log(f"Repository recovery failed: {e}", "ERROR")
+            return False
     
     def fix_permissions(self) -> bool:
         """Fix common permission issues"""
@@ -1992,6 +2158,7 @@ class AIDeploymentOrchestrator:
         
         # Implement step-specific recovery logic
         recovery_methods = {
+            "setup_authentication": ["fix_repository_issues_recovery", "update_package_lists"],
             "install_dependencies": ["update_package_lists", "fix_nodejs_conflicts"],
             "configure_backend": ["fix_django_service_issues", "fix_permissions", "restart_database_service"],
             "configure_frontend": ["fix_npm_permissions", "cleanup_disk_space"],
@@ -2234,10 +2401,10 @@ class AIDeploymentOrchestrator:
         """Setup authentication and security"""
         self.log("Setting up authentication...", "INFO")
         
-        # Update system
-        exit_code, stdout, stderr = self.execute_command("apt update")
-        if exit_code != 0:
-            return False
+        # Update system with enhanced repository validation
+        if not self.update_package_lists():
+            self.log("Package list update failed, but continuing with deployment", "WARNING")
+            # Continue anyway as this might not be critical for user creation
         
         # Create projectmeats user if it doesn't exist
         self.log("Creating projectmeats user...", "INFO")
