@@ -533,9 +533,14 @@ class AIDeploymentOrchestrator:
                 token=github_token,
                 repo="Vacilator/ProjectMeats"
             )
-            self.log("GitHub integration initialized successfully", "SUCCESS")
+            if self.github_integration.authenticated:
+                self.log("GitHub integration initialized successfully", "SUCCESS")
+            else:
+                self.log(f"GitHub integration failed authentication: {self.github_integration.auth_error}", "WARNING")
+                self.log("GitHub features (auto issue/PR creation) will be disabled", "WARNING")
         except Exception as e:
             self.log(f"Failed to initialize GitHub integration: {e}", "WARNING")
+            self.github_integration = None
     
     def reinitialize_github_integration(self):
         """Re-initialize GitHub integration after config changes (e.g., from command line args)"""
@@ -2435,10 +2440,30 @@ class AIDeploymentOrchestrator:
         """Setup authentication and security"""
         self.log("Setting up authentication...", "INFO")
         
+
         # Update system with enhanced repository validation
         if not self.update_package_lists():
             self.log("Package list update failed, but continuing with deployment", "WARNING")
             # Continue anyway as this might not be critical for user creation
+
+        # Clean up any malformed Docker repository entries before first apt update
+        self.log("Cleaning up any malformed Docker repository entries...", "DEBUG")
+        cleanup_commands = [
+            "rm -f /etc/apt/sources.list.d/docker.list",
+            "rm -f /etc/apt/sources.list.d/docker.list.save",
+            "sed -i '/docker.*$(lsb_release/d' /etc/apt/sources.list || true"
+        ]
+        
+        for cmd in cleanup_commands:
+            exit_code, _, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Cleanup command '{cmd}' had issues: {stderr}", "DEBUG")
+        
+        # Update system
+        exit_code, stdout, stderr = self.execute_command("apt update")
+        if exit_code != 0:
+            return False
+
         
         # Create projectmeats user if it doesn't exist
         self.log("Creating projectmeats user...", "INFO")
@@ -4473,21 +4498,26 @@ server {{
         self.log("Detecting Ubuntu version...", "DEBUG")
         exit_code, codename_output, stderr = self.execute_command("lsb_release -cs")
         if exit_code != 0:
-            self.log(f"Failed to get Ubuntu codename with lsb_release: {stderr}", "ERROR")
-            # Try alternative method to get codename
-            exit_code, codename_output, stderr = self.execute_command("cat /etc/os-release | grep VERSION_CODENAME | cut -d= -f2")
-            if exit_code != 0:
-                self.log(f"Failed to get Ubuntu codename from os-release: {stderr}", "ERROR")
-                return False
-        
-        ubuntu_codename = codename_output.strip().strip('"')  # Remove any quotes
-        
-        # Validate the codename looks reasonable (alphabetic, no spaces or special chars)
-        if not ubuntu_codename or not ubuntu_codename.isalpha() or len(ubuntu_codename) < 3:
-            self.log(f"Invalid Ubuntu codename detected: '{ubuntu_codename}'. Cannot proceed with Docker installation.", "ERROR")
-            return False
-        
-        self.log(f"Detected Ubuntu codename: {ubuntu_codename}", "INFO")
+
+            self.log(f"Failed to get Ubuntu codename: {stderr}", "ERROR")
+            # Fallback to trying to detect Ubuntu codename from /etc/os-release
+            exit_code2, codename_output2, stderr2 = self.execute_command("grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '\"'")
+            if exit_code2 == 0 and codename_output2.strip():
+                ubuntu_codename = codename_output2.strip()
+                self.log(f"Detected Ubuntu codename from os-release: {ubuntu_codename}", "DEBUG")
+            else:
+                self.log("Could not detect Ubuntu codename, using 'jammy' as default", "WARNING")
+                ubuntu_codename = "jammy"  # Default to jammy for Ubuntu 22.04
+        else:
+            ubuntu_codename = codename_output.strip()
+            
+        # Validate ubuntu_codename is not empty or malformed
+        if not ubuntu_codename or ubuntu_codename.startswith('$') or len(ubuntu_codename) < 3:
+            self.log(f"Invalid Ubuntu codename detected: '{ubuntu_codename}', using 'jammy' as fallback", "WARNING")
+            ubuntu_codename = "jammy"
+            
+        self.log(f"Using Ubuntu codename: {ubuntu_codename}", "DEBUG")
+
         
         commands = [
             # Remove any old Docker versions

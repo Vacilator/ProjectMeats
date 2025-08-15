@@ -59,6 +59,8 @@ class GitHubIntegration:
             owner: Repository owner (auto-detected if repo includes owner)
         """
         self.token = token
+        self.authenticated = False
+        self.auth_error = None
         
         if "/" in repo:
             self.owner, self.repo = repo.split("/", 1)
@@ -76,8 +78,8 @@ class GitHubIntegration:
         
         self.logger = logging.getLogger(__name__)
         
-        # Test authentication on initialization
-        self._test_authentication()
+        # Test authentication on initialization and store result
+        self.authenticated = self._test_authentication()
     
     def _test_authentication(self) -> bool:
         """Test GitHub API authentication"""
@@ -88,9 +90,11 @@ class GitHubIntegration:
                 self.logger.info(f"GitHub authentication successful for user: {user_data.get('login')}")
                 return True
             else:
-                self.logger.error(f"GitHub authentication failed: {response.status_code}")
+                self.auth_error = f"HTTP {response.status_code}: {response.text}"
+                self.logger.error(f"GitHub authentication failed: {response.status_code} - {response.text}")
                 return False
         except Exception as e:
+            self.auth_error = str(e)
             self.logger.error(f"GitHub authentication error: {e}")
             return False
     
@@ -107,6 +111,11 @@ class GitHubIntegration:
         Returns:
             Issue number if successful, None if failed
         """
+        # Check authentication before attempting API call
+        if not self.authenticated:
+            self.logger.error(f"Cannot create GitHub issue - authentication failed: {self.auth_error}")
+            return None
+            
         try:
             # Format error details
             server_info = error_details.get('server_info', {})
@@ -248,6 +257,11 @@ Please analyze the deployment failure above and:
         Returns:
             PR number if successful, None if failed
         """
+        # Check authentication before attempting API call
+        if not self.authenticated:
+            self.logger.error(f"Cannot create GitHub PR - authentication failed: {self.auth_error}")
+            return None
+            
         try:
             # Format error details
             server_info = error_details.get('server_info', {})
@@ -375,6 +389,11 @@ Deployment failed at step `{failed_step}` with the following error:
         Returns:
             True if successful, False otherwise
         """
+        # Check authentication before attempting API call
+        if not self.authenticated:
+            self.logger.error(f"Cannot post deployment log - authentication failed: {self.auth_error}")
+            return False
+            
         try:
             # Create a gist with deployment logs
             timestamp = datetime.now(timezone.utc).isoformat()
@@ -427,6 +446,11 @@ Deployment failed at step `{failed_step}` with the following error:
         Returns:
             True if successful, False otherwise
         """
+        # Check authentication before attempting API call
+        if not self.authenticated:
+            self.logger.error(f"Cannot update deployment status - authentication failed: {self.auth_error}")
+            return False
+            
         try:
             # First, create a deployment if it doesn't exist
             deployment_data = {
@@ -544,14 +568,20 @@ class DeploymentLogManager:
         self.deployment_id = deployment_id
         self.logs: List[DeploymentLogEntry] = []
         self.github: Optional[GitHubIntegration] = None
+        self.github_available = False
         
         # Initialize GitHub integration if token is available
         github_token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_PAT')
         if github_token:
             try:
                 self.github = GitHubIntegration(token=github_token, repo="Vacilator/ProjectMeats")
+                # Only mark as available if authentication succeeded
+                self.github_available = self.github.authenticated if self.github else False
+                if not self.github_available:
+                    logging.getLogger(__name__).warning(f"GitHub integration failed authentication - features disabled")
             except Exception as e:
                 logging.getLogger(__name__).warning(f"GitHub integration not available: {e}")
+                self.github_available = False
     
     def add_log(self, level: str, message: str, step: Optional[str] = None):
         """Add a log entry"""
@@ -565,7 +595,7 @@ class DeploymentLogManager:
         self.logs.append(entry)
         
         # Optionally post to GitHub in real-time for critical errors
-        if level in ["ERROR", "CRITICAL"] and self.github:
+        if level in ["ERROR", "CRITICAL"] and self.github_available and self.github:
             try:
                 self.github.post_deployment_log(self.deployment_id, self.logs[-10:], "running")
             except Exception:
@@ -573,28 +603,28 @@ class DeploymentLogManager:
     
     def post_final_logs(self, status: str) -> bool:
         """Post final deployment logs to GitHub"""
-        if not self.github:
+        if not self.github_available or not self.github:
             return False
             
         return self.github.post_deployment_log(self.deployment_id, self.logs, status)
     
     def create_failure_issue(self, error_details: Dict[str, Any]) -> Optional[int]:
         """Create a GitHub issue for deployment failure"""
-        if not self.github:
+        if not self.github_available or not self.github:
             return None
             
         return self.github.create_deployment_issue(self.deployment_id, error_details, self.logs)
     
     def create_failure_pr(self, error_details: Dict[str, Any]) -> Optional[int]:
         """Create a GitHub PR for critical deployment failure fixes"""
-        if not self.github:
+        if not self.github_available or not self.github:
             return None
             
         return self.github.create_deployment_fix_pr(self.deployment_id, error_details, self.logs)
     
     def update_status(self, status: str, target_url: Optional[str] = None) -> bool:
         """Update deployment status on GitHub"""
-        if not self.github:
+        if not self.github_available or not self.github:
             return False
             
         return self.github.update_deployment_status(self.deployment_id, status, target_url)
