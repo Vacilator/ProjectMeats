@@ -4611,8 +4611,8 @@ services:
     image: postgres:15-alpine
     container_name: projectmeats-db
     environment:
-      POSTGRES_DB: ${{POSTGRES_DB:-{postgres_db}}}
-      POSTGRES_USER: ${{POSTGRES_USER:-{postgres_user}}}
+      POSTGRES_DB: ${{{{POSTGRES_DB:-{postgres_db}}}}}
+      POSTGRES_USER: ${{{{POSTGRES_USER:-{postgres_user}}}}}
       POSTGRES_PASSWORD: ${{POSTGRES_PASSWORD}}
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
@@ -4629,7 +4629,7 @@ services:
       - /tmp
       - /var/run/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${{POSTGRES_USER:-{postgres_user}}} -d ${{POSTGRES_DB:-{postgres_db}}}"]
+      test: ["CMD-SHELL", "pg_isready -U ${{{{POSTGRES_USER:-{postgres_user}}}}} -d ${{{{POSTGRES_DB:-{postgres_db}}}}}"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -4639,7 +4639,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: projectmeats-redis
-    command: redis-server --appendonly yes --requirepass ${{REDIS_PASSWORD}}
+    command: redis-server --appendonly yes --requirepass ${{{{REDIS_PASSWORD}}}}
     volumes:
       - redis_data:/data
     networks:
@@ -4665,8 +4665,8 @@ services:
     container_name: projectmeats-backend
     user: "1000:1000"  # Non-root user
     environment:
-      - DATABASE_URL=postgresql://${{POSTGRES_USER:-{postgres_user}}}:${{POSTGRES_PASSWORD}}@db:5432/${{POSTGRES_DB:-{postgres_db}}}
-      - REDIS_URL=redis://default:${{REDIS_PASSWORD}}@redis:6379/0
+      - DATABASE_URL=postgresql://${{{{POSTGRES_USER:-{postgres_user}}}}}:${{{{POSTGRES_PASSWORD}}}}@db:5432/${{{{POSTGRES_DB:-{postgres_db}}}}}
+      - REDIS_URL=redis://default:${{{{REDIS_PASSWORD}}}}@redis:6379/0
       - DJANGO_SETTINGS_MODULE=projectmeats.settings.production
       - DEBUG=False
       - ALLOWED_HOSTS={domain},www.{domain}
@@ -4764,8 +4764,8 @@ services:
     command: celery -A projectmeats worker -l info --uid=1000 --gid=1000
     user: "1000:1000"
     environment:
-      - DATABASE_URL=postgresql://${{POSTGRES_USER:-{postgres_user}}}:${{POSTGRES_PASSWORD}}@db:5432/${{POSTGRES_DB:-{postgres_db}}}
-      - REDIS_URL=redis://default:${{REDIS_PASSWORD}}@redis:6379/0
+      - DATABASE_URL=postgresql://${{{{POSTGRES_USER:-{postgres_user}}}}}:${{{{POSTGRES_PASSWORD}}}}@db:5432/${{{{POSTGRES_DB:-{postgres_db}}}}}
+      - REDIS_URL=redis://default:${{{{REDIS_PASSWORD}}}}@redis:6379/0
       - DJANGO_SETTINGS_MODULE=projectmeats.settings.production
     volumes:
       - media_volume:/app/media
@@ -4789,7 +4789,7 @@ services:
     image: postgres:15-alpine
     container_name: projectmeats-backup
     environment:
-      PGPASSWORD: ${{POSTGRES_PASSWORD}}
+      PGPASSWORD: ${{{{POSTGRES_PASSWORD}}}}
     volumes:
       - /opt/projectmeats/backups:/backups
     networks:
@@ -4801,7 +4801,7 @@ services:
       sh -c "
         while true; do
           echo 'Starting backup at $(date)'
-          pg_dump -h db -U $${POSTGRES_USER:-{postgres_user}} -d $${POSTGRES_DB:-{postgres_db}} > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
+          pg_dump -h db -U ${{{{POSTGRES_USER:-{postgres_user}}}}} -d ${{{{POSTGRES_DB:-{postgres_db}}}}} > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
           find /backups -name '*.sql' -mtime +7 -delete
           echo 'Backup completed at $(date)'
           sleep 86400
