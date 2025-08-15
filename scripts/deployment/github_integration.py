@@ -97,7 +97,7 @@ class GitHubIntegration:
     def create_deployment_issue(self, deployment_id: str, error_details: Dict[str, Any], 
                               logs: List[DeploymentLogEntry] = None) -> Optional[int]:
         """
-        Create a GitHub issue for deployment failure
+        Create a GitHub issue for deployment failure with @copilot assignment
         
         Args:
             deployment_id: Unique deployment identifier
@@ -114,12 +114,14 @@ class GitHubIntegration:
             error_message = error_details.get('error_message', 'No error message provided')
             timestamp = datetime.now(timezone.utc).isoformat()
             
-            # Create issue title
-            title = f"🚨 Deployment Failed: {deployment_id} - {failed_step}"
+            # Create issue title with enhanced copilot trigger
+            title = f"🚨 Deployment Failed: {deployment_id} - {failed_step} - @copilot please fix"
             
-            # Create detailed issue body
-            body = f"""# Deployment Failure Report
-            
+            # Create detailed issue body with copilot instructions
+            body = f"""# 🚨 Deployment Failure Report - @copilot Please Fix
+
+@copilot This deployment has failed and needs your attention to create a fix. Please analyze the error details below and create a solution.
+
 ## Deployment Information
 - **Deployment ID**: `{deployment_id}`
 - **Timestamp**: {timestamp}
@@ -152,20 +154,29 @@ class GitHubIntegration:
                     body += f"[{log_entry.timestamp}] [{log_entry.level}] {log_entry.message}\n"
                 body += "```\n"
             
-            # Add troubleshooting steps
-            body += """
+            # Add troubleshooting steps and copilot instructions
+            body += f"""
+
+## @copilot Action Required
+
+Please analyze the deployment failure above and:
+1. **Identify the root cause** of the error in step `{failed_step}`
+2. **Create a pull request** with fixes for the identified issues
+3. **Test the fixes** to ensure they resolve the deployment failure
+4. **Document any changes** made to prevent future occurrences
+
 ## Suggested Troubleshooting Steps
 
 1. **Check Server Connectivity**:
    ```bash
-   ssh root@{server}
+   ssh root@{server_info.get('hostname', 'unknown')}
    systemctl status nginx postgresql
    ```
 
 2. **Verify Domain Configuration**:
    ```bash
-   nslookup {domain}
-   curl -I http://{domain}/health
+   nslookup {server_info.get('domain', 'unknown')}
+   curl -I http://{server_info.get('domain', 'unknown')}/health
    ```
 
 3. **Check Application Logs**:
@@ -176,32 +187,34 @@ class GitHubIntegration:
 
 4. **Re-run Deployment**:
    ```bash
-   python ai_deployment_orchestrator.py --server {server} --domain {domain}
+   python ai_deployment_orchestrator.py --server {server_info.get('hostname', 'unknown')} --domain {server_info.get('domain', 'unknown')}
    ```
 
-## Auto-Generated Tags
-- deployment-failure
-- needs-investigation
-- server-{server_tag}
+## Auto-Generated Tags for @copilot
+- deployment-failure: Indicates this is a deployment issue
+- copilot-fix-needed: Requests @copilot to create a fix
+- needs-investigation: Requires deep analysis
+- server-{server_info.get('hostname', 'unknown').replace('.', '-')}: Server-specific issue
+- step-{failed_step.replace('_', '-')}: Failed at specific deployment step
 
 ---
-*This issue was automatically created by the AI Deployment Orchestrator*
-""".format(
-                server=server_info.get('hostname', 'unknown'),
-                domain=server_info.get('domain', 'unknown'),
-                server_tag=server_info.get('hostname', 'unknown').replace('.', '-')
-            )
+*This issue was automatically created by the AI Deployment Orchestrator and assigned to @copilot for automatic resolution.*
+"""
             
-            # Create GitHub issue
+            # Create GitHub issue with @copilot assignment
             issue_data = {
                 "title": title,
                 "body": body,
                 "labels": [
                     "deployment-failure",
+                    "copilot-fix-needed",  # Special label to trigger @copilot attention
                     "auto-generated",
                     "needs-investigation",
-                    f"server-{server_info.get('hostname', 'unknown').replace('.', '-')}"
-                ]
+                    "priority-high",  # High priority for deployment failures
+                    f"server-{server_info.get('hostname', 'unknown').replace('.', '-')}",
+                    f"step-{failed_step.replace('_', '-')}"  # Step-specific label
+                ],
+                "assignees": ["copilot"]  # Automatically assign to @copilot
             }
             
             response = self.session.post(
@@ -212,7 +225,7 @@ class GitHubIntegration:
             if response.status_code == 201:
                 issue = response.json()
                 issue_number = issue['number']
-                self.logger.info(f"Created GitHub issue #{issue_number} for deployment failure")
+                self.logger.info(f"Created GitHub issue #{issue_number} for deployment failure with @copilot assignment")
                 return issue_number
             else:
                 self.logger.error(f"Failed to create GitHub issue: {response.status_code} - {response.text}")
@@ -220,6 +233,133 @@ class GitHubIntegration:
                 
         except Exception as e:
             self.logger.error(f"Error creating GitHub issue: {e}")
+            return None
+                
+    def create_deployment_fix_pr(self, deployment_id: str, error_details: Dict[str, Any], 
+                              logs: List[DeploymentLogEntry] = None) -> Optional[int]:
+        """
+        Create a GitHub PR for deployment failure fixes (for critical failures)
+        
+        Args:
+            deployment_id: Unique deployment identifier
+            error_details: Dictionary containing error information
+            logs: Optional deployment logs to include
+            
+        Returns:
+            PR number if successful, None if failed
+        """
+        try:
+            # Format error details
+            server_info = error_details.get('server_info', {})
+            failed_step = error_details.get('failed_step', 'Unknown')
+            error_message = error_details.get('error_message', 'No error message provided')
+            timestamp = datetime.now(timezone.utc).isoformat()
+            
+            # Create branch name for the fix
+            branch_name = f"fix/deployment-{deployment_id}-{failed_step}".replace('_', '-').replace(' ', '-').lower()[:50]
+            
+            # Create PR title
+            title = f"🔧 Fix deployment failure: {failed_step} ({deployment_id})"
+            
+            # Create detailed PR body
+            body = f"""# 🔧 Deployment Failure Fix for {deployment_id}
+
+## Problem
+Deployment failed at step `{failed_step}` with the following error:
+
+```
+{error_message}
+```
+
+## Server Information
+- **Server**: {server_info.get('hostname', 'Unknown')}
+- **Domain**: {server_info.get('domain', 'Unknown')} 
+- **Timestamp**: {timestamp}
+
+## Proposed Solution
+@copilot Please implement fixes for the deployment failure identified above.
+
+## Testing Checklist
+- [ ] Verify fix addresses the root cause in `{failed_step}` step
+- [ ] Test deployment script with fix applied
+- [ ] Ensure no regression in other deployment steps
+- [ ] Validate on target server: {server_info.get('hostname', 'Unknown')}
+
+## Deployment Logs
+"""
+            
+            # Add recent logs if provided
+            if logs:
+                body += "\n```\n"
+                for log_entry in logs[-10:]:  # Last 10 log entries
+                    body += f"[{log_entry.timestamp}] [{log_entry.level}] {log_entry.message}\n"
+                body += "```\n"
+                
+            body += f"""
+---
+*This PR was automatically created for deployment failure {deployment_id} and assigned to @copilot for resolution.*
+"""
+
+            # First, try to create the branch (this may fail if branch exists, that's ok)
+            try:
+                # Get the latest main branch SHA
+                main_ref_response = self.session.get(f"{self.base_url}/git/refs/heads/main")
+                if main_ref_response.status_code == 200:
+                    main_sha = main_ref_response.json()['object']['sha']
+                    
+                    # Create new branch
+                    branch_data = {
+                        "ref": f"refs/heads/{branch_name}",
+                        "sha": main_sha
+                    }
+                    
+                    branch_response = self.session.post(
+                        f"{self.base_url}/git/refs",
+                        json=branch_data
+                    )
+                    # Branch creation may fail if exists, continue anyway
+            except Exception:
+                pass  # Continue even if branch creation fails
+            
+            # Create GitHub PR
+            pr_data = {
+                "title": title,
+                "head": branch_name,
+                "base": "main", 
+                "body": body,
+                "draft": False,
+                "maintainer_can_modify": True
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/pulls",
+                json=pr_data
+            )
+            
+            if response.status_code == 201:
+                pr = response.json()
+                pr_number = pr['number']
+                self.logger.info(f"Created GitHub PR #{pr_number} for deployment failure with @copilot assignment")
+                
+                # Add @copilot as assignee to the PR
+                try:
+                    assign_data = {"assignees": ["copilot"]}
+                    assign_response = self.session.post(
+                        f"{self.base_url}/issues/{pr_number}/assignees",
+                        json=assign_data
+                    )
+                    if assign_response.status_code == 201:
+                        self.logger.info(f"Assigned @copilot to PR #{pr_number}")
+                except Exception as e:
+                    self.logger.warning(f"Could not assign @copilot to PR: {e}")
+                
+                return pr_number
+            else:
+                self.logger.error(f"Failed to create GitHub PR: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error creating GitHub PR: {e}")
             return None
     
     def post_deployment_log(self, deployment_id: str, logs: List[DeploymentLogEntry], 
@@ -444,6 +584,13 @@ class DeploymentLogManager:
             return None
             
         return self.github.create_deployment_issue(self.deployment_id, error_details, self.logs)
+    
+    def create_failure_pr(self, error_details: Dict[str, Any]) -> Optional[int]:
+        """Create a GitHub PR for critical deployment failure fixes"""
+        if not self.github:
+            return None
+            
+        return self.github.create_deployment_fix_pr(self.deployment_id, error_details, self.logs)
     
     def update_status(self, status: str, target_url: Optional[str] = None) -> bool:
         """Update deployment status on GitHub"""

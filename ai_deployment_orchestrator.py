@@ -19,6 +19,7 @@ Features:
 - State persistence and rollback capabilities
 - Comprehensive logging and reporting
 - GitHub PAT authentication support
+- Automatic @copilot assignment for deployment failures
 
 Usage:
     # Interactive setup and deployment
@@ -27,7 +28,7 @@ Usage:
     # Automated deployment with configuration
     python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --auto
     
-    # With GitHub authentication (recommended for private repos)
+    # With GitHub authentication (recommended for @copilot integration)
     python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --github-user=USERNAME --github-token=TOKEN
     
     # Test connection and validate server
@@ -35,6 +36,13 @@ Usage:
     
     # Resume failed deployment
     python ai_deployment_orchestrator.py --resume --deployment-id=abc123
+
+GitHub Integration:
+    When deployment failures occur, the orchestrator automatically:
+    - Creates GitHub issues assigned to @copilot for automatic fixing
+    - Includes comprehensive error details and troubleshooting steps
+    - For critical failures, also creates PRs with dedicated fix branches
+    - Uses PAT credentials from --github-token parameter or GITHUB_TOKEN env var
 
 Author: ProjectMeats AI Assistant
 """
@@ -74,7 +82,7 @@ except ImportError:
 
 # Import GitHub integration
 try:
-    from github_integration import GitHubIntegration, DeploymentLogManager, DeploymentLogEntry
+    from scripts.deployment.github_integration import GitHubIntegration, DeploymentLogManager, DeploymentLogEntry
     GITHUB_INTEGRATION_AVAILABLE = True
 except ImportError:
     GITHUB_INTEGRATION_AVAILABLE = False
@@ -1680,11 +1688,11 @@ class AIDeploymentOrchestrator:
             self.disconnect_from_server()
     
     def _handle_deployment_failure(self, failed_step: str, error_message: str):
-        """Handle deployment failure with GitHub integration"""
+        """Handle deployment failure with GitHub integration and @copilot assignment"""
         self.log(f"Deployment failed at step: {failed_step}", "CRITICAL")
         self.log(f"Error: {error_message}", "CRITICAL")
         
-        # Update GitHub status and create issue
+        # Update GitHub status and create issue with @copilot assignment
         if self.github_log_manager:
             self.github_log_manager.update_status("failure")
             
@@ -1697,10 +1705,24 @@ class AIDeploymentOrchestrator:
                 "total_steps": len(self.deployment_steps)
             }
             
-            # Create GitHub issue for the failure
+            # Determine if this is a critical failure that needs a PR
+            critical_steps = ["server_connection", "configure_backend", "setup_webserver", "final_verification"]
+            is_critical = failed_step in critical_steps
+            
+            # Create GitHub issue for the failure with @copilot assignment
             issue_number = self.github_log_manager.create_failure_issue(error_details)
             if issue_number:
-                self.log(f"Created GitHub issue #{issue_number} for deployment failure", "INFO")
+                self.log(f"✅ Created GitHub issue #{issue_number} with @copilot assignment for deployment failure", "INFO")
+                
+                # For critical failures, also create a PR to expedite the fix
+                if is_critical:
+                    pr_number = self.github_log_manager.create_failure_pr(error_details)
+                    if pr_number:
+                        self.log(f"✅ Created GitHub PR #{pr_number} with @copilot assignment for critical deployment failure", "INFO")
+                    else:
+                        self.log("⚠️ Could not create GitHub PR, but issue was created successfully", "WARNING")
+            else:
+                self.log("❌ Failed to create GitHub issue - @copilot will not be automatically notified", "ERROR")
             
             # Post final logs
             self.github_log_manager.post_final_logs("failed")
