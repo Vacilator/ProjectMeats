@@ -886,9 +886,7 @@ class AIDeploymentOrchestrator:
             "apt purge -y nodejs npm libnode-dev || true",
             "apt autoremove -y",
             "apt clean",
-            "curl -fsSL https://deb.nodesource.com/setup_18.x | bash -",
-            "apt update",
-            "apt install -y nodejs"
+            "curl -fsSL https://deb.nodesource.com/setup_18.x | bash -"
         ]
         
         for cmd in commands:
@@ -896,6 +894,17 @@ class AIDeploymentOrchestrator:
             if exit_code != 0 and "curl" not in cmd:  # Allow curl to potentially fail
                 self.log(f"Node.js fix command failed: {cmd}", "ERROR")
                 return False
+        
+        # Use enhanced update_package_lists instead of raw apt update
+        if not self.update_package_lists():
+            self.log("Package list update failed during Node.js fix", "WARNING")
+            # Continue anyway as we might still be able to install Node.js
+        
+        # Try to install Node.js
+        exit_code, stdout, stderr = self.execute_command("apt install -y nodejs")
+        if exit_code != 0:
+            self.log(f"Node.js installation failed: {stderr}", "ERROR")
+            return False
         
         # Verify installation
         exit_code, stdout, stderr = self.execute_command("node --version")
