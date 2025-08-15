@@ -158,27 +158,37 @@ fi
 log_info "Starting services..."
 systemctl restart nginx
 
-# Start ProjectMeats service with detailed error handling
+# Start ProjectMeats service with enhanced error handling
+log_info "Starting ProjectMeats service with diagnostics..."
 if ! systemctl start projectmeats; then
     log_error "Failed to start ProjectMeats service"
-    log_info "Checking service status..."
-    systemctl status projectmeats --no-pager -l
-    log_info "Checking recent logs..."
-    journalctl -u projectmeats -n 20 --no-pager
     
-    # Check if critical files exist
-    log_info "Verifying critical files..."
-    if [[ ! -f "/etc/projectmeats/projectmeats.env" ]]; then
-        log_error "Missing environment file: /etc/projectmeats/projectmeats.env"
-    fi
-    if [[ ! -f "/opt/projectmeats/venv/bin/gunicorn" ]]; then
-        log_error "Missing gunicorn: /opt/projectmeats/venv/bin/gunicorn"
-    fi
-    if [[ ! -f "/opt/projectmeats/backend/projectmeats/wsgi.py" ]]; then
-        log_error "Missing WSGI file: /opt/projectmeats/backend/projectmeats/wsgi.py"
+    # Run enhanced diagnostics
+    log_info "Running enhanced service diagnostics..."
+    if [ -f "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" ]; then
+        "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" "$PROJECT_DIR" 2>&1 | tee -a /var/log/projectmeats/deployment_errors.log
+    else
+        log_warning "Enhanced diagnostics not available, using basic checks..."
+        
+        log_info "Checking service status..."
+        systemctl status projectmeats --no-pager -l
+        log_info "Checking recent logs..."
+        journalctl -xeu projectmeats -n 30 --no-pager | tee -a /var/log/projectmeats/deployment_errors.log
+        
+        # Check if critical files exist
+        log_info "Verifying critical files..."
+        if [[ ! -f "/etc/projectmeats/projectmeats.env" ]]; then
+            log_error "Missing environment file: /etc/projectmeats/projectmeats.env"
+        fi
+        if [[ ! -f "/opt/projectmeats/venv/bin/gunicorn" ]]; then
+            log_error "Missing gunicorn: /opt/projectmeats/venv/bin/gunicorn"
+        fi
+        if [[ ! -f "/opt/projectmeats/backend/projectmeats/wsgi.py" ]]; then
+            log_error "Missing WSGI file: /opt/projectmeats/backend/projectmeats/wsgi.py"
+        fi
     fi
     
-    log_warning "Service failed to start - continuing with manual verification"
+    log_warning "Service failed to start - check /var/log/projectmeats/deployment_errors.log for details"
 else
     log_success "ProjectMeats service started successfully"
 fi

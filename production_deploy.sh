@@ -353,11 +353,62 @@ ufw allow OpenSSH
 ufw allow 'Nginx Full'
 ufw --force enable
 
-# Start services
+# Start services with fallback logic
 log_header "🚀 Starting Services"
 systemctl daemon-reload
 systemctl enable projectmeats
-systemctl start projectmeats
+
+# Attempt to start the main service
+log_info "Starting ProjectMeats service..."
+if systemctl start projectmeats; then
+    log_success "✅ ProjectMeats service started successfully"
+else
+    log_error "❌ Main service failed to start, attempting diagnostics and fallback..."
+    
+    # Run diagnostics if available
+    if [ -f "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" ]; then
+        log_info "Running service diagnostics..."
+        "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" "$PROJECT_DIR" 2>&1 | tee /var/log/projectmeats/deployment_errors.log
+    fi
+    
+    # Check if socket activation is the issue
+    if systemctl list-unit-files | grep -q "projectmeats.socket"; then
+        log_info "Attempting socket-based service fallback..."
+        
+        # Try socket activation
+        systemctl enable projectmeats.socket
+        systemctl start projectmeats.socket
+        sleep 3
+        systemctl start projectmeats
+        
+        if systemctl is-active --quiet projectmeats; then
+            log_success "✅ Socket-based service started successfully"
+        else
+            log_warning "⚠️ Socket activation failed, trying port-based fallback..."
+            
+            # Stop socket service
+            systemctl stop projectmeats || true
+            systemctl stop projectmeats.socket || true
+            systemctl disable projectmeats.socket || true
+            
+            # Copy and use port-based service
+            if [ -f "$PROJECT_DIR/deployment/systemd/projectmeats-port.service" ]; then
+                cp "$PROJECT_DIR/deployment/systemd/projectmeats-port.service" /etc/systemd/system/projectmeats.service
+                systemctl daemon-reload
+                systemctl enable projectmeats
+                
+                if systemctl start projectmeats; then
+                    log_success "✅ Port-based fallback service started successfully"
+                    log_info "💡 Using TCP port 8000 instead of Unix socket"
+                else
+                    log_error "❌ All service start attempts failed"
+                    log_info "Check /var/log/projectmeats/deployment_errors.log for details"
+                fi
+            fi
+        fi
+    fi
+fi
+
 systemctl enable nginx
 systemctl restart nginx
 

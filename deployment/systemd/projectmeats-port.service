@@ -1,5 +1,5 @@
 [Unit]
-Description=ProjectMeats Django Application
+Description=ProjectMeats Django Application (Port-based fallback)
 Documentation=https://github.com/Vacilator/ProjectMeats
 After=network.target postgresql.service
 Wants=postgresql.service
@@ -16,11 +16,11 @@ Environment=DJANGO_SETTINGS_MODULE=apps.settings.production
 Environment=PYTHONPATH=/opt/projectmeats/backend
 EnvironmentFile=-/etc/projectmeats/projectmeats.env
 EnvironmentFile=-/opt/projectmeats/.env.production
+EnvironmentFile=-/opt/projectmeats/backend/.env
 ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --bind 127.0.0.1:8000 \
     --workers 3 \
-    --worker-class gthread \
-    --threads 2 \
+    --worker-class sync \
     --worker-connections 1000 \
     --max-requests 1000 \
     --max-requests-jitter 100 \
@@ -28,7 +28,6 @@ ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --access-logfile /var/log/projectmeats/access.log \
     --error-logfile /var/log/projectmeats/error.log \
     --log-level info \
-    --pid /var/run/projectmeats/gunicorn.pid \
     --timeout 120 \
     --graceful-timeout 30 \
     projectmeats.wsgi:application
