@@ -97,27 +97,26 @@ if [[ ! -f /etc/projectmeats/projectmeats.env ]]; then
     if [[ -f deployment/env.production.template ]]; then
         cp deployment/env.production.template /etc/projectmeats/projectmeats.env
     else
-        # Create basic environment file
+        # Create basic environment file with proper quoting
         cat > /etc/projectmeats/projectmeats.env << 'EOF'
 DJANGO_SETTINGS_MODULE=apps.settings.production
 DEBUG=False
-SECRET_KEY=temp-key-change-me
-ALLOWED_HOSTS=meatscentral.com,www.meatscentral.com,127.0.0.1,localhost
-DATABASE_URL=postgres://projectmeats_user:ProjectMeats2024!@localhost:5432/projectmeats_db
-CORS_ALLOWED_ORIGINS=https://meatscentral.com,https://www.meatscentral.com
-CSRF_TRUSTED_ORIGINS=https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com
+SECRET_KEY="temp-key-change-me"
+ALLOWED_HOSTS="meatscentral.com,www.meatscentral.com,127.0.0.1,localhost"
+DATABASE_URL="postgres://projectmeats_user:ProjectMeats2024!@localhost:5432/projectmeats_db"
+CORS_ALLOWED_ORIGINS="https://meatscentral.com,https://www.meatscentral.com"
+CSRF_TRUSTED_ORIGINS="https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com"
 LOG_LEVEL=INFO
 EOF
     fi
     
-    # Generate a secret key and escape special characters for sed
-    SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())" 2>/dev/null || echo "django-insecure-$(openssl rand -hex 25)")
-    # Escape special characters for sed
-    ESCAPED_SECRET_KEY=$(printf '%s\n' "$SECRET_KEY" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    # Generate a secret key using safer character set
+    SECRET_KEY=$(python3 -c "import secrets; print(''.join(secrets.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*-_=+') for _ in range(50)))" 2>/dev/null || echo "django-insecure-$(openssl rand -hex 25)")
     
-    sed -i "s/your-super-secret-key-change-this-in-production/$ESCAPED_SECRET_KEY/" /etc/projectmeats/projectmeats.env
-    sed -i "s/temp-key-change-me/$ESCAPED_SECRET_KEY/" /etc/projectmeats/projectmeats.env
-    sed -i "s/your_db_password/ProjectMeats2024!/" /etc/projectmeats/projectmeats.env
+    # Use sed with proper delimiter to avoid issues with special characters
+    sed -i 's|"temp-key-change-me"|"'"$SECRET_KEY"'"|' /etc/projectmeats/projectmeats.env
+    sed -i 's|your-super-secret-key-change-this-in-production|'"$SECRET_KEY"'|' /etc/projectmeats/projectmeats.env
+    sed -i 's|your_db_password|ProjectMeats2024!|' /etc/projectmeats/projectmeats.env
     
     # Set proper permissions - use projectmeats user
     chown projectmeats:www-data /etc/projectmeats/projectmeats.env

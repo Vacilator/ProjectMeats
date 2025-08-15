@@ -330,8 +330,9 @@ class ProductionDeployment:
     
     def generate_secret_key(self):
         """Generate a secure Django secret key"""
+        # Use only alphanumeric and safe special characters to avoid bash parsing issues
         return ''.join(secrets.choice(
-            'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(-_=+)'
+            'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*-_=+'
         ) for _ in range(50))
     
     def generate_password(self, length=16):

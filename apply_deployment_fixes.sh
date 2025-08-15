@@ -49,22 +49,22 @@ if [[ ! -f "/etc/projectmeats/projectmeats.env" ]]; then
     
     mkdir -p /etc/projectmeats
     
-    # Generate a random secret key
-    SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())" 2>/dev/null || echo "django-insecure-$(openssl rand -hex 25)")
+    # Generate a random secret key using safe characters
+    SECRET_KEY=$(python3 -c "import secrets; print(''.join(secrets.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*-_=+') for _ in range(50)))" 2>/dev/null || echo "django-insecure-$(openssl rand -hex 25)")
     
     cat > /etc/projectmeats/projectmeats.env << EOF
 # Django Configuration
 DEBUG=False
-SECRET_KEY='$SECRET_KEY'
-ALLOWED_HOSTS=localhost,127.0.0.1,meatscentral.com,www.meatscentral.com
+SECRET_KEY="$SECRET_KEY"
+ALLOWED_HOSTS="localhost,127.0.0.1,meatscentral.com,www.meatscentral.com"
 DJANGO_SETTINGS_MODULE=apps.settings.production
 
 # Database Configuration
-DATABASE_URL=postgres://projectmeats_user:ProjectMeats2024!@localhost:5432/projectmeats_db
+DATABASE_URL="postgres://projectmeats_user:ProjectMeats2024!@localhost:5432/projectmeats_db"
 
 # Security Settings
-CORS_ALLOWED_ORIGINS=https://meatscentral.com,https://www.meatscentral.com
-CSRF_TRUSTED_ORIGINS=https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com,http://www.meatscentral.com
+CORS_ALLOWED_ORIGINS="https://meatscentral.com,https://www.meatscentral.com"
+CSRF_TRUSTED_ORIGINS="https://meatscentral.com,https://www.meatscentral.com,http://meatscentral.com,http://www.meatscentral.com"
 
 # Static and Media Files
 STATIC_URL=/django_static/
