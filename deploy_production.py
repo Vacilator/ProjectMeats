@@ -1351,7 +1351,7 @@ log_success "Deployment completed! 🚀"
 
         # Function to parse dig output properly
         def parse_dig_output(domain):
-            """Parse dig output using improved method from problem statement: 'dig +short A domain'"""
+            """Parse dig output using the '+short' flag to extract the IPv4 address for the given domain."""
             try:
                 # Use the exact parsing method from problem statement: dig +short A domain
                 result = subprocess.run(
