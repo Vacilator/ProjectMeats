@@ -142,7 +142,12 @@ def test_deployment_script_socket_fixes():
     content = script_file.read_text()
     
     has_chown = "chown projectmeats:www-data /run/projectmeats.sock" in content
-    has_chmod = "chmod 660 /run/projectmeats.sock" in content
+    # Use regex to match chown command with flexible whitespace and optional quoting
+    chown_pattern = r'chown\s+projectmeats:www-data\s+["\']?/run/projectmeats\.sock["\']?'
+    has_chown = re.search(chown_pattern, content) is not None
+    # Use regex to match chmod command with flexible whitespace and optional quoting
+    chmod_pattern = r'chmod\s+660\s+["\']?/run/projectmeats\.sock["\']?'
+    has_chmod = re.search(chmod_pattern, content) is not None
     
     print(f"  Socket chown command: {'✅' if has_chown else '❌'}")
     print(f"  Socket chmod command: {'✅' if has_chmod else '❌'}")
