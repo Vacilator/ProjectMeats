@@ -126,10 +126,14 @@ sudo -u projectmeats bash -c "source venv/bin/activate && pip install -r backend
 
 # Create production environment file
 log_info "Creating production environment configuration..."
+
+# Generate SECRET_KEY first, then use it in the file
+SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
+
 cat > $PROJECT_DIR/.env.production << EOF
 # Django Configuration
 DEBUG=False
-SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
+SECRET_KEY='$SECRET_KEY'
 ALLOWED_HOSTS=localhost,127.0.0.1,$DOMAIN,www.$DOMAIN
 
 # Database Configuration  
@@ -145,6 +149,16 @@ MEDIA_URL=/media/
 EOF
 
 chown projectmeats:projectmeats $PROJECT_DIR/.env.production
+
+# Validate environment file syntax
+log_info "Validating environment file syntax..."
+if bash -n $PROJECT_DIR/.env.production; then
+    log_success "✓ Environment file syntax is valid"
+else
+    log_error "✗ Environment file syntax error detected"
+    cat $PROJECT_DIR/.env.production
+    exit 1
+fi
 
 # Run Django setup
 log_info "Running Django migrations and collecting static files..."

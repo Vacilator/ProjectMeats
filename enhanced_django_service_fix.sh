@@ -94,13 +94,28 @@ setup_environment() {
     mkdir -p "$PROJECT_DIR/backend/media"
     mkdir -p "$PROJECT_DIR/backend/staticfiles"
     
-    # Set proper ownership
-    chown -R www-data:www-data /var/log/projectmeats
-    chown -R www-data:www-data /var/run/projectmeats
-    chown -R www-data:www-data "$PROJECT_DIR/backend/media"
-    chown -R www-data:www-data "$PROJECT_DIR/backend/staticfiles"
+    # Set proper ownership - use projectmeats user instead of www-data
+    chown -R projectmeats:www-data /var/log/projectmeats
+    chown -R projectmeats:www-data /var/run/projectmeats
+    chown -R projectmeats:www-data "$PROJECT_DIR/backend/media"
+    chown -R projectmeats:www-data "$PROJECT_DIR/backend/staticfiles"
     
-    log_success "Directories created and permissions set"
+    # Set directory permissions - ensure writable by projectmeats user
+    chmod 775 /var/log/projectmeats
+    chmod 775 /var/run/projectmeats
+    chmod 755 /etc/projectmeats
+    chmod 775 "$PROJECT_DIR/backend/media"
+    chmod 775 "$PROJECT_DIR/backend/staticfiles"
+    
+    # Pre-create log files with proper permissions
+    touch /var/log/projectmeats/error.log
+    touch /var/log/projectmeats/access.log
+    chown projectmeats:www-data /var/log/projectmeats/error.log
+    chown projectmeats:www-data /var/log/projectmeats/access.log
+    chmod 664 /var/log/projectmeats/error.log
+    chmod 664 /var/log/projectmeats/access.log
+    
+    log_success "Directories created and permissions set for projectmeats user"
 }
 
 # Step 2: Python Virtual Environment
@@ -160,7 +175,7 @@ setup_environment_config() {
         cat > /etc/projectmeats/projectmeats.env << EOF
 # Django Configuration
 DEBUG=False
-SECRET_KEY=$SECRET_KEY
+SECRET_KEY='$SECRET_KEY'
 ALLOWED_HOSTS=localhost,127.0.0.1,meatscentral.com,www.meatscentral.com
 DJANGO_SETTINGS_MODULE=apps.settings.production
 
@@ -180,10 +195,20 @@ LOG_LEVEL=INFO
 EOF
         
         # Set proper permissions
-        chown www-data:www-data /etc/projectmeats/projectmeats.env
+        chown projectmeats:www-data /etc/projectmeats/projectmeats.env
         chmod 640 /etc/projectmeats/projectmeats.env
         
-        log_success "Environment configuration created"
+        # Validate environment file syntax
+        log_info "Validating environment file syntax..."
+        if bash -n /etc/projectmeats/projectmeats.env; then
+            log_success "✓ Environment file syntax is valid"
+        else
+            log_error "✗ Environment file syntax error detected"
+            cat /etc/projectmeats/projectmeats.env
+            exit 1
+        fi
+        
+        log_success "Environment configuration created and validated"
     else
         log_info "Environment configuration already exists"
     fi

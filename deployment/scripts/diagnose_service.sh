@@ -53,6 +53,13 @@ check_service_status() {
         log_info "Service journal output (last 50 lines):"
         journalctl -xeu "$SERVICE_NAME" --no-pager -n 50 | tee -a "$ERROR_LOG"
         
+        # Capture additional systemctl output for debugging
+        log_info "Capturing additional systemctl diagnostics..."
+        echo "=== systemctl show output ===" >> "$ERROR_LOG"
+        systemctl show "$SERVICE_NAME" >> "$ERROR_LOG" 2>&1
+        echo "=== systemctl list-dependencies ===" >> "$ERROR_LOG"
+        systemctl list-dependencies "$SERVICE_NAME" >> "$ERROR_LOG" 2>&1
+        
         return 1
     fi
 }
@@ -174,12 +181,26 @@ check_dependencies() {
     log_info "Checking critical Python packages..."
     
     local missing_packages=""
-    local required_packages=("django" "djangorestframework" "gunicorn" "psycopg" "dj-database-url")
     
-    for package in "${required_packages[@]}"; do
-        if ! python -c "import ${package//-/_}" 2>/dev/null; then
-            missing_packages="$missing_packages $package"
-            log_error "❌ Missing package: $package"
+    # Check packages with proper import names
+    declare -A package_imports=(
+        ["django"]="django"
+        ["djangorestframework"]="rest_framework"
+        ["gunicorn"]="gunicorn"
+        ["psycopg"]="psycopg"
+        ["dj-database-url"]="dj_database_url"
+    )
+    
+    for package in "${!package_imports[@]}"; do
+        import_name="${package_imports[$package]}"
+        if ! python -c "import $import_name" 2>/dev/null; then
+            # Double-check with pip show command for more accuracy
+            if ! pip show "$package" >/dev/null 2>&1; then
+                missing_packages="$missing_packages $package"
+                log_error "❌ Missing package: $package"
+            else
+                log_success "✅ Package available: $package (verified with pip show)"
+            fi
         else
             log_success "✅ Package available: $package"
         fi
@@ -188,6 +209,17 @@ check_dependencies() {
     if [ -n "$missing_packages" ]; then
         log_error "Missing packages:$missing_packages"
         log_to_file "ERROR: Missing packages:$missing_packages"
+        
+        # Enhanced logging - capture full pip list and environment details
+        log_info "Capturing environment details for debugging..."
+        echo "=== Full pip list ===" >> "$ERROR_LOG"
+        pip list >> "$ERROR_LOG" 2>&1
+        echo "=== Gunicorn version ===" >> "$ERROR_LOG"
+        gunicorn --version >> "$ERROR_LOG" 2>&1 || echo "Gunicorn not found" >> "$ERROR_LOG"
+        echo "=== Python site info ===" >> "$ERROR_LOG"
+        python -m site >> "$ERROR_LOG" 2>&1
+        echo "=== Environment PATH ===" >> "$ERROR_LOG"
+        echo "$PATH" >> "$ERROR_LOG"
         
         log_info "Attempting to install missing packages..."
         pip install $missing_packages 2>&1 | tee -a "$ERROR_LOG"

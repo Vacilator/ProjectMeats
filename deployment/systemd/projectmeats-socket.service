@@ -18,6 +18,7 @@ Environment=PYTHONPATH=/opt/projectmeats/backend
 EnvironmentFile=-/etc/projectmeats/projectmeats.env
 EnvironmentFile=-/opt/projectmeats/.env.production
 EnvironmentFile=-/opt/projectmeats/backend/.env
+ExecStartPre=/opt/projectmeats/deployment/scripts/pre_start_service.sh
 ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --workers 3 \
     --worker-class sync \
@@ -33,11 +34,13 @@ ExecStart=/opt/projectmeats/venv/bin/gunicorn \
     --graceful-timeout 30 \
     projectmeats.wsgi:application
 ExecReload=/bin/kill -s HUP $MAINPID
+ExecStopPost=/bin/sh -c 'journalctl -u projectmeats.service -n 50 >> /var/log/projectmeats/post_failure.log'
 KillMode=mixed
 TimeoutStopSec=5
+SuccessExitStatus=0 1
 PrivateTmp=true
 Restart=always
-RestartSec=10
+RestartSec=5
 
 # Security settings
 NoNewPrivileges=true
