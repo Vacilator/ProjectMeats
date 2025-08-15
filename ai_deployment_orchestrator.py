@@ -1051,6 +1051,73 @@ class AIDeploymentOrchestrator:
         self.log("Django service appears to be healthy", "SUCCESS")
         return False
     
+    def _check_migration_status(self) -> bool:
+        """Check if there are pending migrations"""
+        self.log("Checking Django migration status...", "INFO")
+        
+        # Check if migrations are pending
+        exit_code, stdout, stderr = self.execute_command(
+            "cd /opt/projectmeats/backend && ./venv/bin/python manage.py showmigrations --plan | grep '\\[ \\]'"
+        )
+        if exit_code == 0 and stdout.strip():
+            pending_count = len(stdout.strip().split('\n'))
+            self.log(f"Found {pending_count} pending migrations", "WARNING")
+            return True
+        
+        self.log("No pending migrations found", "SUCCESS")
+        return False
+    
+    def _run_migrations_safely(self) -> bool:
+        """Run Django migrations with proper error handling and resume capability"""
+        self.log("Preparing to run Django migrations safely...", "INFO")
+        
+        # Check current migration status
+        pending_migrations = self._check_migration_status()
+        
+        if not pending_migrations:
+            self.log("All migrations are already applied", "SUCCESS")
+            return True
+        
+        # Run migrations with extended timeout and verbose logging
+        self.log("Running Django migrations with extended timeout (up to 20 minutes)...", "INFO")
+        self.log("This may take several minutes as database indexes are being created...", "INFO")
+        
+        migration_timeout = 1200  # 20 minutes
+        
+        try:
+            exit_code, stdout, stderr = self.execute_command(
+                "cd /opt/projectmeats/backend && ./venv/bin/python manage.py migrate --verbosity=2 --no-input",
+                timeout=migration_timeout
+            )
+            
+            if exit_code == 0:
+                self.log("Django migrations completed successfully", "SUCCESS")
+                
+                # Verify all migrations were applied
+                remaining_migrations = self._check_migration_status()
+                if not remaining_migrations:
+                    self.log("All migrations have been successfully applied", "SUCCESS")
+                    return True
+                else:
+                    self.log("Some migrations may still be pending after completion", "WARNING")
+                    return False
+            else:
+                self.log(f"Migration command failed with exit code {exit_code}", "ERROR")
+                if stderr:
+                    self.log(f"Migration error output: {stderr}", "ERROR")
+                
+                # Check if some migrations were applied before the failure
+                remaining_migrations = self._check_migration_status()
+                if remaining_migrations:
+                    self.log("Some migrations may have been applied before the failure occurred", "WARNING")
+                    self.log("Subsequent deployment attempts will resume from the last successful migration", "INFO")
+                
+                return False
+                
+        except Exception as e:
+            self.log(f"Exception during migration: {e}", "ERROR")
+            return False
+    
     def _run_django_service_fix(self, fix_script_path: str) -> bool:
         """Run the Django service fix script"""
         self.log("Running Django service fix script...", "INFO", Colors.BOLD + Colors.YELLOW)
@@ -3310,10 +3377,16 @@ sudo systemctl reload postgresql
             if exit_code != 0:
                 self.log(f"Ownership command failed: {cmd}", "WARNING")
         
-        # Step 5: Run Django management commands
+        # Step 5: Run Django management commands safely
         self.log("Running Django management commands...", "INFO")
+        
+        # Run migrations safely with proper timeout and resume capability
+        if not self._run_migrations_safely():
+            self.log("Django migrations failed", "ERROR")
+            return False
+        
+        # Run other Django commands with normal timeout
         django_commands = [
-            "cd /opt/projectmeats/backend && ../venv/bin/python manage.py migrate",
             "cd /opt/projectmeats/backend && ../venv/bin/python manage.py collectstatic --noinput",
             "cd /opt/projectmeats/backend && ../venv/bin/python manage.py check --deploy"
         ]
@@ -3403,9 +3476,14 @@ sudo systemctl reload postgresql
         # Also set for current session
         self.execute_command("export DJANGO_SETTINGS_MODULE=apps.settings.settings")
         
-        # Run Django management commands
+        # Run Django management commands safely
+        # Run migrations safely with proper timeout and resume capability
+        if not self._run_migrations_safely():
+            self.log("Django migrations failed", "ERROR")
+            return False
+        
+        # Run other Django commands with normal timeout
         django_commands = [
-            "cd /opt/projectmeats/backend && ./venv/bin/python manage.py migrate",
             "cd /opt/projectmeats/backend && ./venv/bin/python manage.py collectstatic --noinput",
             "cd /opt/projectmeats/backend && ./venv/bin/python manage.py check --deploy"
         ]
