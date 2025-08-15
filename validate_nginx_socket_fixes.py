@@ -107,7 +107,7 @@ def test_port_checking_modernization():
         
         # Count occurrences
         ss_port80_count = len(re.findall(r'\bss\b.*:80', content))
-        netstat_port80_count = len(re.findall(r'netstat.*:80', content))
+        netstat_port80_count = len(re.findall(r'\bnetstat\b.*:80', content))
         
         print(f"Testing {file_path}:")
         print(f"  ss commands for port 80: {ss_port80_count}")
