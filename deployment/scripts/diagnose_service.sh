@@ -420,6 +420,36 @@ check_network_connectivity() {
     elif sudo ss -x | grep -q "/run/projectmeats.sock"; then
         log_success "✅ Django backend running on Unix socket"
         sudo ss -x | grep "projectmeats.sock" | tee -a "$ERROR_LOG"
+        
+        # Add socket permission checking as specified in problem statement
+        if [ -S "/run/projectmeats.sock" ]; then
+            log_info "Checking socket permissions..."
+            socket_perms=$(ls -l /run/projectmeats.sock)
+            log_info "Socket permissions: $socket_perms"
+            
+            # Test socket access with curl as specified in problem statement
+            log_info "Testing socket access with curl..."
+            if curl --unix-socket /run/projectmeats.sock http://localhost/health 2>&1 | tee -a "$ERROR_LOG"; then
+                log_success "✅ Socket is accessible with curl"
+            else
+                log_error "❌ Socket access failed with curl"
+                log_info "This indicates socket permission issues"
+                
+                # Check if www-data can access the socket
+                socket_owner=$(stat -c '%U:%G' /run/projectmeats.sock)
+                socket_mode=$(stat -c '%a' /run/projectmeats.sock)
+                log_info "Socket owner:group = $socket_owner"
+                log_info "Socket mode = $socket_mode"
+                
+                if [[ "$socket_owner" == *"www-data"* ]] && [[ "$socket_mode" == *"66"* || "$socket_mode" == *"660"* ]]; then
+                    log_info "Socket permissions look correct"
+                else
+                    log_warning "Socket permissions may be incorrect"
+                    log_info "Expected: projectmeats:www-data with mode 660"
+                    log_info "Actual: $socket_owner with mode $socket_mode"
+                fi
+            fi
+        fi
     else
         log_error "❌ Django backend not accessible on port 8000 or Unix socket"
         log_to_file "ERROR: Django backend not listening"

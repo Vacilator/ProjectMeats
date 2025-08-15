@@ -203,182 +203,40 @@ log_success "React build completed successfully"
 log_info "Build files created in: $PROJECT_DIR/frontend/build"
 ls -la $PROJECT_DIR/frontend/build/static/js/ | head -5
 
-# Create systemd service for Django backend
-log_header "🔧 Setting up Django Backend Service"
-cat > /etc/systemd/system/projectmeats.service << EOF
-[Unit]
-Description=ProjectMeats Django Application
-After=network.target postgresql.service
-Wants=postgresql.service
+# Create systemd service for Django backend using socket
+log_header "🔧 Setting up Django Backend Service with Unix Socket"
 
-[Service]
-Type=notify
-User=projectmeats
-Group=projectmeats
-WorkingDirectory=$PROJECT_DIR/backend
-Environment=DJANGO_SETTINGS_MODULE=projectmeats.settings
-EnvironmentFile=$PROJECT_DIR/.env.production
-ExecStart=$PROJECT_DIR/venv/bin/gunicorn \\
-    --bind 127.0.0.1:8000 \\
-    --workers 3 \\
-    --worker-class gthread \\
-    --threads 2 \\
-    --worker-connections 1000 \\
-    --max-requests 1000 \\
-    --max-requests-jitter 100 \\
-    --preload \\
-    --access-logfile /var/log/projectmeats/access.log \\
-    --error-logfile /var/log/projectmeats/error.log \\
-    --log-level info \\
-    --pid /var/run/projectmeats/gunicorn.pid \\
-    projectmeats.wsgi:application
-ExecReload=/bin/kill -s HUP \$MAINPID
-KillMode=mixed
-TimeoutStopSec=5
-PrivateTmp=true
-Restart=on-failure
-RestartSec=10
+# Copy socket-based systemd service files from deployment directory
+cp $PROJECT_DIR/deployment/systemd/projectmeats-socket.service /etc/systemd/system/projectmeats.service
+cp $PROJECT_DIR/deployment/systemd/projectmeats.socket /etc/systemd/system/
 
-# Security settings
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=$PROJECT_DIR/backend/media /var/log/projectmeats /var/run/projectmeats
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
+log_success "Copied socket-based systemd configuration files"
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Configure Nginx
+# Configure Nginx with socket-based configuration
 log_header "🌐 Configuring Nginx"
-cat > /etc/nginx/sites-available/projectmeats << EOF
-# ProjectMeats Production Nginx Configuration
-# Serves React frontend and proxies API calls to Django backend
 
-upstream django_backend {
-    server 127.0.0.1:8000;
-}
-
-server {
-    listen 80 default_server;
-    server_name $DOMAIN www.$DOMAIN;
-    root $PROJECT_DIR/frontend/build;
-    index index.html;
-
-    # Security headers
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-    add_header Referrer-Policy "strict-origin-when-cross-origin";
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
-    # API proxy to Django backend
-    location /api/ {
-        proxy_pass http://django_backend;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_redirect off;
-        
-        # CORS headers
-        add_header 'Access-Control-Allow-Origin' '*' always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-        
-        # Handle CORS preflight
-        if (\$request_method = 'OPTIONS') {
-            add_header 'Access-Control-Max-Age' 1728000;
-            add_header 'Content-Type' 'text/plain; charset=utf-8';
-            add_header 'Content-Length' 0;
-            return 204;
-        }
-    }
-
-    # Django admin interface
-    location /admin/ {
-        proxy_pass http://django_backend;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_redirect off;
-    }
-
-    # Django static files (admin, DRF, etc.)
-    location /static/ {
-        alias $PROJECT_DIR/backend/staticfiles/;
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-        
-        # Fallback to React static files for frontend assets
-        try_files \$uri @react_static;
-    }
-
-    # React static assets fallback
-    location @react_static {
-        root $PROJECT_DIR/frontend/build;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        try_files \$uri =404;
-    }
-
-    # Django media files
-    location /media/ {
-        alias $PROJECT_DIR/backend/media/;
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-    }
-
-    # React frontend static assets (js, css, images)
-    location ~* ^/static/.+\\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)\$ {
-        root $PROJECT_DIR/frontend/build;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        try_files \$uri =404;
-    }
-
-    # Favicon and manifest files
-    location ~* \\.(ico|png|svg|webmanifest)\$ {
-        root $PROJECT_DIR/frontend/build;
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-        try_files \$uri =404;
-    }
-
-    # Health check endpoint
-    location /health {
-        access_log off;
-        return 200 "healthy\\n";
-        add_header Content-Type text/plain;
-    }
-
-    # React frontend - handle client-side routing
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
-
-    # Error pages
-    error_page 404 /index.html;
-    error_page 500 502 503 504 /50x.html;
+# Copy the socket-based nginx configuration from deployment templates
+if [ -f "$PROJECT_DIR/deployment/templates/meatscentral.conf" ]; then
+    log_info "Using meatscentral.conf template..."
+    cp "$PROJECT_DIR/deployment/templates/meatscentral.conf" /etc/nginx/sites-available/meatscentral
     
-    location = /50x.html {
-        root $PROJECT_DIR/frontend/build;
-    }
-}
-EOF
+    # Create symlink for meatscentral site
+    ln -sf /etc/nginx/sites-available/meatscentral /etc/nginx/sites-enabled/
+    log_success "Enabled meatscentral.com site configuration"
+else
+    log_warning "meatscentral.conf template not found, using projectmeats-socket.conf"
+    cp "$PROJECT_DIR/deployment/nginx/projectmeats-socket.conf" /etc/nginx/sites-available/projectmeats
+    ln -sf /etc/nginx/sites-available/projectmeats /etc/nginx/sites-enabled/
+fi
 
-# Enable the site
-ln -sf /etc/nginx/sites-available/projectmeats /etc/nginx/sites-enabled/
+# Remove conflicting default nginx site as mentioned in problem statement
 rm -f /etc/nginx/sites-enabled/default
+log_success "Removed default nginx site to prevent conflicts"
+
+log_success "Copied socket-based nginx configuration"
+
+
+
 
 # Test nginx configuration before restart
 log_info "Testing nginx configuration..."
@@ -489,59 +347,97 @@ ufw reload
 log_info "UFW firewall status:"
 ufw status verbose
 
-# Start services with fallback logic
+# Start services with socket-based configuration first
 log_header "🚀 Starting Services"
 systemctl daemon-reload
+
+# First, set up socket-based configuration
+log_info "Setting up socket-based configuration..."
+systemctl enable projectmeats.socket
 systemctl enable projectmeats
 
-# Attempt to start the main service
-log_info "Starting ProjectMeats service..."
-if systemctl start projectmeats; then
-    log_success "✅ ProjectMeats service started successfully"
-else
-    log_error "❌ Main service failed to start, attempting diagnostics and fallback..."
+# Start socket first, then service
+log_info "Starting ProjectMeats socket..."
+if systemctl start projectmeats.socket; then
+    log_success "✅ ProjectMeats socket started successfully"
     
-    # Run diagnostics if available
-    if [ -f "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" ]; then
-        log_info "Running service diagnostics..."
-        "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" "$PROJECT_DIR" 2>&1 | tee /var/log/projectmeats/deployment_errors.log
+    # Wait a moment for socket to be ready
+    sleep 2
+    
+    # Fix socket permissions if needed
+    if [ -S "/run/projectmeats.sock" ]; then
+        log_info "Fixing socket permissions..."
+        chown projectmeats:www-data /run/projectmeats.sock
+        chmod 660 /run/projectmeats.sock
+        log_success "Socket permissions fixed"
     fi
     
-    # Check if socket activation is the issue
-    if systemctl list-unit-files | grep -q "projectmeats.socket"; then
-        log_info "Attempting socket-based service fallback..."
+    log_info "Starting ProjectMeats service..."
+    if systemctl start projectmeats; then
+        log_success "✅ ProjectMeats service started successfully"
+    else
+        log_error "❌ Service failed to start with socket, attempting diagnostics..."
         
-        # Try socket activation
-        systemctl enable projectmeats.socket
-        systemctl start projectmeats.socket
-        sleep 3
-        systemctl start projectmeats
+        # Show socket status
+        log_info "Socket status:"
+        systemctl status projectmeats.socket --no-pager -l || true
         
-        if systemctl is-active --quiet projectmeats; then
-            log_success "✅ Socket-based service started successfully"
+        # Check socket file permissions
+        if [ -S "/run/projectmeats.sock" ]; then
+            log_info "Socket file exists, checking permissions:"
+            ls -la /run/projectmeats.sock || true
         else
-            log_warning "⚠️ Socket activation failed, trying port-based fallback..."
-            
-            # Stop socket service
-            systemctl stop projectmeats || true
-            systemctl stop projectmeats.socket || true
-            systemctl disable projectmeats.socket || true
-            
-            # Copy and use port-based service
-            if [ -f "$PROJECT_DIR/deployment/systemd/projectmeats-port.service" ]; then
-                cp "$PROJECT_DIR/deployment/systemd/projectmeats-port.service" /etc/systemd/system/projectmeats.service
-                systemctl daemon-reload
-                systemctl enable projectmeats
-                
-                if systemctl start projectmeats; then
-                    log_success "✅ Port-based fallback service started successfully"
-                    log_info "💡 Using TCP port 8000 instead of Unix socket"
-                else
-                    log_error "❌ All service start attempts failed"
-                    log_info "Check /var/log/projectmeats/deployment_errors.log for details"
-                fi
-            fi
+            log_warning "Socket file does not exist at /run/projectmeats.sock"
         fi
+        
+        # Run diagnostics if available
+        if [ -f "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" ]; then
+            log_info "Running service diagnostics..."
+            "$PROJECT_DIR/deployment/scripts/diagnose_service.sh" "$PROJECT_DIR" 2>&1 | tee /var/log/projectmeats/deployment_errors.log
+        fi
+        
+        log_warning "⚠️ Falling back to TCP-based configuration..."
+        # Stop socket services
+        systemctl stop projectmeats || true
+        systemctl stop projectmeats.socket || true
+        systemctl disable projectmeats.socket || true
+        
+        # Use TCP-based service
+        if [ -f "$PROJECT_DIR/deployment/systemd/projectmeats-port.service" ]; then
+            cp "$PROJECT_DIR/deployment/systemd/projectmeats-port.service" /etc/systemd/system/projectmeats.service
+        else
+            # Use the original TCP service that was previously in the script
+            cp "$PROJECT_DIR/deployment/systemd/projectmeats.service" /etc/systemd/system/projectmeats.service
+        fi
+        
+        systemctl daemon-reload
+        systemctl enable projectmeats
+        
+        if systemctl start projectmeats; then
+            log_success "✅ TCP-based fallback service started successfully"
+            log_info "💡 Using TCP port 8000 instead of Unix socket"
+        else
+            log_error "❌ All service start attempts failed"
+            log_info "Check /var/log/projectmeats/deployment_errors.log for details"
+        fi
+    fi
+else
+    log_error "❌ Socket failed to start, using TCP fallback..."
+    # Direct fallback to TCP without attempting service start
+    if [ -f "$PROJECT_DIR/deployment/systemd/projectmeats-port.service" ]; then
+        cp "$PROJECT_DIR/deployment/systemd/projectmeats-port.service" /etc/systemd/system/projectmeats.service
+    else
+        cp "$PROJECT_DIR/deployment/systemd/projectmeats.service" /etc/systemd/system/projectmeats.service
+    fi
+    
+    systemctl daemon-reload
+    systemctl enable projectmeats
+    
+    if systemctl start projectmeats; then
+        log_success "✅ TCP-based service started successfully"
+        log_info "💡 Using TCP port 8000 instead of Unix socket"
+    else
+        log_error "❌ Service failed to start"
     fi
 fi
 
