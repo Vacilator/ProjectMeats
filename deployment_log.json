@@ -165,3 +165,7 @@
 {"timestamp": "2025-08-15 20:50:34", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_205034.log", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 20:50:34", "level": "INFO", "message": "GitHub token not found in environment variables or command line arguments", "deployment_id": null, "step": null}
 {"timestamp": "2025-08-15 20:50:34", "level": "INFO", "message": "Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 23:31:18", "level": "INFO", "message": "Logging initialized - logs/deployment_20250815_233118.log", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 23:31:18", "level": "INFO", "message": "GitHub token not found in environment variables or command line arguments", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 23:31:18", "level": "INFO", "message": "Set GITHUB_TOKEN/GITHUB_PAT environment variable or use --github-token argument for GitHub integration features", "deployment_id": null, "step": null}
+{"timestamp": "2025-08-15 23:31:18", "level": "INFO", "message": "Creating production docker-compose configuration...", "deployment_id": null, "step": null}
