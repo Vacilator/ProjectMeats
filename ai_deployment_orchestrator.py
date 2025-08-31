@@ -6620,6 +6620,7 @@ EOF""")
             if not self._validate_docker_compose_config():
                 return False
             
+
             # Build application images with comprehensive error handling
             if not self._build_application_images():
                 return False
@@ -6669,6 +6670,7 @@ EOF""")
             "/opt/projectmeats/docker-compose.prod.yml",
             "/opt/projectmeats/.env",
             "/opt/projectmeats/.env.prod"
+
         ]
         
         for file_path in required_files:
@@ -6749,6 +6751,7 @@ EOF""")
                 self.log(f"Pulling {image} (attempt {attempt + 1}/3)...", "INFO")
                 exit_code, stdout, stderr = self.execute_command(f"docker pull {image}", timeout=300)
                 
+
                 if exit_code == 0:
                     self.log(f"Successfully pulled {image}", "SUCCESS")
                     success = True
@@ -6758,6 +6761,7 @@ EOF""")
                     if attempt < 2:  # Not the last attempt
                         self.log("Retrying in 10 seconds...", "INFO")
                         time.sleep(10)
+
             
             if not success:
                 self.log(f"Failed to pull base image {image} after 3 attempts", "ERROR")

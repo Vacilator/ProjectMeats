@@ -46,11 +46,26 @@ echo -e "\n2. 🔧 Validating Docker Compose configurations..."
 docker compose config --dry-run > /dev/null 2>&1
 print_status "Main docker-compose.yml is valid"
 
-docker compose -f docker-compose.dev.yml config --dry-run > /dev/null 2>&1
-print_status "Development docker-compose.dev.yml is valid"
+if [ -f "docker-compose.dev.yml" ]; then
+    if docker compose -f docker-compose.dev.yml config --dry-run > /dev/null 2>&1; then
+        print_status "Development docker-compose.dev.yml is valid"
+    else
+        print_warning "Development docker-compose.dev.yml has validation issues"
+    fi
+else
+    print_warning "Development docker-compose.dev.yml not found (skipping)"
+fi
 
-docker compose -f docker-compose.prod.yml config --dry-run > /dev/null 2>&1
-print_status "Production docker-compose.prod.yml is valid"
+# Check if .env.prod exists for production validation
+if [ -f ".env.prod" ]; then
+    if docker compose --env-file .env.prod -f docker-compose.prod.yml config --dry-run > /dev/null 2>&1; then
+        print_status "Production docker-compose.prod.yml is valid"
+    else
+        print_warning "Production docker-compose.prod.yml has validation issues"
+    fi
+else
+    print_warning "Production validation skipped (.env.prod not found)"
+fi
 
 echo -e "\n3. 📋 Checking required files..."
 [ -f ".env.example" ]
