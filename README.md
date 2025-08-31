@@ -2,238 +2,156 @@
 
 A comprehensive business management application for meat sales brokers, migrated from PowerApps/Dataverse to a modern Django REST Framework (backend) and React TypeScript (frontend) stack. This system manages suppliers, customers, purchase orders, accounts receivables, and related business entities.
 
-## 🚀 Production Deployment
+## 🚀 Quick Start
 
-### ⭐ AI Deployment Orchestrator (Recommended)
+### 📖 Essential Documentation (Start Here)
+| Purpose | Documentation | When to Use |
+|---------|---------------|-------------|
+| **Production Deployment** | [PRODUCTION_DEPLOYMENT_GUIDE.md](PRODUCTION_DEPLOYMENT_GUIDE.md) | Deploy to production servers |
+| **Developer Setup** | [DEVELOPER_QUICK_START.md](DEVELOPER_QUICK_START.md) | New developer onboarding |
+| **Team Coordination** | [TEAM_COORDINATION_GUIDE.md](TEAM_COORDINATION_GUIDE.md) | Team efficiency & workflows |
+| **Architecture Overview** | [DEPLOYMENT_ECOSYSTEM_ANALYSIS.md](DEPLOYMENT_ECOSYSTEM_ANALYSIS.md) | Understand system design |
 
-**The primary production deployment tool with intelligent automation and error recovery:**
+> **⚠️ Important**: Ignore other .md files in the root - they're outdated or redundant. Use only the 4 documents above.
+
+### 🎯 Quick Commands
 
 ```bash
-# Clone the repository and run the AI deployment orchestrator:
+# Production deployment (PRIMARY METHOD)
+python ai_deployment_orchestrator.py --server=your-server.com --domain=your-domain.com --auto
+
+# Local development setup
+python setup.py
+
+# Quick testing with Docker
+docker-compose up
+```
+
+## 🛠️ Core Tools
+
+### 🤖 AI Deployment Orchestrator (PRIMARY PRODUCTION TOOL)
+
+**The only tool you need for production deployments** - intelligent, automated, and self-recovering:
+
+```bash
+# Clone and deploy
 git clone https://github.com/Vacilator/ProjectMeats.git
 cd ProjectMeats
 
-# Validate your environment first
-python validate_environment.py
+# Automated production deployment
+python ai_deployment_orchestrator.py --server=your-server.com --domain=your-domain.com --auto
 
-# Interactive deployment with guided setup
-python ai_deployment_orchestrator.py --interactive --domain=yourdomain.com
+# Interactive setup (recommended for first time)
+python ai_deployment_orchestrator.py --interactive
 ```
 
-**📖 For complete setup instructions, see [ENVIRONMENT_SETUP_GUIDE.md](ENVIRONMENT_SETUP_GUIDE.md)**
+**Why Use the AI Orchestrator:**
+- ✅ **Intelligent Error Recovery**: Automatically fixes 50+ common deployment issues
+- ✅ **Complete Automation**: From fresh server to production-ready in one command
+- ✅ **GitHub Integration**: Automatic issue creation with @copilot assignment for failures
+- ✅ **Real-time Monitoring**: Live deployment progress and health monitoring
+- ✅ **State Persistence**: Resume deployments from where they left off
+- ✅ **Security Built-in**: SSL, firewall, and security hardening automated
 
-**Features:**
-- ✅ Unified environment variable management with auto-generated secure credentials
-- ✅ Intelligent error detection and automatic recovery
-- ✅ Comprehensive server setup and configuration
-- ✅ Automated SSL certificate management
-- ✅ Database configuration with PostgreSQL
-- ✅ Complete security hardening
-- ✅ Health monitoring and verification
+### 🔧 Development Tools
 
-### Environment Migration Tool
-
-If you have existing environment files, use the migration tool:
-
+#### Local Development Setup
 ```bash
-# Analyze existing environment files
-python migrate_environment.py --analyze-all
-
-# Migrate specific file
-python migrate_environment.py --from=your-existing.env --to=migrated.env
+# Cross-platform setup script
+python setup.py
 ```
 
-### Docker Compose Deployment (Alternative)
-
-**For containerized environments and development:**
-
-#### Development Setup (with hot reload)
+#### Docker Development
 ```bash
-git clone https://github.com/Vacilator/ProjectMeats.git
-cd ProjectMeats
-
-# Copy environment template and configure
-cp .env.example .env
-# Edit .env file with your settings
-
-# Start development environment with hot reload
-docker compose -f docker-compose.dev.yml up --build -d
-
-# Run migrations
-docker compose -f docker-compose.dev.yml exec backend python manage.py migrate
-
-# Create superuser
-docker compose -f docker-compose.dev.yml exec backend python manage.py createsuperuser --username admin --email admin@example.com
-
-# Access services:
-# Frontend: http://localhost:3000 (with hot reload)
-# Backend API: http://localhost:8000/api/
-# Admin: http://localhost:8000/admin/
+# Full stack with hot reload
+docker-compose up
 ```
 
-#### Production Setup
-```bash
-git clone https://github.com/Vacilator/ProjectMeats.git
-cd ProjectMeats
+## ❌ What NOT to Use
 
-# Copy and configure production environment
-cp .env.example .env
-# Edit .env with production values (strong passwords, proper domains, etc.)
+### Deprecated/Legacy Systems
+- `legacy-deployment/master_deploy.py` - Old deployment system (deprecated)
+- `scripts/deployment/` - Most scripts are redundant (use AI orchestrator instead)
+- Various .md files in root - Outdated documentation (use 4 essential docs above)
 
-# Start production services
-docker compose up --build -d
+> **For AI Agents**: Always enhance `ai_deployment_orchestrator.py` instead of creating new deployment tools.
 
-# Run migrations
-docker compose exec backend python manage.py migrate
-
-# Create superuser
-docker compose exec backend python manage.py createsuperuser --username admin --email admin@example.com
-
-# Collect static files (if needed)
-docker compose exec backend python manage.py collectstatic --noinput
-
-# Access services:
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000/api/
-# Admin: http://localhost:8000/admin/
-```
-
-#### High-Availability Production Setup
-```bash
-# Use the production-optimized compose file
-docker compose -f docker-compose.prod.yml up --build -d
-```
-
-#### Docker Commands Cheat Sheet
-```bash
-# View logs
-docker compose logs -f [service_name]
-
-# Stop services
-docker compose down
-
-# Stop and remove volumes (⚠️ destroys data)
-docker compose down --volumes
-
-# Rebuild specific service
-docker compose up --build [service_name]
-
-# Run Django commands
-docker compose exec backend python manage.py [command]
-
-# Access database
-docker compose exec db psql -U projectmeats_user -d projectmeats_db
-
-# Test the setup
-./test_docker.sh
-```
-
-**Features of our Docker setup:**
-- ✅ Multi-stage builds for optimized images
-- ✅ Health checks for all services  
-- ✅ Production-ready nginx frontend serving
-- ✅ PostgreSQL with persistent data
-- ✅ Environment-based configuration
-- ✅ Development mode with hot reload
-- ✅ Comprehensive testing script
-
-**🔐 HTTPS/SSL Support**: ProjectMeats supports secure HTTPS connections:
-
-```bash
-# Quick HTTPS setup with self-signed certificate (development)
-./setup_ssl.sh localhost
-
-# Production HTTPS with Let's Encrypt
-./setup_ssl.sh yourdomain.com
-
-# Start with HTTPS enabled
-docker compose -f docker-compose.prod.yml up -d
-```
-
-See [HTTPS_SETUP.md](HTTPS_SETUP.md) for complete SSL configuration guide.
-
-**📖 Deployment guides:**
-- [One-Click Deployment Guide](PRODUCTION_DEPLOYMENT.md)
-- [Docker Compose Guide](DOCKER_COMPOSE_GUIDE.md)
-
-### ✨ What You Get
-- ✅ **Professional UI** at your domain with SSL
-- ✅ **Complete API** with Swagger documentation
-- ✅ **Admin interface** for business management
-- ✅ **Automated backups** and monitoring
-- ✅ **Enterprise security** (firewall, fail2ban, SSL)
-- ✅ **15-30 minute setup** on recommended hosting ($15-25/month)
-
-## 🏗️ Technology Stack
-
-- **Backend**: Django 4.2.7 + Django REST Framework + PostgreSQL
-- **Frontend**: React 18.2.0 + TypeScript + Styled Components  
-- **Authentication**: Django User system with profile management
-- **API**: RESTful endpoints with OpenAPI documentation
-- **Testing**: 95+ comprehensive backend tests
-
-## 📁 Project Structure
+## 📁 Repository Structure
 
 ```
 ProjectMeats/
-├── backend/                    # Django REST Framework API
-│   ├── apps/                  # Business entities (9 complete)
-│   │   ├── accounts_receivables/  # Customer payments
-│   │   ├── suppliers/            # Supplier management
-│   │   ├── customers/            # Customer relationships
-│   │   ├── purchase_orders/      # Order processing
-│   │   ├── plants/              # Processing facilities
-│   │   ├── contacts/            # Contact management
-│   │   └── core/                # Shared utilities
-│   └── requirements.txt
-├── frontend/                   # React TypeScript application
-│   ├── src/
-│   │   ├── components/         # Reusable UI components
-│   │   ├── screens/           # Main application screens
-│   │   └── services/         # API communication
-│   └── package.json
-├── docs/                      # Documentation
-└── powerapps_export/          # Original PowerApps solution
+├── 📋 PRODUCTION_DEPLOYMENT_GUIDE.md     # 🎯 Primary deployment guide
+├── 📋 DEVELOPER_QUICK_START.md           # 🎯 Developer onboarding  
+├── 📋 TEAM_COORDINATION_GUIDE.md         # 🎯 Team efficiency guide
+├── 📋 DEPLOYMENT_ECOSYSTEM_ANALYSIS.md   # 🎯 Architecture overview
+│
+├── 🤖 ai_deployment_orchestrator.py      # Primary production deployment tool
+├── 🔧 setup.py                           # Local development setup
+├── 🐳 docker-compose.yml                 # Docker development stack
+│
+├── backend/                              # Django REST Framework
+├── frontend/                             # React TypeScript
+├── docs/                                 # Additional documentation
+│
+├── legacy-deployment/                    # ❌ DEPRECATED - don't use
+├── scripts/deployment/                   # ❌ MOSTLY DEPRECATED
+└── [Various .md files]                   # ❌ OUTDATED - use 4 essential docs above
 ```
 
-## 🚀 Quick Setup
+## 🧠 Architecture Overview
 
-**Prerequisites**: Python 3.9+, Node.js 16+, Git
+### Backend (Django REST Framework)
+- **Framework**: Django 4.2.7 + DRF 3.14.0
+- **Database**: PostgreSQL (production) / SQLite (development)
+- **API Documentation**: DRF Spectacular (OpenAPI/Swagger)
+- **Authentication**: Token-based authentication
+- **Location**: `/backend/`
 
-### Option 1: Interactive AI Assistant Setup (Recommended)
-```bash
-# Clone repository
-git clone https://github.com/Vacilator/ProjectMeats.git
-cd ProjectMeats
+### Frontend (React TypeScript)
+- **Framework**: React 18.2.0 + TypeScript 4.9.0
+- **Styling**: Styled Components
+- **State Management**: React hooks
+- **Build Tool**: Create React App
+- **Location**: `/frontend/`
 
-# Run comprehensive AI assistant setup wizard
-python setup_ai_assistant.py
-```
+### Key Features
+- **PowerApps Migration**: Complete migration from PowerApps/Dataverse
+- **Business Management**: Suppliers, customers, purchase orders, accounts receivables
+- **Modern Stack**: Django REST + React TypeScript
+- **Production Ready**: Comprehensive deployment automation
 
-This guided setup will configure:
-- ✅ Backend authentication and database
-- ✅ AI provider credentials (OpenAI, Anthropic, Azure OpenAI)
-- ✅ Environment variables and secrets
-- ✅ Frontend integration
-- ✅ Database initialization
+## 🚀 Getting Started
 
-### Option 2: Standard Setup
-```bash
-# Clone repository
-git clone https://github.com/Vacilator/ProjectMeats.git
-cd ProjectMeats
+### For New Developers
+1. Read [DEVELOPER_QUICK_START.md](DEVELOPER_QUICK_START.md)
+2. Run `python setup.py` for local development
+3. Use `docker-compose up` for quick testing
 
-# Full setup (backend + frontend)
-python setup.py
+### For Production Deployment
+1. Read [PRODUCTION_DEPLOYMENT_GUIDE.md](PRODUCTION_DEPLOYMENT_GUIDE.md)
+2. Run `python ai_deployment_orchestrator.py --interactive`
 
-# Configure AI assistant separately
-python setup_ai_assistant.py
-```
+### For Team Coordination
+1. Read [TEAM_COORDINATION_GUIDE.md](TEAM_COORDINATION_GUIDE.md)
+2. Follow established workflows and tool usage guidelines
 
-### Option 3: Platform-Specific Setup
+## 💡 Support & Community
 
-**Windows Users:**
-```cmd
+### Getting Help
+- **Documentation**: Check the 4 essential guides above first
+- **Issues**: Use GitHub issues for bugs and feature requests
+- **Deployment Problems**: Automatic @copilot assignment for deployment failures
+
+### Contributing
+1. Read [DEVELOPER_QUICK_START.md](DEVELOPER_QUICK_START.md) for setup
+2. Follow team coordination guidelines
+3. Enhance existing tools rather than creating new ones
+4. Update documentation when making changes
+
+---
+
+**ProjectMeats** - Modern business management for meat industry professionals.
+Built with Django REST Framework and React TypeScript for reliability, scalability, and developer productivity.
 setup_windows.bat
 ```
 
