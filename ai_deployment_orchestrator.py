@@ -4667,9 +4667,6 @@ services:"""
     image: redis:7-alpine
     container_name: projectmeats-redis
     command: redis-server --appendonly yes --requirepass ${{{{REDIS_PASSWORD}}}}
-    image: redis:7-alpine
-    container_name: projectmeats-redis
-    command: redis-server --appendonly yes --requirepass ${{{{REDIS_PASSWORD}}}}
     volumes:
       - redis_data:/data
     networks:
