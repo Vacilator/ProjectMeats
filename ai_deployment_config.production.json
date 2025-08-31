@@ -1,0 +1,123 @@
+{
+  "version": "1.0",
+  "created": "2025-01-15T00:00:00Z",
+  "description": "Production configuration for AI Deployment Orchestrator with DigitalOcean managed PostgreSQL",
+  
+  "ssh": {
+    "port": 22,
+    "timeout": 30,
+    "key_filename": null,
+    "password": null
+  },
+  
+  "deployment": {
+    "max_retries": 3,
+    "retry_delay": 5,
+    "command_timeout": 300,
+    "auto_approve": false,
+    "auto_recovery": true,
+    "backup_on_failure": true,
+    "rollback_enabled": true
+  },
+  
+  "ai_features": {
+    "intelligent_error_detection": true,
+    "auto_fix_common_issues": true,
+    "learn_from_failures": true,
+    "share_anonymized_metrics": false,
+    "predictive_scaling": true,
+    "optimization_suggestions": true
+  },
+  
+  "database": {
+    "type": "postgresql",
+    "host": "db-postgresql-nyc1-23354-do-user-24316406-0.h.db.ondigitalocean.com",
+    "port": 25060,
+    "name": "defaultdb",
+    "user": "doadmin",
+    "password": "AVNS_Cxsh8ohPL3kbg-fZhQf",
+    "auto_create": false,
+    "external_managed": true,
+    "ssl_mode": "require",
+    "backup_enabled": true,
+    "connection_options": {
+      "sslmode": "require",
+      "connect_timeout": 10,
+      "application_name": "ProjectMeats"
+    }
+  },
+  
+  "docker": {
+    "enabled": true,
+    "skip_database_container": true,
+    "monitoring_enabled": false
+  },
+  
+  "security": {
+    "firewall_enabled": true,
+    "ssl_enabled": true,
+    "fail2ban_enabled": true,
+    "auto_security_updates": true,
+    "allowed_ports": [22, 80, 443],
+    "ssl_provider": "letsencrypt"
+  },
+  
+  "monitoring": {
+    "enabled": true,
+    "health_checks": true,
+    "performance_monitoring": true,
+    "error_tracking": true,
+    "log_aggregation": true,
+    "alerts": {
+      "email": null,
+      "webhook": null,
+      "discord": null
+    }
+  },
+  
+  "backup": {
+    "enabled": true,
+    "frequency": "daily",
+    "retention_days": 7,
+    "storage_backend": "local",
+    "compression": true
+  },
+  
+  "logging": {
+    "level": "INFO",
+    "max_files": 10,
+    "max_size": "50MB",
+    "structured_logging": true,
+    "console_output": true
+  },
+  
+  "notifications": {
+    "enabled": false,
+    "webhook_url": "",
+    "slack_channel": "",
+    "email_recipients": []
+  },
+  
+  "recovery_strategies": {
+    "database_connection": {
+      "priority": 1,
+      "timeout": 300,
+      "fallback_methods": ["retry_with_ssl", "connection_pooling"]
+    },
+    "nodejs_conflicts": {
+      "priority": 2,
+      "timeout": 600,
+      "fallback_methods": ["snap", "manual_install"]
+    },
+    "package_conflicts": {
+      "priority": 3,
+      "timeout": 300,
+      "fallback_methods": ["apt_update", "dpkg_reconfigure"]
+    },
+    "permission_issues": {
+      "priority": 4,
+      "timeout": 60,
+      "fallback_methods": ["chown_recursive", "chmod_fix"]
+    }
+  }
+}

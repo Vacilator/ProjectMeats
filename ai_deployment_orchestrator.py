@@ -4577,35 +4577,60 @@ server {{
         # Ensure required configuration variables are defined with secure defaults
         domain = self.config.get('domain', 'localhost')
         
-        # Define database credentials with fallbacks to prevent NameError
-        # Support environment variables as mentioned in the problem statement
-        postgres_user = (
-            os.environ.get('POSTGRES_USER') or 
-            self.config.get('db_user', 'projectmeats')
-        )
-        postgres_db = (
-            os.environ.get('POSTGRES_DB') or 
-            self.config.get('db_name', 'projectmeats')
-        )
+        # Check for external managed database configuration
+        db_config = self.config.get('database', {})
+        use_external_db = db_config.get('external_managed', False) or self.config.get('docker', {}).get('skip_database_container', False)
         
-        # Generate secure passwords if not already defined
-        if not hasattr(self, '_postgres_password') or self._postgres_password is None:
-            self._postgres_password = (
-                os.environ.get('POSTGRES_PASSWORD') or 
-                self._generate_secure_password(32)
+        if use_external_db:
+            self.log("Using external managed database - PostgreSQL container will be skipped", "INFO")
+            # Use external database credentials
+            postgres_host = db_config.get('host', 'localhost')
+            postgres_port = db_config.get('port', 5432)
+            postgres_user = db_config.get('user', 'postgres')
+            postgres_db = db_config.get('name', 'projectmeats')
+            postgres_password = db_config.get('password', '')
+            postgres_ssl_mode = db_config.get('ssl_mode', 'prefer')
+        else:
+            # Use local Docker database configuration with fallbacks to prevent NameError
+            # Support environment variables as mentioned in the problem statement
+            postgres_host = 'db'
+            postgres_port = 5432
+            postgres_user = (
+                os.environ.get('POSTGRES_USER') or 
+                self.config.get('db_user', 'projectmeats')
             )
+            postgres_db = (
+                os.environ.get('POSTGRES_DB') or 
+                self.config.get('db_name', 'projectmeats')
+            )
+            postgres_ssl_mode = 'disable'
+            
+            # Generate secure passwords if not already defined
+            if not hasattr(self, '_postgres_password') or self._postgres_password is None:
+                self._postgres_password = (
+                    os.environ.get('POSTGRES_PASSWORD') or 
+                    self._generate_secure_password(32)
+                )
+            postgres_password = self._postgres_password
+            
         if not hasattr(self, '_redis_password') or self._redis_password is None:
             self._redis_password = (
                 os.environ.get('REDIS_PASSWORD') or 
                 self._generate_secure_password(32)
             )
         
+        # Build docker-compose content conditionally based on database configuration
         compose_content = f"""version: '3.8'
 
 # ProjectMeats Production Docker Compose
 # Optimized for DigitalOcean droplets with industry best practices
+# Database: {'External Managed PostgreSQL' if use_external_db else 'Local Docker PostgreSQL'}
 
-services:
+services:"""
+
+        # Add PostgreSQL database container only if not using external managed database
+        if not use_external_db:
+            compose_content += f"""
   # PostgreSQL Database with security hardening
   db:
     image: postgres:15-alpine
@@ -4634,9 +4659,14 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+"""
 
+        compose_content += f"""
   # Redis Cache with security hardening  
   redis:
+    image: redis:7-alpine
+    container_name: projectmeats-redis
+    command: redis-server --appendonly yes --requirepass ${{{{REDIS_PASSWORD}}}}
     image: redis:7-alpine
     container_name: projectmeats-redis
     command: redis-server --appendonly yes --requirepass ${{{{REDIS_PASSWORD}}}}
@@ -4664,8 +4694,19 @@ services:
       target: production
     container_name: projectmeats-backend
     user: "1000:1000"  # Non-root user
-    environment:
-      - DATABASE_URL=postgresql://${{{{POSTGRES_USER:-{postgres_user}}}}}:${{{{POSTGRES_PASSWORD}}}}@db:5432/${{{{POSTGRES_DB:-{postgres_db}}}}}
+    environment:"""
+
+        # Build DATABASE_URL based on configuration
+        if use_external_db:
+            if postgres_ssl_mode and postgres_ssl_mode != 'disable':
+                database_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}?sslmode={postgres_ssl_mode}"
+            else:
+                database_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
+        else:
+            database_url = f"postgresql://${{{{POSTGRES_USER:-{postgres_user}}}}}:${{{{POSTGRES_PASSWORD}}}}@db:5432/${{{{POSTGRES_DB:-{postgres_db}}}}}"
+
+        compose_content += f"""
+      - DATABASE_URL={database_url}
       - REDIS_URL=redis://default:${{{{REDIS_PASSWORD}}}}@redis:6379/0
       - DJANGO_SETTINGS_MODULE=projectmeats.settings.production
       - DEBUG=False
@@ -4676,12 +4717,23 @@ services:
     volumes:
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media
-      - /opt/projectmeats/logs:/app/logs
+      - /opt/projectmeats/logs:/app/logs"""
+
+        # Add dependencies based on database configuration
+        if use_external_db:
+            compose_content += f"""
+    depends_on:
+      redis:
+        condition: service_healthy"""
+        else:
+            compose_content += f"""
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_healthy
+        condition: service_healthy"""
+
+        compose_content += f"""
     networks:
       - backend
       - frontend
@@ -4764,17 +4816,28 @@ services:
     command: celery -A projectmeats worker -l info --uid=1000 --gid=1000
     user: "1000:1000"
     environment:
-      - DATABASE_URL=postgresql://${{{{POSTGRES_USER:-{postgres_user}}}}}:${{{{POSTGRES_PASSWORD}}}}@db:5432/${{{{POSTGRES_DB:-{postgres_db}}}}}
+      - DATABASE_URL={database_url}
       - REDIS_URL=redis://default:${{{{REDIS_PASSWORD}}}}@redis:6379/0
       - DJANGO_SETTINGS_MODULE=projectmeats.settings.production
     volumes:
       - media_volume:/app/media
-      - /opt/projectmeats/logs:/app/logs
+      - /opt/projectmeats/logs:/app/logs"""
+
+        # Add dependencies for Celery based on database configuration
+        if use_external_db:
+            compose_content += f"""
+    depends_on:
+      redis:
+        condition: service_healthy"""
+        else:
+            compose_content += f"""
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_healthy
+        condition: service_healthy"""
+
+        compose_content += f"""
     networks:
       - backend
     restart: unless-stopped
@@ -4782,9 +4845,13 @@ services:
       - no-new-privileges:true
     read_only: true
     tmpfs:
-      - /tmp
+      - /tmp"""
 
-  # Backup Service
+        # Add backup service only if not using external managed database
+        if not use_external_db:
+            compose_content += f"""
+
+  # Backup Service (Local PostgreSQL only)
   backup:
     image: postgres:15-alpine
     container_name: projectmeats-backup
@@ -4806,12 +4873,44 @@ services:
           echo 'Backup completed at $(date)'
           sleep 86400
         done
-      "
+      \""""
+        else:
+            compose_content += f"""
+
+  # External PostgreSQL backup service
+  backup:
+    image: postgres:15-alpine
+    container_name: projectmeats-backup
+    environment:
+      PGPASSWORD: {postgres_password}
+    volumes:
+      - /opt/projectmeats/backups:/backups
+    restart: "no"
+    profiles:
+      - backup
+    command: >
+      sh -c "
+        while true; do
+          echo 'Starting backup at $(date)'
+          pg_dump -h {postgres_host} -p {postgres_port} -U {postgres_user} -d {postgres_db} {'--set=sslmode=' + postgres_ssl_mode if postgres_ssl_mode != 'disable' else ''} > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
+          find /backups -name '*.sql' -mtime +7 -delete
+          echo 'Backup completed at $(date)'
+          sleep 86400
+        done
+      \""""
+
+        # Add volumes section - conditionally include postgres_data
+        compose_content += f"""
 
 # Volumes for persistent data
-volumes:
+volumes:"""
+        
+        if not use_external_db:
+            compose_content += f"""
   postgres_data:
-    driver: local
+    driver: local"""
+            
+        compose_content += f"""
   redis_data:
     driver: local
   static_volume:
@@ -4831,16 +4930,22 @@ networks:
     internal: true
 """
 
-        # Instead of creating a new docker-compose.yml, use the existing docker-compose.prod.yml
-        # and create the required .env.prod file
-        self.log("Using existing docker-compose.prod.yml for production deployment", "INFO")
+        # Write the generated docker-compose content to the server
+        self.log(f"Writing {'external database' if use_external_db else 'local database'} docker-compose configuration...", "INFO")
         
-        # Create .env.prod file with proper values
-        env_content = f"""# ProjectMeats Production Environment
-# Generated by AI Deployment Orchestrator
+        exit_code, _, stderr = self.execute_command(f"cat > /opt/projectmeats/docker-compose.prod.yml << 'EOF'\\n{compose_content}\\nEOF")
+        if exit_code != 0:
+            self.log(f"Failed to write docker-compose.prod.yml: {stderr}", "ERROR")
+            return False
+        
+        # Create .env.prod file with proper values based on configuration
+        if use_external_db:
+            env_content = f"""# ProjectMeats Production Environment
+# Generated by AI Deployment Orchestrator - External Database Configuration
+# External PostgreSQL Database: {postgres_host}:{postgres_port}
 POSTGRES_DB={postgres_db}
 POSTGRES_USER={postgres_user}
-POSTGRES_PASSWORD={self._postgres_password}
+POSTGRES_PASSWORD={postgres_password}
 REDIS_PASSWORD={self._redis_password}
 DJANGO_SECRET_KEY={self._generate_django_secret_key()}
 DEBUG=False
@@ -4850,6 +4955,31 @@ CORS_ALLOWED_ORIGINS=https://{domain},https://www.{domain}
 CSRF_TRUSTED_ORIGINS=https://{domain},https://www.{domain},http://{domain},http://www.{domain}
 GRAFANA_PASSWORD={self._generate_secure_password()}
 LOG_LEVEL=INFO
+
+# External Database Configuration
+DATABASE_HOST={postgres_host}
+DATABASE_PORT={postgres_port}
+DATABASE_SSL_MODE={postgres_ssl_mode}
+DATABASE_EXTERNAL=true
+"""
+        else:
+            env_content = f"""# ProjectMeats Production Environment  
+# Generated by AI Deployment Orchestrator - Local Database Configuration
+POSTGRES_DB={postgres_db}
+POSTGRES_USER={postgres_user}
+POSTGRES_PASSWORD={postgres_password}
+REDIS_PASSWORD={self._redis_password}
+DJANGO_SECRET_KEY={self._generate_django_secret_key()}
+DEBUG=False
+ALLOWED_HOSTS={domain},www.{domain},localhost,127.0.0.1
+DOMAIN={domain}
+CORS_ALLOWED_ORIGINS=https://{domain},https://www.{domain}
+CSRF_TRUSTED_ORIGINS=https://{domain},https://www.{domain},http://{domain},http://www.{domain}
+GRAFANA_PASSWORD={self._generate_secure_password()}
+LOG_LEVEL=INFO
+
+# Local Database Configuration
+DATABASE_EXTERNAL=false
 """
         
         # Write .env.prod file to server  
@@ -5236,6 +5366,15 @@ def main():
     parser.add_argument("--docker", action="store_true", help="Use Docker-based deployment with industry best practices")
     parser.add_argument("--docker-monitoring", action="store_true", help="Include monitoring stack (Prometheus, Grafana) with Docker deployment")
     
+    # Database configuration arguments
+    parser.add_argument("--db-host", help="Database host (for external database)")
+    parser.add_argument("--db-port", type=int, help="Database port (for external database)")
+    parser.add_argument("--db-name", help="Database name")
+    parser.add_argument("--db-user", help="Database username")
+    parser.add_argument("--db-password", help="Database password")
+    parser.add_argument("--db-ssl-mode", help="Database SSL mode (require, prefer, disable)")
+    parser.add_argument("--external-db", action="store_true", help="Use external managed database (skip local PostgreSQL container)")
+    
     args = parser.parse_args()
     
     # Initialize orchestrator
@@ -5248,6 +5387,33 @@ def main():
         orchestrator.log("GitHub authentication configured from command line", "SUCCESS")
         # Re-initialize GitHub integration now that we have the token
         orchestrator.reinitialize_github_integration()
+    
+    # Set database configuration if provided
+    if args.external_db or any([args.db_host, args.db_port, args.db_name, args.db_user, args.db_password]):
+        if 'database' not in orchestrator.config:
+            orchestrator.config['database'] = {}
+        if 'docker' not in orchestrator.config:
+            orchestrator.config['docker'] = {}
+            
+        if args.external_db:
+            orchestrator.config['database']['external_managed'] = True
+            orchestrator.config['docker']['skip_database_container'] = True
+            orchestrator.log("External database configuration enabled", "INFO")
+            
+        if args.db_host:
+            orchestrator.config['database']['host'] = args.db_host
+        if args.db_port:
+            orchestrator.config['database']['port'] = args.db_port
+        if args.db_name:
+            orchestrator.config['database']['name'] = args.db_name
+        if args.db_user:
+            orchestrator.config['database']['user'] = args.db_user
+        if args.db_password:
+            orchestrator.config['database']['password'] = args.db_password
+        if args.db_ssl_mode:
+            orchestrator.config['database']['ssl_mode'] = args.db_ssl_mode
+            
+        orchestrator.log("Database configuration updated from command line arguments", "SUCCESS")
     
     # Load profile settings if specified
     profile_settings = {}
