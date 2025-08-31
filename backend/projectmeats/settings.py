@@ -3,12 +3,31 @@ Django settings for ProjectMeats.
 
 Migrated from PowerApps/Dataverse to Django REST Framework.
 Configured for React frontend integration with comprehensive API support.
+
+Environment Variable Priority:
+1. Environment variables (set by deployment or manually)
+2. .env files (backend/.env, .env.production, etc.)
+3. Default values (for development)
+
+For production deployment, use the AI Deployment Orchestrator which automatically
+generates secure environment files with proper configuration.
 """
 
 from pathlib import Path
 
 import dj_database_url
-from decouple import config
+
+# Import decouple with fallback for environments where it's not available
+try:
+    from decouple import config
+except ImportError:
+    import os
+    def config(key, default=None, cast=str):
+        """Fallback config function when python-decouple is not available"""
+        value = os.environ.get(key, default)
+        if cast == bool and isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes', 'on')
+        return cast(value) if value is not None else default
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

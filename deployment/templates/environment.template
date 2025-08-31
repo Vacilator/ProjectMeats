@@ -1,0 +1,92 @@
+# ProjectMeats Production Environment Configuration
+# Generated automatically by AI Deployment Orchestrator
+# DO NOT EDIT MANUALLY - This file is auto-generated
+
+# ==========================================
+# DJANGO CORE SETTINGS
+# ==========================================
+
+# Production settings
+DEBUG={debug}
+SECRET_KEY={secret_key}
+ALLOWED_HOSTS={allowed_hosts}
+
+# ==========================================
+# DATABASE CONFIGURATION  
+# ==========================================
+
+# PostgreSQL production database
+DATABASE_URL=postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
+
+# ==========================================
+# SECURITY SETTINGS
+# ==========================================
+
+{ssl_settings}
+
+# ==========================================
+# CORS CONFIGURATION
+# ==========================================
+
+# Frontend domains
+CORS_ALLOWED_ORIGINS={cors_origins}
+CORS_ALLOW_CREDENTIALS=True
+CSRF_TRUSTED_ORIGINS={csrf_trusted_origins}
+
+# ==========================================
+# FILE STORAGE AND PATHS
+# ==========================================
+
+# File storage paths
+STATIC_URL=/static/
+STATIC_ROOT={static_root}
+MEDIA_URL=/media/
+MEDIA_ROOT={media_root}
+
+# ==========================================
+# EMAIL CONFIGURATION
+# ==========================================
+
+{email_settings}
+
+# ==========================================
+# LOGGING CONFIGURATION
+# ==========================================
+
+# Logging settings
+LOG_LEVEL=INFO
+LOG_DIR={log_dir}
+
+# ==========================================
+# COMPANY INFORMATION
+# ==========================================
+
+# Company details
+COMPANY_NAME={company_name}
+COMPANY_EMAIL={company_email}
+COMPANY_PHONE={company_phone}
+COMPANY_ADDRESS={company_address}
+
+# ==========================================
+# BACKUP CONFIGURATION
+# ==========================================
+
+# Backup settings
+BACKUP_DIR={backup_dir}
+DB_BACKUP_RETENTION_DAYS=30
+
+# ==========================================
+# FEATURE FLAGS
+# ==========================================
+
+# Feature toggles
+ENABLE_API_DOCS=True
+POWERAPPS_MIGRATION_MODE=False
+
+# ==========================================
+# DEPLOYMENT METADATA
+# ==========================================
+
+# Deployment information (for monitoring)
+DEPLOYMENT_TIMESTAMP={deployment_timestamp}
+DEPLOYMENT_VERSION={deployment_version}
