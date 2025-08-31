@@ -43,13 +43,39 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Environment files
+# Environment files (SECURITY: Exclude all environment files)
 .env
+.env.*
 .env.local
 .env.production
 .env.development
 .env.test
+.env.prod
+.env.prod.local
 
 # Build artifacts
 dist/
 build/
+
+# Secrets and certificates (SECURITY)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+ssl/
+
+# Backup files
+*.bak
+*.backup
+*.sql
+
+# Git and version control
+.git/
+.gitignore
+
+# Documentation (exclude from build)
+docs/
+*.md
+README*

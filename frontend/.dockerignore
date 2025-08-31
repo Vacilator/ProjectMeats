@@ -9,11 +9,17 @@ yarn-error.log*
 build/
 dist/
 
-# Development files
+# Development files (SECURITY: Exclude all environment files)
+.env
+.env.*
 .env.local
+.env.development
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
+.env.prod
+.env.prod.local
 
 # IDE and editor files
 .idea/
@@ -38,3 +44,24 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+
+# Secrets and certificates (SECURITY)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+ssl/
+
+# Git and version control
+.git/
+.gitignore
+
+# Documentation (exclude from build)
+docs/
+*.md
+README*
+
+# Source maps (exclude for security)
+*.map

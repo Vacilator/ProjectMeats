@@ -1,7 +1,7 @@
 # ProjectMeats Development Makefile
 # Provides essential development commands for Django + React application
 
-.PHONY: help setup dev test clean docs format lint docker-build docker-up docker-down
+.PHONY: help setup dev test clean docs format lint docker-build docker-up docker-down prod-validate prod-up prod-down prod-logs prod-status
 
 # Default target
 help:
@@ -27,6 +27,13 @@ help:
 	@echo "  make docker-up     - Start Docker Compose stack"
 	@echo "  make docker-down   - Stop Docker Compose stack"
 	@echo "  make docker-logs   - View Docker Compose logs"
+	@echo ""
+	@echo "Production Commands:"
+	@echo "  make prod-validate - Validate production configuration"
+	@echo "  make prod-up       - Start production stack"
+	@echo "  make prod-down     - Stop production stack"
+	@echo "  make prod-logs     - View production logs"
+	@echo "  make prod-status   - Check production status"
 	@echo ""
 	@echo "Database Commands:"
 	@echo "  make migrate   - Run Django migrations"
@@ -97,6 +104,37 @@ docker-down:
 docker-logs:
 	@echo "📋 Viewing Docker Compose logs..."
 	docker compose logs -f
+
+# Production deployment commands
+prod-validate:
+	@echo "🔍 Validating production configuration..."
+	./scripts/preflight/validate_prod_compose.sh
+
+prod-up: prod-validate
+	@echo "🚀 Starting production stack..."
+	@echo "This will start ProjectMeats in production mode with Traefik reverse proxy"
+	@echo "Services will be available at: https://${DOMAIN:-localhost}"
+	docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+	@echo "✅ Production stack started!"
+	@echo ""
+	@echo "Monitor with: make prod-logs"
+	@echo "Check status: make prod-status"
+
+prod-down:
+	@echo "🛑 Stopping production stack..."
+	docker compose --env-file .env.prod -f docker-compose.prod.yml down
+	@echo "✅ Production stack stopped"
+
+prod-logs:
+	@echo "📋 Viewing production logs..."
+	docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f
+
+prod-status:
+	@echo "📊 Production stack status..."
+	docker compose --env-file .env.prod -f docker-compose.prod.yml ps
+	@echo ""
+	@echo "📈 Resource usage:"
+	docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}"
 
 # Database commands
 migrate:
