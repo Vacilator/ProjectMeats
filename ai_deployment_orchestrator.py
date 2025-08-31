@@ -5343,13 +5343,13 @@ EOF""")
             "docker pull nginx:alpine",
             
             # Build application images using production compose file
-            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml build --no-cache",
+            "cd /opt/projectmeats && docker compose --env-file .env.prod -f docker-compose.prod.yml build --no-cache",
             
             # Deploy containers using production compose file
-            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml up -d",
+            "cd /opt/projectmeats && docker compose --env-file .env.prod -f docker-compose.prod.yml up -d",
             
             # Wait for services to be healthy
-            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml ps",
+            "cd /opt/projectmeats && docker compose --env-file .env.prod -f docker-compose.prod.yml ps",
         ]
         
         for cmd in commands:
@@ -5364,7 +5364,7 @@ EOF""")
                 self.log(f"Success: {stdout[:200]}...", "SUCCESS")
                 
         # Verify containers are running with production compose file
-        exit_code, stdout, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml ps --format table")
+        exit_code, stdout, stderr = self.execute_command("cd /opt/projectmeats && docker compose --env-file .env.prod -f docker-compose.prod.yml ps --format table")
         if exit_code == 0:
             self.log("Container deployment status:", "INFO")
             self.log(stdout, "INFO")
