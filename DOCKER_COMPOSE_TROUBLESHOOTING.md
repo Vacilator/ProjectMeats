@@ -24,6 +24,54 @@ The AI deployment script automatically creates the `.env` file during deployment
 cp .env.prod .env
 ```
 
+### Issue: Corrupted environment variable names (e.g., "nNfJ")
+
+**Symptoms:**
+```
+WARN[0000] The "nNfJ" variable is not set. Defaulting to a blank string.
+```
+
+**Root Cause:**
+Environment file contains corrupted or non-ASCII variable names, often due to encoding issues.
+
+**Solution:**
+1. **Use the quick fix script** (recommended):
+   ```bash
+   ./docker_production_quickfix.sh
+   ```
+
+2. **Manual fix**:
+   ```bash
+   # Recreate environment file from template
+   cp .env.prod.example .env.prod
+   
+   # Clean any non-ASCII characters
+   iconv -f utf-8 -t ascii//IGNORE .env.prod > .env.prod.clean
+   mv .env.prod.clean .env.prod
+   ```
+
+### Issue: Files not found during Docker build
+
+**Symptoms:**
+```
+ERROR: failed to calculate checksum: "/nginx.prod.conf": not found
+ERROR: failed to calculate checksum: "/requirements-prod.txt": not found
+```
+
+**Root Cause:**
+Required files are missing from build context or .env.prod doesn't exist.
+
+**Solution:**
+1. **Run the validation script**:
+   ```bash
+   ./validate_docker_production.sh
+   ```
+
+2. **Verify all required files exist**:
+   ```bash
+   ls nginx/nginx.prod.conf backend/requirements-prod.txt frontend/nginx.prod.conf
+   ```
+
 ### Issue: "mapping key already defined" errors
 
 **Symptoms:**
@@ -63,19 +111,28 @@ env_file:
 
 If you need to deploy manually (not recommended for production):
 
+### Quick Fix for Common Issues
+```bash
+# Use the quick fix script to resolve common deployment issues
+./docker_production_quickfix.sh
+```
+
+### Manual Deployment Steps
 ```bash
 # 1. Ensure environment file exists
-cp .env.prod .env
+cp .env.prod.example .env.prod
 
-# 2. Validate configuration
-docker compose -f docker-compose.prod.yml config --quiet
+# 2. Edit with your production values
+nano .env.prod
 
-# 3. Build and deploy
+# 3. Validate the environment and configuration
+./validate_docker_production.sh
+
+# 4. Build and deploy
 docker compose -f docker-compose.prod.yml build --no-cache
 docker compose -f docker-compose.prod.yml up -d
 
-# 4. Clean up
-rm .env  # Keep secrets out of git
+# Note: .env.prod is already in .gitignore and won't be committed
 ```
 
 ## Required Environment Variables
