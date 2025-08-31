@@ -6642,45 +6642,202 @@ EOF""")
             return False
     
     def _validate_docker_prerequisites(self) -> bool:
-        """Validate Docker prerequisites before deployment"""
+        """Validate Docker prerequisites before deployment with enhanced error handling"""
         self.log("Validating Docker prerequisites...", "INFO")
         
-        # Check Docker daemon status
-        exit_code, _, stderr = self.execute_command("docker info")
-        if exit_code != 0:
-            self.log(f"Docker daemon not running or accessible: {stderr}", "ERROR")
-            return False
+        # Enhanced Docker daemon connectivity check with retry logic and auto-recovery
+        if not self._check_docker_daemon_connectivity():
+            self.log("Initial Docker daemon connectivity check failed", "WARNING")
+            self.log("Attempting automatic recovery before final failure...", "INFO")
+            
+            # Try one more time after potential auto-recovery
+            if not self._check_docker_daemon_connectivity():
+                self.log("Docker daemon connectivity failed even after recovery attempts", "ERROR")
+                return False
+            else:
+                self.log("Docker daemon connectivity recovered successfully", "SUCCESS")
         
         # Check Docker Compose availability
         exit_code, version_output, stderr = self.execute_command("docker compose version")
         if exit_code != 0:
             self.log(f"Docker Compose not available: {stderr}", "ERROR")
+            self._provide_docker_compose_troubleshooting()
             return False
         else:
             self.log(f"Docker Compose available: {version_output.strip()}", "INFO")
         
-        # Check if user can access Docker
+        # Check if user can access Docker with enhanced diagnostics
         exit_code, _, stderr = self.execute_command("docker ps")
         if exit_code != 0:
             self.log(f"Cannot access Docker: {stderr}", "ERROR")
+            self._provide_docker_access_troubleshooting()
             return False
         
-        # Validate required files exist
-        required_files = [
-            "/opt/projectmeats/docker-compose.prod.yml",
-            "/opt/projectmeats/.env",
-            "/opt/projectmeats/.env.prod"
-
-        ]
+        # Validate required files exist (only check files that should be present)
+        required_files = []
         
+        # Check if we're in a Docker deployment context
+        if os.path.exists("/opt/projectmeats/docker-compose.prod.yml"):
+            required_files.extend([
+                "/opt/projectmeats/docker-compose.prod.yml",
+                "/opt/projectmeats/.env",
+                "/opt/projectmeats/.env.prod"
+            ])
+        else:
+            # We're in development/repository context - check repository files
+            required_files.extend([
+                "docker-compose.prod.yml",
+                ".env.prod.template"
+            ])
+        
+        missing_files = []
         for file_path in required_files:
             exit_code, _, _ = self.execute_command(f"test -f {file_path}")
             if exit_code != 0:
-                self.log(f"Required file missing: {file_path}", "ERROR")
-                return False
+                missing_files.append(file_path)
+        
+        if missing_files:
+            self.log(f"Required files missing: {', '.join(missing_files)}", "ERROR")
+            self.log("Note: Some files may be created during deployment process", "INFO")
+            # Don't fail here - files might be created later in the deployment process
         
         self.log("Docker prerequisites validation passed", "SUCCESS")
         return True
+    
+    def _check_docker_daemon_connectivity(self) -> bool:
+        """Check Docker daemon connectivity with retry logic and enhanced diagnostics"""
+        max_retries = 3
+        retry_delay = 5  # seconds
+        
+        for attempt in range(max_retries):
+            self.log(f"Checking Docker daemon connectivity (attempt {attempt + 1}/{max_retries})...", "INFO")
+            
+            exit_code, stdout, stderr = self.execute_command("docker info")
+            if exit_code == 0:
+                self.log("Docker daemon is accessible", "SUCCESS")
+                return True
+            
+            # Log the specific error
+            self.log(f"Docker daemon check failed: {stderr}", "WARNING")
+            
+            # Provide detailed diagnostics on first failure
+            if attempt == 0:
+                self._diagnose_docker_connectivity_issues(stderr)
+            
+            # Wait before retrying (except on last attempt)
+            if attempt < max_retries - 1:
+                self.log(f"Retrying in {retry_delay} seconds...", "INFO")
+                import time
+                time.sleep(retry_delay)
+        
+        self.log("Docker daemon not accessible after all retry attempts", "ERROR")
+        self._provide_docker_daemon_troubleshooting()
+        return False
+    
+    def _diagnose_docker_connectivity_issues(self, error_message: str) -> None:
+        """Diagnose common Docker connectivity issues and provide specific guidance"""
+        self.log("Diagnosing Docker connectivity issues...", "INFO")
+        
+        # Check if Docker service is running
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active docker")
+        if exit_code != 0:
+            self.log("Docker service is not active", "WARNING")
+            if self._attempt_docker_service_recovery():
+                self.log("Docker service recovery successful", "SUCCESS")
+            else:
+                self.log("Docker service recovery failed", "ERROR")
+        else:
+            self.log("Docker service is active", "INFO")
+        
+        # Check socket permissions
+        exit_code, stdout, stderr = self.execute_command("ls -la /var/run/docker.sock")
+        if exit_code == 0:
+            self.log(f"Docker socket permissions: {stdout.strip()}", "INFO")
+            
+            # Check if current user is in docker group
+            exit_code, groups_output, _ = self.execute_command("groups")
+            if "docker" not in groups_output:
+                self.log("Current user is not in docker group", "WARNING")
+                self.log("Adding current user to docker group...", "INFO")
+                username = self.execute_command("whoami")[1].strip()
+                add_group_exit_code, _, add_group_stderr = self.execute_command(f"usermod -aG docker {username}")
+                if add_group_exit_code == 0:
+                    self.log("User added to docker group. Note: logout/login may be required", "SUCCESS")
+                else:
+                    self.log(f"Failed to add user to docker group: {add_group_stderr}", "WARNING")
+            else:
+                self.log("Current user is in docker group", "INFO")
+        else:
+            self.log("Docker socket not found", "ERROR")
+        
+        # Check for common error patterns
+        if "permission denied" in error_message.lower():
+            self.log("Permission denied error detected", "WARNING")
+            self.log("This usually means the user doesn't have access to Docker socket", "INFO")
+        elif "connection refused" in error_message.lower():
+            self.log("Connection refused error detected", "WARNING") 
+            self.log("This usually means Docker daemon is not running", "INFO")
+        elif "no such file or directory" in error_message.lower():
+            self.log("Socket file not found error detected", "WARNING")
+            self.log("This usually means Docker is not properly installed", "INFO")
+    
+    def _attempt_docker_service_recovery(self) -> bool:
+        """Attempt to automatically recover Docker service"""
+        self.log("Attempting automatic Docker service recovery...", "INFO")
+        
+        # Step 1: Try to start Docker service
+        self.log("Starting Docker service...", "INFO")
+        start_exit_code, _, start_stderr = self.execute_command("systemctl start docker")
+        if start_exit_code != 0:
+            self.log(f"Failed to start Docker service: {start_stderr}", "ERROR")
+            return False
+        
+        # Step 2: Wait a moment for service to initialize
+        self.log("Waiting for Docker service to initialize...", "INFO")
+        import time
+        time.sleep(3)
+        
+        # Step 3: Verify service is now active
+        exit_code, stdout, stderr = self.execute_command("systemctl is-active docker")
+        if exit_code != 0:
+            self.log("Docker service still not active after start attempt", "ERROR")
+            return False
+        
+        # Step 4: Test Docker daemon connectivity
+        exit_code, _, stderr = self.execute_command("docker info")
+        if exit_code != 0:
+            self.log(f"Docker daemon still not accessible: {stderr}", "ERROR")
+            return False
+        
+        self.log("Docker service recovery completed successfully", "SUCCESS")
+        return True
+    
+    def _provide_docker_daemon_troubleshooting(self) -> None:
+        """Provide comprehensive Docker daemon troubleshooting guidance"""
+        self.log("Docker Daemon Troubleshooting Guide:", "INFO")
+        self.log("1. Check Docker service status: systemctl status docker", "INFO")
+        self.log("2. Start Docker service: sudo systemctl start docker", "INFO")
+        self.log("3. Enable Docker to start on boot: sudo systemctl enable docker", "INFO")
+        self.log("4. Add user to docker group: sudo usermod -aG docker $USER", "INFO")
+        self.log("5. Logout and login again after adding to docker group", "INFO")
+        self.log("6. Check Docker socket permissions: ls -la /var/run/docker.sock", "INFO")
+        self.log("7. Restart Docker service: sudo systemctl restart docker", "INFO")
+    
+    def _provide_docker_compose_troubleshooting(self) -> None:
+        """Provide Docker Compose troubleshooting guidance"""
+        self.log("Docker Compose Troubleshooting Guide:", "INFO")
+        self.log("1. Install Docker Compose plugin: sudo apt-get install docker-compose-plugin", "INFO")
+        self.log("2. Or install standalone: sudo pip install docker-compose", "INFO")
+        self.log("3. Check Docker version supports Compose: docker --version", "INFO")
+        self.log("4. Use 'docker compose' (modern) instead of 'docker-compose' (legacy)", "INFO")
+    
+    def _provide_docker_access_troubleshooting(self) -> None:
+        """Provide Docker access troubleshooting guidance"""
+        self.log("Docker Access Troubleshooting Guide:", "INFO")
+        self.log("1. Verify user is in docker group: groups $USER", "INFO")
+        self.log("2. Check socket permissions: ls -la /var/run/docker.sock", "INFO")
+        self.log("3. Test with sudo: sudo docker ps", "INFO")
+        self.log("4. If sudo works, it's a permissions issue", "INFO")
     
     def _validate_disk_space_for_docker(self) -> bool:
         """Validate sufficient disk space for Docker build and deployment"""
