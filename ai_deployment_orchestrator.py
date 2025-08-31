@@ -6176,13 +6176,14 @@ EOF""")
             return False
     
     def _validate_final_docker_compose_config(self) -> bool:
-        """Validate final docker-compose configuration"""
+        """Validate final docker-compose configuration with environment file"""
         self.log("Validating final docker-compose configuration...", "INFO")
         
-        # Test docker-compose syntax
-        exit_code, _, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml config --quiet")
+        # Test docker-compose syntax with environment file
+        exit_code, _, stderr = self.execute_command("cd /opt/projectmeats && docker compose --env-file .env.prod -f docker-compose.prod.yml config --quiet")
         if exit_code != 0:
             self.log(f"Docker-compose configuration validation failed: {stderr}", "ERROR")
+            self.log("Tip: Run 'docker compose --env-file .env.prod -f docker-compose.prod.yml config' for detailed error information", "INFO")
             return False
         
         # Check that required files exist and are readable
@@ -6199,7 +6200,45 @@ EOF""")
         
         self.log("Final docker-compose configuration validation passed", "SUCCESS")
         return True
-    
+
+    def _run_preflight_validation(self) -> bool:
+        """Run comprehensive preflight validation using dedicated script"""
+        self.log("Running preflight validation for production deployment...", "INFO")
+        
+        # Check if preflight script exists
+        script_path = "/opt/projectmeats/scripts/preflight/validate_prod_compose.sh"
+        exit_code, _, _ = self.execute_command(f"test -x {script_path}")
+        
+        if exit_code != 0:
+            self.log("Preflight validation script not found, using basic validation", "WARNING")
+            return True  # Fall back to basic validation
+        
+        # Run preflight validation script
+        exit_code, output, stderr = self.execute_command(f"cd /opt/projectmeats && {script_path}")
+        
+        if exit_code == 0:
+            self.log("Preflight validation passed successfully", "SUCCESS")
+            if output:
+                # Log successful validation output
+                for line in output.split('\n'):
+                    if '[SUCCESS]' in line or '[INFO]' in line:
+                        self.log(line.replace('[SUCCESS]', '').replace('[INFO]', '').strip(), "INFO")
+            return True
+        else:
+            self.log("Preflight validation failed", "ERROR")
+            if output:
+                # Log validation errors and warnings
+                for line in output.split('\n'):
+                    if '[ERROR]' in line:
+                        self.log(line.replace('[ERROR]', '').strip(), "ERROR")
+                    elif '[WARNING]' in line:
+                        self.log(line.replace('[WARNING]', '').strip(), "WARNING")
+            
+            if stderr:
+                self.log(f"Preflight validation stderr: {stderr}", "ERROR")
+            
+            return False
+
     def _create_production_dockerfiles(self) -> bool:
         """Create production-optimized Dockerfiles with multi-stage builds"""
         self.log("Creating production-optimized Dockerfiles...", "INFO")
@@ -6614,6 +6653,11 @@ EOF""")
             
             # Pull base images with retry logic
             if not self._pull_base_images_with_retry():
+                return False
+            
+            # Run comprehensive preflight validation
+            if not self._run_preflight_validation():
+                self.log("Preflight validation failed. Please fix issues before deployment.", "ERROR")
                 return False
             
             # Validate docker-compose configuration
@@ -7269,17 +7313,18 @@ EOF""")
         return True
     
     def _validate_docker_compose_config(self) -> bool:
-        """Validate docker-compose configuration before build"""
+        """Validate docker-compose configuration before build with environment file"""
         self.log("Validating docker-compose configuration...", "INFO")
         
-        # Test docker-compose config syntax
-        exit_code, _, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml config --quiet")
+        # Test docker-compose config syntax with environment file
+        exit_code, _, stderr = self.execute_command("cd /opt/projectmeats && docker compose --env-file .env.prod -f docker-compose.prod.yml config --quiet")
         if exit_code != 0:
             self.log(f"Docker compose configuration invalid: {stderr}", "ERROR")
+            self.log("Tip: Ensure .env.prod file exists and has all required variables set", "INFO")
             return False
         
         # Check for environment variable substitution issues
-        exit_code, config_output, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml config")
+        exit_code, config_output, stderr = self.execute_command("cd /opt/projectmeats && docker compose --env-file .env.prod -f docker-compose.prod.yml config")
         if exit_code == 0:
             # Look for unresolved variables (pattern: ${VAR} that wasn't substituted)
             if "${" in config_output and "}" in config_output:
