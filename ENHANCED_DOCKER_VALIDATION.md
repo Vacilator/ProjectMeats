@@ -37,12 +37,28 @@ def _check_docker_daemon_connectivity(self) -> bool:
         # Comprehensive diagnostics
 ```
 
-### 2. Comprehensive Diagnostics
+### 2. Enhanced Service Startup Failure Handling (NEW)
+- **Deep diagnosis** of Docker service startup failures
+- **Automatic restart attempts** when systemctl start fails
+- **Systemd journal analysis** for root cause identification
+- **Corrupted state cleanup** (socket files, PID files)
+- **Installation validation** for persistent failures
+
+**Service Startup Recovery Patterns:**
+- `systemctl start docker` fails → Diagnose → `systemctl restart docker`
+- Journal analysis for specific error patterns
+- Automatic cleanup of corrupted Docker state files
+- Docker installation integrity validation
+- Enhanced troubleshooting guidance for service failures
+
+### 3. Comprehensive Diagnostics
 - **Service Status Check**: Verifies Docker service is active
 - **Socket Permissions**: Validates `/var/run/docker.sock` permissions
 - **User Group Membership**: Confirms user is in docker group
 - **Error Pattern Detection**: Identifies specific error types
 - **System Information**: Disk space, Docker version, etc.
+- **NEW: Service Startup Analysis**: Systemd journal examination
+- **NEW: Installation Validation**: Docker binary and configuration checks
 
 ### 3. Automatic Recovery Capabilities
 - **Service Start**: Automatically attempts to start Docker service
@@ -106,11 +122,30 @@ Comprehensive diagnostic function:
 - Error pattern identification
 
 #### `_attempt_docker_service_recovery()`
-Automatic recovery function:
+Enhanced automatic recovery function:
 - Service start attempt
+- **NEW: Service startup failure diagnosis**
+- **NEW: Automatic restart fallback**
+- **NEW: Docker installation validation**
 - Initialization wait period
 - Recovery verification
 - Success/failure reporting
+
+#### `_diagnose_docker_service_startup_failure()` (NEW)
+Deep diagnostic function for service startup failures:
+- Systemd service status analysis
+- Journal log examination for error patterns
+- Automatic cleanup of corrupted state files
+- Detection of common service startup issues
+- Targeted recovery based on error patterns
+
+#### `_validate_docker_installation()` (NEW)
+Docker installation integrity validation:
+- Docker binary existence and accessibility
+- Docker version verification
+- Systemd service unit validation
+- Configuration directory checks
+- Installation corruption detection
 
 ### Error Handling Flow
 
