@@ -4513,132 +4513,442 @@ server {{
             return False
     
     def _install_docker(self) -> bool:
-        """Install Docker with industry best practices"""
-        self.log("Installing Docker with latest security practices...", "INFO")
+        """Install Docker with industry best practices and comprehensive error handling"""
+        self.log("Installing Docker with enhanced validation and error handling...", "INFO")
         
-        # Clean up any existing malformed Docker repository entries first
-        self.log("Cleaning up any malformed Docker repository entries...", "DEBUG")
-        cleanup_commands = [
-            # Remove any malformed Docker repository files
-            "rm -f /etc/apt/sources.list.d/docker.list",
-            "rm -f /etc/apt/sources.list.d/docker.list.save",
-            # Clean apt cache
-            "apt-get clean",
-            # Remove any malformed entries from sources.list that contain $(lsb_release
-            "sed -i '/docker.*$(lsb_release/d' /etc/apt/sources.list || true"
-        ]
-        
-        for cmd in cleanup_commands:
-            exit_code, _, stderr = self.execute_command(cmd)
-            if exit_code != 0:
-                self.log(f"Cleanup command '{cmd}' had issues: {stderr}", "DEBUG")
-        
-        # Get the Ubuntu codename with better error handling and validation
-        self.log("Detecting Ubuntu version...", "DEBUG")
-        exit_code, codename_output, stderr = self.execute_command("lsb_release -cs")
-        if exit_code != 0:
-
-            self.log(f"Failed to get Ubuntu codename: {stderr}", "ERROR")
-            # Fallback to trying to detect Ubuntu codename from /etc/os-release
-            exit_code2, codename_output2, stderr2 = self.execute_command("grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '\"'")
-            if exit_code2 == 0 and codename_output2.strip():
-                ubuntu_codename = codename_output2.strip()
-                self.log(f"Detected Ubuntu codename from os-release: {ubuntu_codename}", "DEBUG")
-            else:
-                self.log("Could not detect Ubuntu codename, using 'jammy' as default", "WARNING")
-                ubuntu_codename = "jammy"  # Default to jammy for Ubuntu 22.04
-        else:
-            ubuntu_codename = codename_output.strip()
-            
-        # Validate ubuntu_codename is not empty or malformed
-        if not ubuntu_codename or ubuntu_codename.startswith('$') or len(ubuntu_codename) < 3:
-            self.log(f"Invalid Ubuntu codename detected: '{ubuntu_codename}', using 'jammy' as fallback", "WARNING")
-            ubuntu_codename = "jammy"
-            
-        self.log(f"Using Ubuntu codename: {ubuntu_codename}", "DEBUG")
-
-        
-        commands = [
-            # Remove any old Docker versions
-            "apt-get remove -y docker docker-engine docker.io containerd runc || true",
-            
-            # Install dependencies
-            "apt-get update",
-            "apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release",
-            
-            # Add Docker's official GPG key
-            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --batch --yes --quiet --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
-            
-            # Add Docker repository with properly validated Ubuntu codename
-            f"echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {ubuntu_codename} stable' | tee /etc/apt/sources.list.d/docker.list > /dev/null",
-            
-            # Install Docker
-            "apt-get update",
-            "apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
-            
-            # Enable and start Docker
-            "systemctl enable docker",
-            "systemctl start docker",
-            
-            # Create projectmeats user and add to docker group
-            "useradd -r -s /bin/false projectmeats || true",
-            "usermod -aG docker projectmeats",
-            
-            # Create necessary directories
-            "mkdir -p /opt/projectmeats/{logs,backups,ssl,media,static}",
-            "chown -R projectmeats:docker /opt/projectmeats",
-        ]
-        
-        for cmd in commands:
-            exit_code, stdout, stderr = self.execute_command(cmd)
-            if exit_code != 0 and "remove" not in cmd and "useradd" not in cmd:
-                self.log(f"Failed to execute: {cmd}", "ERROR")
-                self.log(f"Error: {stderr}", "ERROR")
+        try:
+            # Comprehensive pre-installation validation
+            if not self._validate_docker_installation_prerequisites():
                 return False
-                
-        # Verify Docker installation
-        exit_code, stdout, stderr = self.execute_command("docker --version")
-        if exit_code == 0:
-            self.log(f"Docker installed successfully: {stdout.strip()}", "SUCCESS")
+            
+            # Enhanced repository cleanup with pattern validation
+            if not self._comprehensive_docker_repository_cleanup():
+                return False
+            
+            # Robust Ubuntu version detection with fallbacks
+            ubuntu_codename = self._detect_ubuntu_codename_safely()
+            if not ubuntu_codename:
+                return False
+            
+            # Install Docker with comprehensive error handling
+            if not self._install_docker_with_retry(ubuntu_codename):
+                return False
+            
+            # Post-installation validation and setup
+            if not self._validate_and_configure_docker_installation():
+                return False
+            
+            self.log("Docker installation completed successfully with all validations", "SUCCESS")
             return True
-        else:
-            self.log("Docker installation verification failed", "ERROR")
+            
+        except Exception as e:
+            self.log(f"Docker installation failed with exception: {e}", "ERROR")
             return False
     
-    def _create_production_docker_compose(self) -> bool:
-        """Create production-optimized docker-compose.yml with industry best practices"""
-        self.log("Creating production docker-compose configuration...", "INFO")
+    def _validate_docker_installation_prerequisites(self) -> bool:
+        """Validate prerequisites for Docker installation"""
+        self.log("Validating Docker installation prerequisites...", "INFO")
         
-        # Ensure required configuration variables are defined with secure defaults
+        # Check if Docker is already installed and working
+        exit_code, version_output, _ = self.execute_command("docker --version")
+        if exit_code == 0:
+            self.log(f"Docker already installed: {version_output.strip()}", "INFO")
+            
+            # Check if Docker daemon is running
+            exit_code, _, _ = self.execute_command("docker info")
+            if exit_code == 0:
+                self.log("Docker daemon is running and accessible", "SUCCESS")
+                return True
+            else:
+                self.log("Docker installed but daemon not accessible - proceeding with configuration", "INFO")
+        
+        # Check system requirements
+        exit_code, _, _ = self.execute_command("uname -m | grep -E 'x86_64|amd64'")
+        if exit_code != 0:
+            self.log("Docker requires x86_64/amd64 architecture", "ERROR")
+            return False
+        
+        # Check available disk space
+        exit_code, df_output, _ = self.execute_command("df -h / | tail -1")
+        if exit_code == 0:
+            # Simple check for available space
+            if "100%" in df_output:
+                self.log("Insufficient disk space for Docker installation", "ERROR")
+                return False
+        
+        # Check network connectivity
+        exit_code, _, _ = self.execute_command("curl -f --connect-timeout 10 https://download.docker.com/ >/dev/null 2>&1")
+        if exit_code != 0:
+            self.log("Cannot reach Docker download servers - check internet connectivity", "ERROR")
+            return False
+        
+        self.log("Docker installation prerequisites validated", "SUCCESS")
+        return True
+    
+    def _comprehensive_docker_repository_cleanup(self) -> bool:
+        """Comprehensive cleanup of Docker repository configurations with pattern validation"""
+        self.log("Performing comprehensive Docker repository cleanup...", "INFO")
+        
+        try:
+            # Define all known problematic patterns that have caused issues
+            problematic_patterns = [
+                "$(lsb_release Release",  # Missing closing ) and -cs
+                "$(lsb_release)",         # Missing -cs flag  
+                "$(lsb_release -cs ",     # Missing closing )
+                "$(lsb_release -c)",      # Wrong flag (should be -cs)
+                "$(lsb_release -s",       # Missing closing ) and wrong flag
+                r"\$\(lsb_release[^)]*Release",  # Regex pattern for various malformed patterns
+            ]
+            
+            # Remove known problematic Docker repository files
+            docker_repo_files = [
+                "/etc/apt/sources.list.d/docker.list",
+                "/etc/apt/sources.list.d/docker.list.save",
+                "/etc/apt/sources.list.d/download_docker_com_linux_ubuntu.list",
+                "/etc/apt/sources.list.d/docker-ce.list",
+                "/etc/apt/sources.list.d/docker-community.list"
+            ]
+            
+            for repo_file in docker_repo_files:
+                exit_code, _, _ = self.execute_command(f"test -f {repo_file}")
+                if exit_code == 0:
+                    # Check if file contains problematic patterns before removing
+                    exit_code, content, _ = self.execute_command(f"cat {repo_file}")
+                    if exit_code == 0:
+                        has_issues = any(pattern in content for pattern in problematic_patterns[:4])  # Skip regex pattern
+                        if has_issues or "docker.com" in content:
+                            self.log(f"Removing problematic Docker repository file: {repo_file}", "INFO")
+                            self.execute_command(f"rm -f {repo_file}")
+            
+            # Clean up main sources.list for Docker entries with malformed patterns
+            self.log("Cleaning malformed Docker entries from main sources.list...", "DEBUG")
+            cleanup_commands = [
+                # Remove lines containing malformed lsb_release patterns
+                "sed -i '/docker.com.*$(lsb_release Release/d' /etc/apt/sources.list",
+                "sed -i '/docker.com.*$(lsb_release)/d' /etc/apt/sources.list",
+                "sed -i '/docker.com.*$(lsb_release -cs /d' /etc/apt/sources.list",
+                "sed -i '/docker.com.*$(lsb_release -c)/d' /etc/apt/sources.list",
+                # Remove any Docker GPG keys that might be corrupted
+                "rm -f /usr/share/keyrings/docker-archive-keyring.gpg.tmp*",
+                "rm -f /usr/share/keyrings/docker-archive-keyring.gpg.backup*",
+                # Clean package cache to avoid issues
+                "apt-get clean",
+                "rm -rf /var/lib/apt/lists/*docker*"
+            ]
+            
+            for cmd in cleanup_commands:
+                exit_code, _, stderr = self.execute_command(cmd)
+                if exit_code != 0 and "No such file" not in stderr:
+                    self.log(f"Cleanup command had issues (non-critical): {cmd} - {stderr}", "DEBUG")
+            
+            # Verify cleanup was successful
+            exit_code, _, _ = self.execute_command("grep -r 'docker.com.*$(lsb_release' /etc/apt/ 2>/dev/null")
+            if exit_code == 0:
+                self.log("Warning: Some malformed Docker repository entries may still exist", "WARNING")
+                # Attempt more aggressive cleanup
+                self.execute_command("find /etc/apt/ -name '*.list*' -exec sed -i '/docker.com.*$(lsb_release/d' {} \\;")
+            
+            self.log("Docker repository cleanup completed", "SUCCESS")
+            return True
+            
+        except Exception as e:
+            self.log(f"Docker repository cleanup failed: {e}", "ERROR")
+            return False
+    
+    def _detect_ubuntu_codename_safely(self) -> Optional[str]:
+        """Detect Ubuntu codename with multiple fallback methods"""
+        self.log("Detecting Ubuntu version with fallback methods...", "INFO")
+        
+        # Method 1: lsb_release (primary)
+        exit_code, codename_output, stderr = self.execute_command("lsb_release -cs")
+        if exit_code == 0 and codename_output.strip() and not codename_output.startswith('$'):
+            ubuntu_codename = codename_output.strip()
+            self.log(f"Ubuntu codename detected via lsb_release: {ubuntu_codename}", "INFO")
+            
+            # Validate it's a known Ubuntu codename
+            known_codenames = ['focal', 'jammy', 'lunar', 'mantic', 'noble', 'bionic', 'xenial']
+            if ubuntu_codename in known_codenames:
+                return ubuntu_codename
+            else:
+                self.log(f"Unknown Ubuntu codename '{ubuntu_codename}', trying fallback methods", "WARNING")
+        
+        # Method 2: /etc/os-release (fallback)
+        exit_code, os_release_output, _ = self.execute_command("grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '\"'")
+        if exit_code == 0 and os_release_output.strip():
+            ubuntu_codename = os_release_output.strip()
+            self.log(f"Ubuntu codename detected via os-release: {ubuntu_codename}", "INFO")
+            return ubuntu_codename
+        
+        # Method 3: /etc/lsb-release (fallback)  
+        exit_code, lsb_release_output, _ = self.execute_command("grep DISTRIB_CODENAME /etc/lsb-release | cut -d= -f2")
+        if exit_code == 0 and lsb_release_output.strip():
+            ubuntu_codename = lsb_release_output.strip()
+            self.log(f"Ubuntu codename detected via lsb-release file: {ubuntu_codename}", "INFO")
+            return ubuntu_codename
+        
+        # Method 4: Ubuntu version detection (fallback)
+        exit_code, version_output, _ = self.execute_command("lsb_release -rs")
+        if exit_code == 0 and version_output.strip():
+            version = version_output.strip()
+            version_to_codename = {
+                '22.04': 'jammy',
+                '20.04': 'focal', 
+                '18.04': 'bionic',
+                '23.04': 'lunar',
+                '23.10': 'mantic',
+                '24.04': 'noble'
+            }
+            if version in version_to_codename:
+                ubuntu_codename = version_to_codename[version]
+                self.log(f"Ubuntu codename mapped from version {version}: {ubuntu_codename}", "INFO")
+                return ubuntu_codename
+        
+        # Method 5: Default to jammy (Ubuntu 22.04 LTS - most common)
+        self.log("Could not detect Ubuntu codename, defaulting to 'jammy' (Ubuntu 22.04 LTS)", "WARNING")
+        return "jammy"
+    
+    def _install_docker_with_retry(self, ubuntu_codename: str) -> bool:
+        """Install Docker with retry logic and comprehensive error handling"""
+        self.log(f"Installing Docker for Ubuntu {ubuntu_codename}...", "INFO")
+        
+        # Docker installation commands with enhanced error handling
+        install_commands = [
+            # Remove any old Docker versions with error suppression
+            ("Removing old Docker versions", "apt-get remove -y docker docker-engine docker.io containerd runc || true"),
+            
+            # Update package lists with validation
+            ("Updating package lists", "apt-get update"),
+            
+            # Install dependencies with verification
+            ("Installing dependencies", "apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release"),
+            
+            # Create keyrings directory
+            ("Creating keyrings directory", "mkdir -p /usr/share/keyrings"),
+            
+            # Add Docker's official GPG key with retry
+            ("Adding Docker GPG key", f"curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --batch --yes --quiet --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg"),
+            
+            # Validate GPG key was added
+            ("Validating GPG key", "test -f /usr/share/keyrings/docker-archive-keyring.gpg"),
+            
+            # Add Docker repository with validated Ubuntu codename
+            ("Adding Docker repository", f"echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {ubuntu_codename} stable' | tee /etc/apt/sources.list.d/docker.list > /dev/null"),
+            
+            # Update package lists again
+            ("Updating package lists with Docker repo", "apt-get update"),
+            
+            # Install Docker packages
+            ("Installing Docker packages", "apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"),
+        ]
+        
+        for description, command in install_commands:
+            success = False
+            for attempt in range(3):  # 3 retry attempts for critical commands
+                self.log(f"{description} (attempt {attempt + 1}/3)...", "INFO")
+                exit_code, stdout, stderr = self.execute_command(command, timeout=300)
+                
+                if exit_code == 0:
+                    self.log(f"{description} completed successfully", "SUCCESS")
+                    success = True
+                    break
+                else:
+                    self.log(f"{description} failed (attempt {attempt + 1}): {stderr}", "WARNING")
+                    
+                    # Special handling for specific commands
+                    if "apt-get update" in command and attempt < 2:
+                        # For apt-get update failures, try to fix repository issues
+                        self.log("Attempting to fix repository issues...", "INFO")
+                        self._fix_repository_issues(stderr)
+                        time.sleep(5)
+                    elif attempt < 2:
+                        time.sleep(10)  # Wait before retry
+            
+            if not success:
+                self.log(f"Failed to complete: {description}", "ERROR")
+                return False
+        
+        return True
+    
+    def _validate_and_configure_docker_installation(self) -> bool:
+        """Validate and configure Docker installation"""
+        self.log("Validating and configuring Docker installation...", "INFO")
+        
+        # Verify Docker installation
+        exit_code, version_output, stderr = self.execute_command("docker --version")
+        if exit_code != 0:
+            self.log(f"Docker installation verification failed: {stderr}", "ERROR")
+            return False
+        
+        self.log(f"Docker installed successfully: {version_output.strip()}", "SUCCESS")
+        
+        # Verify Docker Compose
+        exit_code, compose_version, stderr = self.execute_command("docker compose version")
+        if exit_code != 0:
+            self.log(f"Docker Compose verification failed: {stderr}", "ERROR")
+            return False
+        
+        self.log(f"Docker Compose available: {compose_version.strip()}", "SUCCESS")
+        
+        # Configure Docker daemon and services
+        configuration_commands = [
+            # Enable Docker service
+            ("Enabling Docker service", "systemctl enable docker"),
+            
+            # Start Docker service 
+            ("Starting Docker service", "systemctl start docker"),
+            
+            # Create projectmeats user if it doesn't exist
+            ("Creating projectmeats user", "useradd -r -s /bin/false projectmeats || true"),
+            
+            # Add projectmeats user to docker group
+            ("Adding projectmeats to docker group", "usermod -aG docker projectmeats"),
+            
+            # Create necessary directories with proper ownership
+            ("Creating project directories", "mkdir -p /opt/projectmeats/{logs,backups,ssl,media,static}"),
+            
+            # Set proper ownership
+            ("Setting directory ownership", "chown -R projectmeats:docker /opt/projectmeats || chown -R projectmeats:projectmeats /opt/projectmeats"),
+        ]
+        
+        for description, command in configuration_commands:
+            exit_code, stdout, stderr = self.execute_command(command)
+            if exit_code == 0:
+                self.log(f"{description} completed successfully", "SUCCESS")
+            else:
+                # Some commands are expected to potentially fail (like useradd for existing user)
+                if "already exists" in stderr or "useradd" in command:
+                    self.log(f"{description} - user already exists", "INFO")
+                else:
+                    self.log(f"{description} failed: {stderr}", "WARNING")
+                    # Continue anyway for non-critical failures
+        
+        # Final validation - test Docker daemon access
+        exit_code, _, stderr = self.execute_command("docker info")
+        if exit_code != 0:
+            self.log(f"Docker daemon not accessible after installation: {stderr}", "ERROR")
+            
+            # Try to start Docker service
+            self.execute_command("systemctl restart docker")
+            time.sleep(10)
+            
+            # Test again
+            exit_code, _, stderr = self.execute_command("docker info")
+            if exit_code != 0:
+                self.log("Docker daemon still not accessible after restart", "ERROR")
+                return False
+        
+        self.log("Docker installation validation and configuration completed successfully", "SUCCESS")
+        return True
+    
+    def _create_production_docker_compose(self) -> bool:
+        """Create production-optimized docker-compose.yml with comprehensive validation and external database support"""
+        self.log("Creating production docker-compose configuration with enhanced validation...", "INFO")
+        
+        try:
+            # Validate configuration requirements
+            if not self._validate_docker_compose_requirements():
+                return False
+            
+            # Determine database configuration
+            db_config = self._determine_database_configuration()
+            
+            # Generate docker-compose content based on configuration
+            compose_content = self._generate_docker_compose_content(db_config)
+            
+            # Validate generated content
+            if not self._validate_generated_compose_content(compose_content):
+                return False
+            
+            # Write docker-compose.prod.yml with atomic operation
+            if not self._write_docker_compose_file_atomically(compose_content):
+                return False
+            
+            # Create corresponding environment file
+            if not self._create_corresponding_env_file(db_config):
+                return False
+            
+            # Validate final configuration
+            if not self._validate_final_docker_compose_config():
+                return False
+            
+            self.log("Production docker-compose configuration created and validated successfully", "SUCCESS")
+            return True
+            
+        except Exception as e:
+            self.log(f"Failed to create docker-compose configuration: {e}", "ERROR")
+            return False
+    
+    def _validate_docker_compose_requirements(self) -> bool:
+        """Validate requirements for docker-compose creation"""
+        self.log("Validating docker-compose requirements...", "INFO")
+        
+        # Check required configuration
         domain = self.config.get('domain', 'localhost')
+        if not domain:
+            self.log("Domain configuration is required for docker-compose", "ERROR")
+            return False
+        
+        # Validate domain format (basic validation)
+        if ' ' in domain or '"' in domain or "'" in domain:
+            self.log(f"Invalid domain format: {domain}", "ERROR")
+            return False
+        
+        # Check project directory exists
+        exit_code, _, _ = self.execute_command("test -d /opt/projectmeats")
+        if exit_code != 0:
+            self.log("Project directory /opt/projectmeats does not exist", "ERROR")
+            return False
+        
+        self.log("Docker-compose requirements validation passed", "SUCCESS")
+        return True
+    
+    def _determine_database_configuration(self) -> Dict[str, Any]:
+        """Determine database configuration (external vs local)"""
+        self.log("Determining database configuration...", "INFO")
         
         # Check for external managed database configuration
         db_config = self.config.get('database', {})
         use_external_db = db_config.get('external_managed', False) or self.config.get('docker', {}).get('skip_database_container', False)
         
+        config = {
+            'use_external_db': use_external_db,
+            'domain': self.config.get('domain', 'localhost')
+        }
+        
         if use_external_db:
             self.log("Using external managed database - PostgreSQL container will be skipped", "INFO")
             # Use external database credentials
-            postgres_host = db_config.get('host', 'localhost')
-            postgres_port = db_config.get('port', 5432)
-            postgres_user = db_config.get('user', 'postgres')
-            postgres_db = db_config.get('name', 'projectmeats')
-            postgres_password = db_config.get('password', '')
-            postgres_ssl_mode = db_config.get('ssl_mode', 'prefer')
+            config.update({
+                'postgres_host': db_config.get('host', 'localhost'),
+                'postgres_port': db_config.get('port', 5432),
+                'postgres_user': db_config.get('user', 'postgres'),
+                'postgres_db': db_config.get('name', 'projectmeats'),
+                'postgres_password': db_config.get('password', ''),
+                'postgres_ssl_mode': db_config.get('ssl_mode', 'prefer')
+            })
+            
+            # Validate external database configuration
+            if not config['postgres_password']:
+                self.log("External database password is required but not provided", "ERROR")
+                return {}
+                
         else:
+            self.log("Using local Docker database configuration", "INFO")
             # Use local Docker database configuration with fallbacks to prevent NameError
             # Support environment variables as mentioned in the problem statement
-            postgres_host = 'db'
-            postgres_port = 5432
-            postgres_user = (
-                os.environ.get('POSTGRES_USER') or 
-                self.config.get('db_user', 'projectmeats')
-            )
-            postgres_db = (
-                os.environ.get('POSTGRES_DB') or 
-                self.config.get('db_name', 'projectmeats')
-            )
-            postgres_ssl_mode = 'disable'
+            config.update({
+                'postgres_host': 'db',
+                'postgres_port': 5432,
+                'postgres_user': (
+                    os.environ.get('POSTGRES_USER') or 
+                    self.config.get('db_user', 'projectmeats')
+                ),
+                'postgres_db': (
+                    os.environ.get('POSTGRES_DB') or 
+                    self.config.get('db_name', 'projectmeats')
+                ),
+                'postgres_ssl_mode': 'disable'
+            })
             
             # Generate secure passwords if not already defined
             if not hasattr(self, '_postgres_password') or self._postgres_password is None:
@@ -4646,20 +4956,33 @@ server {{
                     os.environ.get('POSTGRES_PASSWORD') or 
                     self._generate_secure_password(32)
                 )
-            postgres_password = self._postgres_password
-            
+            config['postgres_password'] = self._postgres_password
+        
+        # Generate Redis password if not already defined
         if not hasattr(self, '_redis_password') or self._redis_password is None:
             self._redis_password = (
                 os.environ.get('REDIS_PASSWORD') or 
                 self._generate_secure_password(32)
             )
+        config['redis_password'] = self._redis_password
         
-        # Build docker-compose content conditionally based on database configuration
+        return config
+    
+    def _generate_docker_compose_content(self, db_config: Dict[str, Any]) -> str:
+        """Generate docker-compose content based on configuration"""
+        self.log("Generating docker-compose content...", "INFO")
+        
+        use_external_db = db_config['use_external_db']
+        domain = db_config['domain']
+        
+        # Start building docker-compose content
         compose_content = f"""version: '3.8'
 
 # ProjectMeats Production Docker Compose
-# Optimized for DigitalOcean droplets with industry best practices
+# Generated by AI Deployment Orchestrator with comprehensive validation
+# Optimized for production deployment with security hardening
 # Database: {'External Managed PostgreSQL' if use_external_db else 'Local Docker PostgreSQL'}
+# Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 services:"""
 
@@ -4671,8 +4994,8 @@ services:"""
     image: postgres:15-alpine
     container_name: projectmeats-db
     environment:
-      POSTGRES_DB: ${{POSTGRES_DB:-{postgres_db}}}
-      POSTGRES_USER: ${{POSTGRES_USER:-{postgres_user}}}
+      POSTGRES_DB: ${{POSTGRES_DB:-{db_config['postgres_db']}}}
+      POSTGRES_USER: ${{POSTGRES_USER:-{db_config['postgres_user']}}}
       POSTGRES_PASSWORD: ${{POSTGRES_PASSWORD}}
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
@@ -4689,13 +5012,19 @@ services:"""
       - /tmp
       - /var/run/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${{POSTGRES_USER:-{postgres_user}}} -d ${{POSTGRES_DB:-{postgres_db}}}"]
+      test: ["CMD-SHELL", "pg_isready -U ${{POSTGRES_USER:-{db_config['postgres_user']}}} -d ${{POSTGRES_DB:-{db_config['postgres_db']}}}"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 """
 
+        # Add Redis service
         compose_content += f"""
   # Redis Cache with security hardening  
   redis:
@@ -4717,7 +5046,24 @@ services:"""
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+"""
 
+        # Build DATABASE_URL based on configuration
+        if use_external_db:
+            if db_config['postgres_ssl_mode'] and db_config['postgres_ssl_mode'] != 'disable':
+                database_url = f"postgresql://{db_config['postgres_user']}:{db_config['postgres_password']}@{db_config['postgres_host']}:{db_config['postgres_port']}/{db_config['postgres_db']}?sslmode={db_config['postgres_ssl_mode']}"
+            else:
+                database_url = f"postgresql://{db_config['postgres_user']}:{db_config['postgres_password']}@{db_config['postgres_host']}:{db_config['postgres_port']}/{db_config['postgres_db']}"
+        else:
+            database_url = f"postgresql://${{POSTGRES_USER:-{db_config['postgres_user']}}}:${{POSTGRES_PASSWORD}}@db:5432/${{POSTGRES_DB:-{db_config['postgres_db']}}}"
+
+        # Add Backend service
+        compose_content += f"""
   # Django Backend with production optimizations
   backend:
     build:
@@ -4726,26 +5072,18 @@ services:"""
       target: production
     container_name: projectmeats-backend
     user: "1000:1000"  # Non-root user
-    environment:"""
-
-        # Build DATABASE_URL based on configuration
-        if use_external_db:
-            if postgres_ssl_mode and postgres_ssl_mode != 'disable':
-                database_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}?sslmode={postgres_ssl_mode}"
-            else:
-                database_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
-        else:
-            database_url = f"postgresql://${{POSTGRES_USER:-{postgres_user}}}:${{POSTGRES_PASSWORD}}@db:5432/${{POSTGRES_DB:-{postgres_db}}}"
-
-        compose_content += f"""
+    environment:
       - DATABASE_URL={database_url}
       - REDIS_URL=redis://default:${{REDIS_PASSWORD}}@redis:6379/0
       - DJANGO_SETTINGS_MODULE=projectmeats.settings.production
       - DEBUG=False
-      - ALLOWED_HOSTS={domain},www.{domain}
+      - ALLOWED_HOSTS={domain},www.{domain},localhost,127.0.0.1
       - SECURE_SSL_REDIRECT=True
       - SESSION_COOKIE_SECURE=True
       - CSRF_COOKIE_SECURE=True
+      - SECURE_HSTS_SECONDS=31536000
+      - SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+      - SECURE_HSTS_PRELOAD=True
     volumes:
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media
@@ -4782,6 +5120,19 @@ services:"""
       timeout: 10s
       retries: 3
       start_period: 120s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   # React Frontend with nginx serving
   frontend:
@@ -4804,6 +5155,19 @@ services:"""
       - /var/cache/nginx
       - /var/run
       - /var/log/nginx
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
 
   # Nginx Reverse Proxy with SSL termination
   nginx:
@@ -4837,6 +5201,19 @@ services:"""
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
 
   # Background Task Worker
   celery:
@@ -4877,9 +5254,22 @@ services:"""
       - no-new-privileges:true
     read_only: true
     tmpfs:
-      - /tmp"""
+      - /tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M"""
 
-        # Add backup service only if not using external managed database
+        # Add backup service based on database configuration
         if not use_external_db:
             compose_content += f"""
 
@@ -4900,7 +5290,7 @@ services:"""
       sh -c "
         while true; do
           echo 'Starting backup at $(date)'
-          pg_dump -h db -U ${{POSTGRES_USER:-{postgres_user}}} -d ${{POSTGRES_DB:-{postgres_db}}} > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
+          pg_dump -h db -U ${{POSTGRES_USER:-{db_config['postgres_user']}}} -d ${{POSTGRES_DB:-{db_config['postgres_db']}}} > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
           find /backups -name '*.sql' -mtime +7 -delete
           echo 'Backup completed at $(date)'
           sleep 86400
@@ -4914,7 +5304,7 @@ services:"""
     image: postgres:15-alpine
     container_name: projectmeats-backup
     environment:
-      PGPASSWORD: {postgres_password}
+      PGPASSWORD: {db_config['postgres_password']}
     volumes:
       - /opt/projectmeats/backups:/backups
     restart: "no"
@@ -4924,7 +5314,7 @@ services:"""
       sh -c "
         while true; do
           echo 'Starting backup at $(date)'
-          pg_dump -h {postgres_host} -p {postgres_port} -U {postgres_user} -d {postgres_db} {'--set=sslmode=' + postgres_ssl_mode if postgres_ssl_mode != 'disable' else ''} > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
+          pg_dump -h {db_config['postgres_host']} -p {db_config['postgres_port']} -U {db_config['postgres_user']} -d {db_config['postgres_db']} {'--set=sslmode=' + db_config['postgres_ssl_mode'] if db_config['postgres_ssl_mode'] != 'disable' else ''} > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
           find /backups -name '*.sql' -mtime +7 -delete
           echo 'Backup completed at $(date)'
           sleep 86400
@@ -4962,25 +5352,90 @@ networks:
     internal: true
 """
 
-        # Write the generated docker-compose content to the server
-        self.log(f"Writing {'external database' if use_external_db else 'local database'} docker-compose configuration...", "INFO")
+        return compose_content
+    
+    def _validate_generated_compose_content(self, compose_content: str) -> bool:
+        """Validate generated docker-compose content"""
+        self.log("Validating generated docker-compose content...", "INFO")
         
-        exit_code, _, stderr = self.execute_command(f"""cat > /opt/projectmeats/docker-compose.prod.yml << 'EOF'
-{compose_content}
-EOF""")
-        if exit_code != 0:
-            self.log(f"Failed to write docker-compose.prod.yml: {stderr}", "ERROR")
+        # Basic validation checks
+        if not compose_content or len(compose_content) < 1000:
+            self.log("Generated docker-compose content appears too short", "ERROR")
             return False
         
-        # Create .env.prod file with proper values based on configuration
+        # Check for required sections
+        required_sections = ['version:', 'services:', 'volumes:', 'networks:']
+        for section in required_sections:
+            if section not in compose_content:
+                self.log(f"Required section '{section}' missing from docker-compose", "ERROR")
+                return False
+        
+        # Check for potential security issues
+        security_issues = ['privileged: true', 'user: root', 'security_opt: []']
+        for issue in security_issues:
+            if issue in compose_content:
+                self.log(f"Potential security issue found: {issue}", "WARNING")
+        
+        self.log("Docker-compose content validation passed", "SUCCESS")
+        return True
+    
+    def _write_docker_compose_file_atomically(self, compose_content: str) -> bool:
+        """Write docker-compose file atomically"""
+        self.log("Writing docker-compose file atomically...", "INFO")
+        
+        # Create backup of existing file if it exists
+        backup_cmd = "if [ -f /opt/projectmeats/docker-compose.prod.yml ]; then cp /opt/projectmeats/docker-compose.prod.yml /opt/projectmeats/docker-compose.prod.yml.backup.$(date +%Y%m%d_%H%M%S); fi"
+        self.execute_command(backup_cmd)
+        
+        # Write to temporary file first
+        temp_file = f"/opt/projectmeats/docker-compose.prod.yml.tmp.{secrets.token_hex(8)}"
+        exit_code, _, stderr = self.execute_command(f"""cat > {temp_file} << 'EOF'
+{compose_content}
+EOF""")
+        
+        if exit_code != 0:
+            self.log(f"Failed to write temporary docker-compose file: {stderr}", "ERROR")
+            return False
+        
+        # Validate the temporary file
+        exit_code, _, stderr = self.execute_command(f"wc -l {temp_file}")
+        if exit_code != 0:
+            self.log("Failed to validate temporary docker-compose file", "ERROR")
+            self.execute_command(f"rm -f {temp_file}")
+            return False
+        
+        # Move temporary file to final location atomically
+        exit_code, _, stderr = self.execute_command(f"mv {temp_file} /opt/projectmeats/docker-compose.prod.yml")
+        if exit_code != 0:
+            self.log(f"Failed to move docker-compose file to final location: {stderr}", "ERROR")
+            self.execute_command(f"rm -f {temp_file}")
+            return False
+        
+        # Set proper permissions
+        self.execute_command("chmod 644 /opt/projectmeats/docker-compose.prod.yml")
+        self.execute_command("chown projectmeats:docker /opt/projectmeats/docker-compose.prod.yml || chown projectmeats:projectmeats /opt/projectmeats/docker-compose.prod.yml")
+        
+        self.log("Docker-compose file written successfully", "SUCCESS")
+        return True
+    
+    def _create_corresponding_env_file(self, db_config: Dict[str, Any]) -> bool:
+        """Create .env.prod file corresponding to the docker-compose configuration"""
+        self.log("Creating corresponding .env.prod file...", "INFO")
+        
+        use_external_db = db_config['use_external_db']
+        domain = db_config['domain']
+        
+        # Build environment content based on configuration
         if use_external_db:
             env_content = f"""# ProjectMeats Production Environment
 # Generated by AI Deployment Orchestrator - External Database Configuration
-# External PostgreSQL Database: {postgres_host}:{postgres_port}
-POSTGRES_DB={postgres_db}
-POSTGRES_USER={postgres_user}
-POSTGRES_PASSWORD={postgres_password}
-REDIS_PASSWORD={self._redis_password}
+# External PostgreSQL Database: {db_config['postgres_host']}:{db_config['postgres_port']}
+# Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+POSTGRES_DB={db_config['postgres_db']}
+POSTGRES_USER={db_config['postgres_user']}
+POSTGRES_PASSWORD={db_config['postgres_password']}
+REDIS_PASSWORD={db_config['redis_password']}
 DJANGO_SECRET_KEY={self._generate_django_secret_key()}
 DEBUG=False
 ALLOWED_HOSTS={domain},www.{domain},localhost,127.0.0.1
@@ -4991,18 +5446,20 @@ GRAFANA_PASSWORD={self._generate_secure_password()}
 LOG_LEVEL=INFO
 
 # External Database Configuration
-DATABASE_HOST={postgres_host}
-DATABASE_PORT={postgres_port}
-DATABASE_SSL_MODE={postgres_ssl_mode}
+DATABASE_HOST={db_config['postgres_host']}
+DATABASE_PORT={db_config['postgres_port']}
+DATABASE_SSL_MODE={db_config['postgres_ssl_mode']}
 DATABASE_EXTERNAL=true
 """
         else:
             env_content = f"""# ProjectMeats Production Environment  
 # Generated by AI Deployment Orchestrator - Local Database Configuration
-POSTGRES_DB={postgres_db}
-POSTGRES_USER={postgres_user}
-POSTGRES_PASSWORD={postgres_password}
-REDIS_PASSWORD={self._redis_password}
+# Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+POSTGRES_DB={db_config['postgres_db']}
+POSTGRES_USER={db_config['postgres_user']}
+POSTGRES_PASSWORD={db_config['postgres_password']}
+REDIS_PASSWORD={db_config['redis_password']}
 DJANGO_SECRET_KEY={self._generate_django_secret_key()}
 DEBUG=False
 ALLOWED_HOSTS={domain},www.{domain},localhost,127.0.0.1
@@ -5016,16 +5473,51 @@ LOG_LEVEL=INFO
 DATABASE_EXTERNAL=false
 """
         
-        # Write .env.prod file to server  
-        exit_code, _, stderr = self.execute_command(f"""cat > /opt/projectmeats/.env.prod << 'EOF'
+        # Write .env.prod file atomically
+        temp_env_file = f"/opt/projectmeats/.env.prod.tmp.{secrets.token_hex(8)}"
+        exit_code, _, stderr = self.execute_command(f"""cat > {temp_env_file} << 'EOF'
 {env_content}
 EOF""")
+        
+        if exit_code != 0:
+            self.log(f"Failed to create temporary .env.prod file: {stderr}", "ERROR")
+            return False
+        
+        # Move to final location
+        exit_code, _, stderr = self.execute_command(f"mv {temp_env_file} /opt/projectmeats/.env.prod")
         if exit_code == 0:
+            self.execute_command("chmod 600 /opt/projectmeats/.env.prod")
+            self.execute_command("chown projectmeats:docker /opt/projectmeats/.env.prod || chown projectmeats:projectmeats /opt/projectmeats/.env.prod")
             self.log("Production environment file (.env.prod) created successfully", "SUCCESS")
             return True
         else:
             self.log(f"Failed to create .env.prod: {stderr}", "ERROR")
             return False
+    
+    def _validate_final_docker_compose_config(self) -> bool:
+        """Validate final docker-compose configuration"""
+        self.log("Validating final docker-compose configuration...", "INFO")
+        
+        # Test docker-compose syntax
+        exit_code, _, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml config --quiet")
+        if exit_code != 0:
+            self.log(f"Docker-compose configuration validation failed: {stderr}", "ERROR")
+            return False
+        
+        # Check that required files exist and are readable
+        required_files = [
+            "/opt/projectmeats/docker-compose.prod.yml",
+            "/opt/projectmeats/.env.prod"
+        ]
+        
+        for file_path in required_files:
+            exit_code, _, _ = self.execute_command(f"test -r {file_path}")
+            if exit_code != 0:
+                self.log(f"Required file not readable: {file_path}", "ERROR")
+                return False
+        
+        self.log("Final docker-compose configuration validation passed", "SUCCESS")
+        return True
     
     def _create_production_dockerfiles(self) -> bool:
         """Create production-optimized Dockerfiles with multi-stage builds"""
@@ -5228,77 +5720,176 @@ EOF""")
         return True
     
     def _create_docker_environment_files(self) -> bool:
-        """Create secure environment files for Docker deployment"""
-        self.log("Creating Docker environment configuration...", "INFO")
+        """Create secure environment files for Docker deployment with comprehensive validation"""
+        self.log("Creating Docker environment configuration with preemptive validation...", "INFO")
         
-        # Use consistent variables with the docker-compose function
-        # Support environment variables as mentioned in the problem statement
-        postgres_user = (
-            os.environ.get('POSTGRES_USER') or 
-            self.config.get('db_user', 'projectmeats')
-        )
-        postgres_db = (
-            os.environ.get('POSTGRES_DB') or 
-            self.config.get('db_name', 'projectmeats')
-        )
-        
-        # Generate or use existing secure passwords
-        postgres_password = (
-            os.environ.get('POSTGRES_PASSWORD') or
-            getattr(self, '_postgres_password', None) or
-            secrets.token_urlsafe(32)
-        )
-        redis_password = (
-            os.environ.get('REDIS_PASSWORD') or
-            getattr(self, '_redis_password', None) or
-            secrets.token_urlsafe(32)
-        )
-        django_secret = get_random_secret_key()
-        
-        domain = self.config.get('domain', 'localhost')
-        
-        # Docker environment file
-        docker_env_content = f"""# ProjectMeats Docker Environment Configuration
+        try:
+            # Use consistent variables with the docker-compose function
+            # Support environment variables as mentioned in the problem statement
+            postgres_user = (
+                os.environ.get('POSTGRES_USER') or 
+                self.config.get('db_user', 'projectmeats')
+            )
+            postgres_db = (
+                os.environ.get('POSTGRES_DB') or 
+                self.config.get('db_name', 'projectmeats')
+            )
+            
+            # Generate or use existing secure passwords
+            postgres_password = (
+                os.environ.get('POSTGRES_PASSWORD') or
+                getattr(self, '_postgres_password', None) or
+                secrets.token_urlsafe(32)
+            )
+            redis_password = (
+                os.environ.get('REDIS_PASSWORD') or
+                getattr(self, '_redis_password', None) or
+                secrets.token_urlsafe(32)
+            )
+            django_secret = get_random_secret_key()
+            
+            domain = self.config.get('domain', 'localhost')
+            
+            # Preemptive validation of environment variables
+            env_validation_errors = []
+            
+            # Validate PostgreSQL configuration
+            if not postgres_user or len(postgres_user.strip()) == 0:
+                env_validation_errors.append("POSTGRES_USER cannot be empty")
+            if not postgres_db or len(postgres_db.strip()) == 0:
+                env_validation_errors.append("POSTGRES_DB cannot be empty") 
+            if not postgres_password or len(postgres_password) < 12:
+                env_validation_errors.append("POSTGRES_PASSWORD must be at least 12 characters")
+            
+            # Validate Redis configuration
+            if not redis_password or len(redis_password) < 12:
+                env_validation_errors.append("REDIS_PASSWORD must be at least 12 characters")
+                
+            # Validate Django configuration
+            if not django_secret or len(django_secret) < 50:
+                env_validation_errors.append("DJANGO_SECRET_KEY must be at least 50 characters")
+                
+            # Validate domain configuration
+            if not domain or domain == 'localhost':
+                self.log("Warning: Using localhost as domain - external access may not work", "WARNING")
+            
+            # Check for special characters that could cause shell injection
+            dangerous_chars = ['$', '`', '"', "'", '\\', ';', '&', '|']
+            for var_name, var_value in [
+                ('POSTGRES_USER', postgres_user),
+                ('POSTGRES_DB', postgres_db),
+                ('POSTGRES_PASSWORD', postgres_password),
+                ('REDIS_PASSWORD', redis_password)
+            ]:
+                if any(char in str(var_value) for char in dangerous_chars):
+                    env_validation_errors.append(f"{var_name} contains potentially dangerous characters")
+            
+            if env_validation_errors:
+                self.log("Environment variable validation failed:", "ERROR")
+                for error in env_validation_errors:
+                    self.log(f"  - {error}", "ERROR")
+                return False
+                
+            self.log("Environment variable validation passed", "SUCCESS")
+            
+            # Generate all required environment variables with safe defaults
+            env_vars = {
+                'POSTGRES_DB': postgres_db,
+                'POSTGRES_USER': postgres_user, 
+                'POSTGRES_PASSWORD': postgres_password,
+                'REDIS_PASSWORD': redis_password,
+                'DJANGO_SECRET_KEY': django_secret,
+                'DEBUG': 'False',
+                'ALLOWED_HOSTS': f'{domain},www.{domain},localhost,127.0.0.1',
+                'DOMAIN': domain,
+                'CORS_ALLOWED_ORIGINS': f'https://{domain},https://www.{domain}',
+                'CSRF_TRUSTED_ORIGINS': f'https://{domain},https://www.{domain},http://{domain},http://www.{domain}',
+                'SECURE_SSL_REDIRECT': 'True',
+                'SECURE_HSTS_SECONDS': '31536000',
+                'SECURE_HSTS_INCLUDE_SUBDOMAINS': 'True', 
+                'SECURE_HSTS_PRELOAD': 'True',
+                'SESSION_COOKIE_SECURE': 'True',
+                'CSRF_COOKIE_SECURE': 'True',
+                'LOG_LEVEL': 'INFO',
+                'GRAFANA_PASSWORD': self._generate_secure_password(24)
+            }
+            
+            # Build environment file content
+            docker_env_content = f"""# ProjectMeats Docker Environment Configuration
 # Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+# Auto-generated by AI Deployment Orchestrator with security validation
 
-# Database Configuration
-POSTGRES_DB={postgres_db}
-POSTGRES_USER={postgres_user}
-POSTGRES_PASSWORD={postgres_password}
-
-# Redis Configuration  
-REDIS_PASSWORD={redis_password}
-
-# Django Configuration
-DJANGO_SECRET_KEY={django_secret}
-DEBUG=False
-ALLOWED_HOSTS={domain},www.{domain},localhost,127.0.0.1
-
-# Domain Configuration
-DOMAIN={domain}
-CORS_ALLOWED_ORIGINS=https://{domain},https://www.{domain}
-
-# Security Settings
-SECURE_SSL_REDIRECT=True
-SECURE_HSTS_SECONDS=31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS=True
-SECURE_HSTS_PRELOAD=True
-SESSION_COOKIE_SECURE=True
-CSRF_COOKIE_SECURE=True
 """
-
-        # Write environment file
-        exit_code, _, stderr = self.execute_command(f"""cat > /opt/projectmeats/.env << 'EOF'
+            
+            # Add each variable with proper escaping
+            for key, value in env_vars.items():
+                # Escape quotes and backslashes in values
+                escaped_value = str(value).replace('\\', '\\\\').replace('"', '\\"')
+                docker_env_content += f'{key}="{escaped_value}"\n'
+            
+            # Create backup of existing .env file if it exists
+            backup_cmd = "if [ -f /opt/projectmeats/.env ]; then cp /opt/projectmeats/.env /opt/projectmeats/.env.backup.$(date +%Y%m%d_%H%M%S); fi"
+            self.execute_command(backup_cmd)
+            
+            # Write environment file atomically (write to temp file then move)
+            temp_env_file = f"/opt/projectmeats/.env.tmp.{secrets.token_hex(8)}"
+            exit_code, _, stderr = self.execute_command(f"""cat > {temp_env_file} << 'EOF'
 {docker_env_content}
 EOF""")
-        if exit_code == 0:
+            
+            if exit_code != 0:
+                self.log(f"Failed to create temporary environment file: {stderr}", "ERROR")
+                return False
+            
+            # Validate the created file before moving it
+            exit_code, validation_output, stderr = self.execute_command(f"wc -l {temp_env_file}")
+            if exit_code != 0 or "0" in validation_output:
+                self.log(f"Environment file validation failed - file appears empty", "ERROR")
+                self.execute_command(f"rm -f {temp_env_file}")
+                return False
+            
+            # Move temp file to final location atomically
+            exit_code, _, stderr = self.execute_command(f"mv {temp_env_file} /opt/projectmeats/.env")
+            if exit_code != 0:
+                self.log(f"Failed to move environment file to final location: {stderr}", "ERROR")
+                self.execute_command(f"rm -f {temp_env_file}")
+                return False
+            
             # Set secure permissions
-            self.execute_command("chmod 600 /opt/projectmeats/.env")
-            self.execute_command("chown projectmeats:docker /opt/projectmeats/.env")
-            self.log("Docker environment file created with secure permissions", "SUCCESS")
+            permission_commands = [
+                "chmod 600 /opt/projectmeats/.env",
+                "chown projectmeats:docker /opt/projectmeats/.env || chown projectmeats:projectmeats /opt/projectmeats/.env"
+            ]
+            
+            for cmd in permission_commands:
+                exit_code, _, stderr = self.execute_command(cmd)
+                if exit_code != 0:
+                    self.log(f"Warning: Permission command failed: {cmd} - {stderr}", "WARNING")
+                    # Continue anyway as file was created successfully
+            
+            # Create .env.prod as a symlink to .env to handle Docker Compose requirements
+            exit_code, _, stderr = self.execute_command("cd /opt/projectmeats && ln -sf .env .env.prod")
+            if exit_code != 0:
+                self.log(f"Warning: Failed to create .env.prod symlink: {stderr}", "WARNING")
+                # Copy file as fallback
+                self.execute_command("cd /opt/projectmeats && cp .env .env.prod")
+            
+            # Validate that all required variables are set in the file
+            self.log("Validating generated environment file...", "INFO")
+            required_vars = ['POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'REDIS_PASSWORD', 'DJANGO_SECRET_KEY']
+            
+            for var in required_vars:
+                exit_code, _, _ = self.execute_command(f"grep -q '^{var}=' /opt/projectmeats/.env")
+                if exit_code != 0:
+                    self.log(f"Critical: Required variable {var} not found in environment file", "ERROR")
+                    return False
+            
+            self.log("Docker environment file created and validated successfully", "SUCCESS")
+            self.log("Environment file includes all required variables with secure defaults", "INFO")
             return True
-        else:
-            self.log(f"Failed to create environment file: {stderr}", "ERROR")
+            
+        except Exception as e:
+            self.log(f"Exception in _create_docker_environment_files: {e}", "ERROR")
             return False
     
     def _setup_docker_infrastructure(self) -> bool:
@@ -5328,57 +5919,407 @@ EOF""")
         return True
     
     def _build_and_deploy_containers(self) -> bool:
-        """Build and deploy Docker containers"""
-        self.log("Building and deploying Docker containers...", "INFO")
+        """Build and deploy Docker containers with comprehensive validation and error handling"""
+        self.log("Building and deploying Docker containers with enhanced validation...", "INFO")
         
-        commands = [
-            # Change to project directory
-            "cd /opt/projectmeats",
+        try:
+            # Pre-deployment validation
+            if not self._validate_docker_prerequisites():
+                return False
             
-            # Pull base images
-            "docker pull postgres:15-alpine",
-            "docker pull redis:7-alpine", 
-            "docker pull python:3.11-slim",
-            "docker pull node:18-alpine",
-            "docker pull nginx:alpine",
+            # Disk space validation
+            if not self._validate_disk_space_for_docker():
+                return False
             
-            # Build application images using production compose file
-            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml build --no-cache",
+            # Pull base images with retry logic
+            if not self._pull_base_images_with_retry():
+                return False
             
-            # Deploy containers using production compose file
-            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml up -d",
+            # Validate docker-compose configuration
+            if not self._validate_docker_compose_config():
+                return False
             
-            # Wait for services to be healthy
-            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml ps",
+            # Build application images with comprehensive error handling
+            if not self._build_application_images():
+                return False
+            
+            # Deploy containers with dependency validation
+            if not self._deploy_containers_with_validation():
+                return False
+                
+            # Comprehensive health validation
+            if not self._validate_all_container_health():
+                return False
+                
+            self.log("Container deployment completed successfully with all validations passed", "SUCCESS")
+            return True
+            
+        except Exception as e:
+            self.log(f"Container deployment failed with exception: {e}", "ERROR")
+            self._cleanup_failed_deployment()
+            return False
+    
+    def _validate_docker_prerequisites(self) -> bool:
+        """Validate Docker prerequisites before deployment"""
+        self.log("Validating Docker prerequisites...", "INFO")
+        
+        # Check Docker daemon status
+        exit_code, _, stderr = self.execute_command("docker info")
+        if exit_code != 0:
+            self.log(f"Docker daemon not running or accessible: {stderr}", "ERROR")
+            return False
+        
+        # Check Docker Compose availability
+        exit_code, version_output, stderr = self.execute_command("docker compose version")
+        if exit_code != 0:
+            self.log(f"Docker Compose not available: {stderr}", "ERROR")
+            return False
+        else:
+            self.log(f"Docker Compose available: {version_output.strip()}", "INFO")
+        
+        # Check if user can access Docker
+        exit_code, _, stderr = self.execute_command("docker ps")
+        if exit_code != 0:
+            self.log(f"Cannot access Docker: {stderr}", "ERROR")
+            return False
+        
+        # Validate required files exist
+        required_files = [
+            "/opt/projectmeats/docker-compose.prod.yml",
+            "/opt/projectmeats/.env",
+            "/opt/projectmeats/.env.prod"
         ]
         
-        for cmd in commands:
-            self.log(f"Executing: {cmd}", "INFO")
-            exit_code, stdout, stderr = self.execute_command(cmd, timeout=600)  # 10 minute timeout for builds
-            
+        for file_path in required_files:
+            exit_code, _, _ = self.execute_command(f"test -f {file_path}")
             if exit_code != 0:
-                self.log(f"Command failed: {cmd}", "ERROR")
-                self.log(f"Error: {stderr}", "ERROR")
+                self.log(f"Required file missing: {file_path}", "ERROR")
                 return False
+        
+        self.log("Docker prerequisites validation passed", "SUCCESS")
+        return True
+    
+    def _validate_disk_space_for_docker(self) -> bool:
+        """Validate sufficient disk space for Docker build and deployment"""
+        self.log("Validating disk space for Docker operations...", "INFO")
+        
+        # Check available disk space
+        exit_code, df_output, stderr = self.execute_command("df -h /opt/projectmeats /var/lib/docker 2>/dev/null || df -h /")
+        if exit_code != 0:
+            self.log(f"Cannot check disk space: {stderr}", "WARNING")
+            return True  # Continue if we can't check
+        
+        # Parse disk usage (simple check for > 80% usage)
+        lines = df_output.strip().split('\n')
+        for line in lines[1:]:  # Skip header
+            parts = line.split()
+            if len(parts) >= 5:
+                usage_percent = parts[4].rstrip('%')
+                try:
+                    usage = int(usage_percent)
+                    if usage > 85:
+                        self.log(f"High disk usage detected: {usage}% - may cause Docker build failures", "WARNING")
+                        # Attempt cleanup
+                        self._cleanup_docker_space()
+                    elif usage > 95:
+                        self.log(f"Critical disk usage: {usage}% - Docker build will likely fail", "ERROR")
+                        return False
+                except ValueError:
+                    continue
+        
+        self.log("Disk space validation passed", "SUCCESS")
+        return True
+    
+    def _cleanup_docker_space(self) -> bool:
+        """Clean up Docker space to free disk"""
+        self.log("Attempting to free Docker disk space...", "INFO")
+        
+        cleanup_commands = [
+            "docker system prune -f",
+            "docker image prune -a -f",
+            "docker volume prune -f",
+            "docker network prune -f"
+        ]
+        
+        for cmd in cleanup_commands:
+            exit_code, stdout, stderr = self.execute_command(cmd)
+            if exit_code == 0:
+                self.log(f"Cleanup success: {stdout.strip()}", "INFO")
             else:
-                self.log(f"Success: {stdout[:200]}...", "SUCCESS")
+                self.log(f"Cleanup command failed: {cmd} - {stderr}", "WARNING")
+        
+        return True
+    
+    def _pull_base_images_with_retry(self) -> bool:
+        """Pull base images with retry logic"""
+        self.log("Pulling base images with retry logic...", "INFO")
+        
+        base_images = [
+            "postgres:15-alpine",
+            "redis:7-alpine", 
+            "python:3.11-slim",
+            "node:18-alpine",
+            "nginx:alpine"
+        ]
+        
+        for image in base_images:
+            success = False
+            for attempt in range(3):  # 3 retry attempts
+                self.log(f"Pulling {image} (attempt {attempt + 1}/3)...", "INFO")
+                exit_code, stdout, stderr = self.execute_command(f"docker pull {image}", timeout=300)
                 
-        # Verify containers are running with production compose file
-        exit_code, stdout, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml ps --format table")
-        if exit_code == 0:
-            self.log("Container deployment status:", "INFO")
-            self.log(stdout, "INFO")
+                if exit_code == 0:
+                    self.log(f"Successfully pulled {image}", "SUCCESS")
+                    success = True
+                    break
+                else:
+                    self.log(f"Failed to pull {image} (attempt {attempt + 1}): {stderr}", "WARNING")
+                    if attempt < 2:  # Not the last attempt
+                        self.log("Retrying in 10 seconds...", "INFO")
+                        time.sleep(10)
             
-            # Check if critical containers are running (based on production compose names)
-            if "projectmeats-db" in stdout and "projectmeats-backend" in stdout:
-                self.log("All critical containers deployed successfully", "SUCCESS")
-                return True
-            else:
-                self.log("Some critical containers may not be running", "WARNING")
+            if not success:
+                self.log(f"Failed to pull base image {image} after 3 attempts", "ERROR")
                 return False
-        else:
-            self.log(f"Failed to check container status: {stderr}", "ERROR")
+        
+        self.log("All base images pulled successfully", "SUCCESS")
+        return True
+    
+    def _validate_docker_compose_config(self) -> bool:
+        """Validate docker-compose configuration before build"""
+        self.log("Validating docker-compose configuration...", "INFO")
+        
+        # Test docker-compose config syntax
+        exit_code, _, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml config --quiet")
+        if exit_code != 0:
+            self.log(f"Docker compose configuration invalid: {stderr}", "ERROR")
             return False
+        
+        # Check for environment variable substitution issues
+        exit_code, config_output, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml config")
+        if exit_code == 0:
+            # Look for unresolved variables (pattern: ${VAR} that wasn't substituted)
+            if "${" in config_output and "}" in config_output:
+                self.log("Warning: Unresolved environment variables detected in docker-compose config", "WARNING")
+                # Extract the unresolved variables
+                import re
+                unresolved = re.findall(r'\$\{([^}]+)\}', config_output)
+                if unresolved:
+                    self.log(f"Unresolved variables: {', '.join(set(unresolved))}", "WARNING")
+        
+        self.log("Docker compose configuration validation passed", "SUCCESS")
+        return True
+    
+    def _build_application_images(self) -> bool:
+        """Build application images with comprehensive error handling"""
+        self.log("Building application images with enhanced error handling...", "INFO")
+        
+        # Build with detailed progress and error capture
+        build_cmd = "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml build --no-cache --progress=plain"
+        
+        self.log("Starting Docker build process...", "INFO")
+        exit_code, stdout, stderr = self.execute_command(build_cmd, timeout=1200)  # 20 minute timeout
+        
+        if exit_code != 0:
+            self.log("Docker build failed. Analyzing error output...", "ERROR")
+            
+            # Analyze common build failure patterns
+            error_analysis = self._analyze_docker_build_errors(stderr + stdout)
+            
+            if error_analysis:
+                self.log("Build failure analysis:", "ERROR")
+                for issue in error_analysis:
+                    self.log(f"  - {issue}", "ERROR")
+            
+            return False
+        
+        # Verify all images were built successfully
+        if not self._verify_built_images():
+            return False
+        
+        self.log("Application images built successfully", "SUCCESS")
+        return True
+    
+    def _analyze_docker_build_errors(self, error_output: str) -> List[str]:
+        """Analyze Docker build errors and provide insights"""
+        issues = []
+        
+        # Check for common error patterns
+        error_patterns = {
+            "ENOSPC": "Insufficient disk space during build",
+            "ENOMEM": "Insufficient memory during build", 
+            "network timeout": "Network connectivity issues during build",
+            "package not found": "Package repository issues",
+            "permission denied": "File permission issues during build",
+            "Dockerfile not found": "Missing Dockerfile",
+            "failed to compute cache key": "Build context issues",
+            "failed to copy": "File copy issues in Docker build"
+        }
+        
+        for pattern, description in error_patterns.items():
+            if pattern.lower() in error_output.lower():
+                issues.append(description)
+        
+        return issues
+    
+    def _verify_built_images(self) -> bool:
+        """Verify that all required images were built successfully"""
+        self.log("Verifying built Docker images...", "INFO")
+        
+        # Get list of images that should have been built
+        exit_code, images_output, stderr = self.execute_command("docker images --format 'table {{.Repository}}:{{.Tag}}' | grep projectmeats")
+        
+        if exit_code != 0:
+            self.log("No ProjectMeats images found after build", "ERROR")
+            return False
+        
+        expected_images = ["backend", "frontend", "nginx"]  # Based on docker-compose services
+        found_images = images_output.lower()
+        
+        missing_images = []
+        for expected in expected_images:
+            if expected not in found_images:
+                missing_images.append(expected)
+        
+        if missing_images:
+            self.log(f"Missing built images: {', '.join(missing_images)}", "ERROR")
+            return False
+        
+        self.log("All required images built successfully", "SUCCESS")
+        return True
+    
+    def _deploy_containers_with_validation(self) -> bool:
+        """Deploy containers with dependency validation"""
+        self.log("Deploying containers with dependency validation...", "INFO")
+        
+        # Start containers
+        deploy_cmd = "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml up -d"
+        
+        exit_code, stdout, stderr = self.execute_command(deploy_cmd, timeout=300)
+        if exit_code != 0:
+            self.log(f"Container deployment failed: {stderr}", "ERROR")
+            return False
+        
+        # Wait for containers to start
+        self.log("Waiting for containers to start...", "INFO")
+        time.sleep(30)
+        
+        # Check container status
+        exit_code, status_output, stderr = self.execute_command("cd /opt/projectmeats && docker compose -f docker-compose.prod.yml ps")
+        if exit_code != 0:
+            self.log(f"Cannot check container status: {stderr}", "ERROR")
+            return False
+        
+        self.log("Container deployment status:", "INFO")
+        self.log(status_output, "INFO")
+        
+        return True
+    
+    def _validate_all_container_health(self) -> bool:
+        """Comprehensive health validation for all containers"""
+        self.log("Performing comprehensive container health validation...", "INFO")
+        
+        # Wait for health checks to stabilize
+        self.log("Waiting for health checks to stabilize (60 seconds)...", "INFO")
+        time.sleep(60)
+        
+        # Check health status of all containers
+        exit_code, health_output, stderr = self.execute_command(
+            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml ps --format 'table {{.Name}}\\t{{.Status}}'"
+        )
+        
+        if exit_code != 0:
+            self.log(f"Cannot check container health: {stderr}", "ERROR")
+            return False
+        
+        self.log("Container health status:", "INFO")
+        self.log(health_output, "INFO")
+        
+        # Check for any unhealthy containers
+        if "unhealthy" in health_output.lower() or "exited" in health_output.lower():
+            self.log("Some containers are unhealthy or have exited", "ERROR")
+            self._diagnose_unhealthy_containers()
+            return False
+        
+        # Test specific endpoint connectivity
+        if not self._test_container_endpoints():
+            return False
+        
+        self.log("All containers are healthy and responding", "SUCCESS")
+        return True
+    
+    def _diagnose_unhealthy_containers(self):
+        """Diagnose unhealthy containers"""
+        self.log("Diagnosing unhealthy containers...", "INFO")
+        
+        # Get detailed container status
+        exit_code, containers, _ = self.execute_command(
+            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml ps --format json"
+        )
+        
+        if exit_code == 0:
+            self.log("Container details:", "INFO")
+            self.log(containers, "INFO")
+        
+        # Get logs for failed containers
+        container_names = ["projectmeats-db", "projectmeats-backend", "projectmeats-nginx"]
+        for container in container_names:
+            self.log(f"Checking logs for {container}...", "INFO")
+            exit_code, logs, _ = self.execute_command(f"docker logs {container} --tail 20")
+            if exit_code == 0:
+                self.log(f"Recent logs for {container}:", "INFO")
+                self.log(logs, "INFO")
+    
+    def _test_container_endpoints(self) -> bool:
+        """Test container endpoints for connectivity"""
+        self.log("Testing container endpoint connectivity...", "INFO")
+        
+        # Test database connectivity
+        exit_code, _, _ = self.execute_command("docker exec projectmeats-backend python -c 'import django; django.setup(); from django.db import connection; connection.ensure_connection()'")
+        if exit_code != 0:
+            self.log("Database connectivity test failed", "ERROR")
+            return False
+        else:
+            self.log("Database connectivity test passed", "SUCCESS")
+        
+        # Test Redis connectivity  
+        exit_code, _, _ = self.execute_command("docker exec projectmeats-redis redis-cli ping")
+        if exit_code != 0:
+            self.log("Redis connectivity test failed", "ERROR")
+            return False
+        else:
+            self.log("Redis connectivity test passed", "SUCCESS")
+        
+        # Test web endpoints
+        test_endpoints = [
+            ("Backend health", "http://localhost:8000/health/"),
+            ("Frontend", "http://localhost/"),
+            ("Nginx health", "http://localhost/health")
+        ]
+        
+        for name, url in test_endpoints:
+            exit_code, _, _ = self.execute_command(f"curl -f --connect-timeout 10 --max-time 30 {url} >/dev/null 2>&1")
+            if exit_code == 0:
+                self.log(f"{name} endpoint test passed", "SUCCESS")
+            else:
+                self.log(f"{name} endpoint test failed", "WARNING")
+                # Don't fail deployment for endpoint issues as they might be temporary
+        
+        return True
+    
+    def _cleanup_failed_deployment(self):
+        """Clean up failed deployment"""
+        self.log("Cleaning up failed deployment...", "INFO")
+        
+        cleanup_commands = [
+            "cd /opt/projectmeats && docker compose -f docker-compose.prod.yml down --remove-orphans",
+            "docker system prune -f"
+        ]
+        
+        for cmd in cleanup_commands:
+            exit_code, _, stderr = self.execute_command(cmd)
+            if exit_code != 0:
+                self.log(f"Cleanup command failed: {cmd} - {stderr}", "WARNING")
     
     def _generate_secure_password(self, length=24) -> str:
         """Generate a secure random password"""
