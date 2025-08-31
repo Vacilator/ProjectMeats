@@ -79,3 +79,6 @@ logs/
 backups/
 ssl/private/
 monitoring/data/
+
+# Diagnostic artifacts
+artifacts/
