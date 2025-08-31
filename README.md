@@ -13,23 +13,35 @@ A comprehensive business management application for meat sales brokers, migrated
 git clone https://github.com/Vacilator/ProjectMeats.git
 cd ProjectMeats
 
+# Validate your environment first
+python validate_environment.py
+
 # Interactive deployment with guided setup
-python ai_deployment_orchestrator.py --interactive
-
-# Automated deployment for specific server/domain
-python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --auto
-
-# With GitHub authentication
-python ai_deployment_orchestrator.py --server=myserver.com --domain=mydomain.com --github-user=USERNAME --github-token=TOKEN
+python ai_deployment_orchestrator.py --interactive --domain=yourdomain.com
 ```
 
+**📖 For complete setup instructions, see [ENVIRONMENT_SETUP_GUIDE.md](ENVIRONMENT_SETUP_GUIDE.md)**
+
 **Features:**
+- ✅ Unified environment variable management with auto-generated secure credentials
 - ✅ Intelligent error detection and automatic recovery
 - ✅ Comprehensive server setup and configuration
 - ✅ Automated SSL certificate management
 - ✅ Database configuration with PostgreSQL
 - ✅ Complete security hardening
 - ✅ Health monitoring and verification
+
+### Environment Migration Tool
+
+If you have existing environment files, use the migration tool:
+
+```bash
+# Analyze existing environment files
+python migrate_environment.py --analyze-all
+
+# Migrate specific file
+python migrate_environment.py --from=your-existing.env --to=migrated.env
+```
 
 ### Docker Compose Deployment (Alternative)
 
