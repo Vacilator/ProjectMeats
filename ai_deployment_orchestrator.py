@@ -5144,8 +5144,8 @@ RUN apk add --no-cache curl
 # Copy built app from builder stage
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy production nginx configuration
+COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
 
 # Create non-root user
 RUN addgroup -g 101 -S nginx && \\
@@ -5156,43 +5156,51 @@ RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \\
-    CMD curl --fail --silent http://localhost/ || exit 1
+    CMD curl --fail --silent --show-error --max-time 5 http://localhost/ || exit 1
 
 # Expose port
 EXPOSE 80
 
-# Start nginx
+# Start nginx as non-root user
+USER nginx
 CMD ["nginx", "-g", "daemon off;"]
 """
 
         # Nginx Dockerfile.prod with security hardening
         nginx_dockerfile = """# ProjectMeats Nginx Production Dockerfile
-# Security-hardened reverse proxy
+# Multi-stage build with security hardening
 
-FROM nginx:alpine
+FROM nginx:alpine AS production
 
-# Install security tools
-RUN apk add --no-cache curl openssl
+# Install security tools and create necessary directories
+RUN apk add --no-cache \\
+    curl \\
+    openssl \\
+    && mkdir -p /etc/nginx/ssl \\
+    && chown -R nginx:nginx /etc/nginx/ssl
 
-# Copy nginx configuration
-COPY nginx.prod.conf /etc/nginx/nginx.conf
-COPY conf.d/ /etc/nginx/conf.d/
+# Copy nginx configurations
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-http-only.conf /etc/nginx/conf.d/http-only.conf
+COPY nginx.prod.conf /etc/nginx/conf.d/nginx.prod.conf
 
-# Create non-root user
-RUN addgroup -g 101 -S nginx && \\
-    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+# Copy startup script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
-# Set proper permissions
-RUN chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx
+# Create non-root nginx user with proper permissions
+RUN adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \\
+    && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \\
-    CMD curl --fail --silent http://localhost/health || exit 1
+    CMD curl --fail --silent --show-error --max-time 5 http://localhost/health || exit 1
 
 # Expose ports
 EXPOSE 80 443
 
-# Start nginx
+# Use our custom entrypoint
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
 """
 
