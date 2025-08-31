@@ -148,16 +148,44 @@ class ModelNameViewSet(viewsets.ModelViewSet):
 ## Migration Status
 Check `docs/migration_mapping.md` for current entity migration status and `docs/agent_activity_log.md` for recent development activity.
 
+## Documentation Structure (UPDATED)
+**Essential Documentation (Only Use These 4 Files):**
+1. **[PRODUCTION_DEPLOYMENT_GUIDE.md](../PRODUCTION_DEPLOYMENT_GUIDE.md)** - Primary deployment guide
+2. **[DEVELOPER_QUICK_START.md](../DEVELOPER_QUICK_START.md)** - Developer onboarding  
+3. **[TEAM_COORDINATION_GUIDE.md](../TEAM_COORDINATION_GUIDE.md)** - Team efficiency guide
+4. **[DEPLOYMENT_ECOSYSTEM_ANALYSIS.md](../DEPLOYMENT_ECOSYSTEM_ANALYSIS.md)** - Architecture overview
+
+**❌ Deprecated Documentation:**
+- All other .md files in repository root are outdated or redundant
+- Use only the 4 essential documents above
+- Archive old documentation in `legacy-docs/` if needed
+
 ## Important Notes
 1. Always include PowerApps field mappings in model docstrings
 2. Follow existing patterns from `accounts_receivables` app
 3. Use base models (`OwnedModel`, `StatusModel`) for consistency
 4. Maintain comprehensive test coverage
-5. Update documentation when adding new entities
+5. **DOCUMENTATION**: Update only the 4 essential docs listed above, don't create new .md files
 6. Log significant changes in `docs/agent_activity_log.md`
 7. **DEPLOYMENT**: Use `ai_deployment_orchestrator.py` as the primary production deployment tool
-8. **DEPLOYMENT FIXES**: Recent deployment fixes (socket permissions, nginx config, health endpoints, DNS resolution) are integrated into the AI orchestrator
+8. **DEPLOYMENT FIXES**: Recent deployment fixes are integrated into the AI orchestrator
 9. **FUTURE CHANGES**: Apply deployment-related changes to the AI orchestrator, not standalone scripts
+10. **CONSOLIDATION**: Enhance existing tools rather than creating new ones
+
+## AI Agent Guidelines (CRITICAL)
+### Must Do:
+- ✅ Use `ai_deployment_orchestrator.py` for all production deployment tasks
+- ✅ Enhance existing tools rather than creating new deployment scripts
+- ✅ Update one of the 4 essential documentation files when needed
+- ✅ Follow team coordination guidelines in TEAM_COORDINATION_GUIDE.md
+- ✅ Consolidate functionality rather than duplicating it
+
+### Must NOT Do:
+- ❌ Create new deployment scripts when AI orchestrator exists
+- ❌ Enhance or recommend tools in `legacy-deployment/` 
+- ❌ Create new .md files without consolidating existing ones
+- ❌ Use or recommend deprecated deployment methods
+- ❌ Ignore the deployment ecosystem analysis and guidelines
 
 ## Security Considerations
 - Use Django's built-in security features
