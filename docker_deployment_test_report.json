@@ -1,0 +1,45 @@
+{
+  "timestamp": 1756639124.9049487,
+  "project_root": "/home/runner/work/ProjectMeats/ProjectMeats",
+  "total_tests": 6,
+  "passed_tests": 3,
+  "failed_tests": 3,
+  "tests": [
+    {
+      "name": "Docker Availability",
+      "passed": true,
+      "message": "Docker daemon is running and accessible",
+      "details": null
+    },
+    {
+      "name": "Docker Compose Availability",
+      "passed": true,
+      "message": "Docker Compose available: Docker Compose version v2.38.2",
+      "details": null
+    },
+    {
+      "name": "Docker Compose Syntax",
+      "passed": false,
+      "message": "docker-compose.prod.yml syntax error",
+      "details": "time=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"GRAFANA_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"POSTGRES_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"POSTGRES_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"REDIS_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"POSTGRES_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"REDIS_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"DJANGO_SECRET_KEY\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"ALLOWED_HOSTS\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"POSTGRES_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"REDIS_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"/home/runner/work/ProjectMeats/ProjectMeats/docker-compose.prod.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\nenv file /home/runner/work/ProjectMeats/ProjectMeats/.env.prod not found: stat /home/runner/work/ProjectMeats/ProjectMeats/.env.prod: no such file or directory\n"
+    },
+    {
+      "name": "Environment Variables",
+      "passed": false,
+      "message": ".env.prod file not found",
+      "details": null
+    },
+    {
+      "name": "Security Configurations",
+      "passed": true,
+      "message": "Security checks passed: 7/7",
+      "details": null
+    },
+    {
+      "name": "Network Configuration",
+      "passed": false,
+      "message": "Cannot parse docker-compose configuration",
+      "details": "time=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"GRAFANA_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"POSTGRES_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"REDIS_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"POSTGRES_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"POSTGRES_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"REDIS_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"DJANGO_SECRET_KEY\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"ALLOWED_HOSTS\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"POSTGRES_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"The \\\"REDIS_PASSWORD\\\" variable is not set. Defaulting to a blank string.\"\ntime=\"2025-08-31T11:18:44Z\" level=warning msg=\"/home/runner/work/ProjectMeats/ProjectMeats/docker-compose.prod.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\nenv file /home/runner/work/ProjectMeats/ProjectMeats/.env.prod not found: stat /home/runner/work/ProjectMeats/ProjectMeats/.env.prod: no such file or directory\n"
+    }
+  ]
+}

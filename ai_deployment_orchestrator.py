@@ -7007,16 +7007,20 @@ EOF""")
                 self.log(f"Cleanup command failed: {cmd} - {stderr}", "WARNING")
     
     def _generate_secure_password(self, length=24) -> str:
-        """Generate a secure random password"""
-        chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+        """Generate a secure random password safe for shell environments"""
+        # Use only characters that won't trigger shell injection validation
+        # Excludes: $ ` " ' \ ; & | (dangerous_chars from validation)
+        chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^*()_+-=[]{}:<>?'
         return ''.join(secrets.choice(chars) for _ in range(length))
     
     def _generate_django_secret_key(self) -> str:
-        """Generate a Django-compatible secret key"""
+        """Generate a Django-compatible secret key safe for shell environments"""
         if DJANGO_AVAILABLE:
             return get_random_secret_key()
         else:
-            chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(-_=+)'
+            # Use shell-safe characters that won't cause injection issues
+            # Excludes: $ ` " ' \ ; & | (dangerous_chars from validation)
+            chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^*()_+-={}:<>?'
             return ''.join(secrets.choice(chars) for _ in range(50))
 
 
