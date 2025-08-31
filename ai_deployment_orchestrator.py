@@ -6781,8 +6781,110 @@ EOF""")
             self.log("Socket file not found error detected", "WARNING")
             self.log("This usually means Docker is not properly installed", "INFO")
     
+    def _diagnose_docker_service_startup_failure(self, error_message: str) -> bool:
+        """Diagnose Docker service startup failures and attempt automatic fixes"""
+        self.log("Diagnosing Docker service startup failure...", "INFO")
+        
+        # Check systemd service status for detailed error information
+        exit_code, status_output, _ = self.execute_command("systemctl status docker")
+        if exit_code != 0:
+            self.log("Getting detailed service status...", "INFO")
+            self.log(f"Docker service status: {status_output}", "INFO")
+        
+        # Check systemd journal for Docker service errors
+        exit_code, journal_output, _ = self.execute_command("journalctl -u docker --no-pager -n 10")
+        if exit_code == 0:
+            self.log("Recent Docker service journal entries:", "INFO")
+            # Log only the last few lines to avoid spam
+            journal_lines = journal_output.strip().split('\n')[-5:]
+            for line in journal_lines:
+                self.log(f"Journal: {line}", "INFO")
+        
+        # Check for common service startup issues
+        recovery_attempted = False
+        
+        # Issue 1: Docker daemon already running but unresponsive
+        if "already running" in error_message.lower() or "address already in use" in error_message.lower():
+            self.log("Docker daemon may be hung - attempting restart", "WARNING")
+            exit_code, _, _ = self.execute_command("systemctl stop docker")
+            import time
+            time.sleep(2)
+            recovery_attempted = True
+        
+        # Issue 2: Missing Docker socket directory
+        exit_code, _, _ = self.execute_command("test -d /var/run")
+        if exit_code != 0:
+            self.log("Creating missing /var/run directory", "INFO")
+            self.execute_command("mkdir -p /var/run")
+            recovery_attempted = True
+        
+        # Issue 3: Corrupted Docker state
+        if "failed to start daemon" in error_message.lower():
+            self.log("Docker daemon startup failure detected - cleaning state", "WARNING")
+            # Clean up Docker state files that might be corrupted
+            cleanup_commands = [
+                "rm -f /var/run/docker.pid",
+                "rm -f /var/run/docker.sock"
+            ]
+            for cmd in cleanup_commands:
+                exit_code, _, _ = self.execute_command(cmd)
+                if exit_code == 0:
+                    recovery_attempted = True
+        
+        # Issue 4: AppArmor or SELinux conflicts (common on some distributions)
+        if "apparmor" in error_message.lower() or "selinux" in error_message.lower():
+            self.log("Security module conflict detected", "WARNING")
+            self.log("This may require manual intervention or Docker reinstallation", "INFO")
+        
+        return recovery_attempted
+    
+    def _validate_docker_installation(self) -> bool:
+        """Validate Docker installation integrity"""
+        self.log("Validating Docker installation integrity...", "INFO")
+        
+        # Check if Docker binary exists and is executable
+        exit_code, docker_path, _ = self.execute_command("which docker")
+        if exit_code != 0:
+            self.log("Docker binary not found in PATH", "ERROR")
+            return False
+        else:
+            self.log(f"Docker binary found at: {docker_path.strip()}", "INFO")
+        
+        # Check Docker version
+        exit_code, version_output, stderr = self.execute_command("docker --version")
+        if exit_code != 0:
+            self.log(f"Cannot get Docker version: {stderr}", "ERROR")
+            return False
+        else:
+            self.log(f"Docker version: {version_output.strip()}", "INFO")
+        
+        # Check if Docker service unit file exists
+        exit_code, _, _ = self.execute_command("systemctl cat docker")
+        if exit_code != 0:
+            self.log("Docker systemd service unit not found", "ERROR")
+            return False
+        else:
+            self.log("Docker systemd service unit found", "INFO")
+        
+        # Check basic Docker daemon configuration
+        docker_config_paths = [
+            "/etc/docker/daemon.json",
+            "/var/lib/docker"
+        ]
+        
+        for config_path in docker_config_paths:
+            exit_code, _, _ = self.execute_command(f"test -e {config_path}")
+            if exit_code == 0:
+                self.log(f"Docker configuration found: {config_path}", "INFO")
+            else:
+                self.log(f"Docker configuration missing: {config_path}", "WARNING")
+        
+        # All basic checks passed
+        self.log("Docker installation appears to be valid", "SUCCESS")
+        return True
+    
     def _attempt_docker_service_recovery(self) -> bool:
-        """Attempt to automatically recover Docker service"""
+        """Attempt to automatically recover Docker service with enhanced error handling"""
         self.log("Attempting automatic Docker service recovery...", "INFO")
         
         # Step 1: Try to start Docker service
@@ -6790,7 +6892,23 @@ EOF""")
         start_exit_code, _, start_stderr = self.execute_command("systemctl start docker")
         if start_exit_code != 0:
             self.log(f"Failed to start Docker service: {start_stderr}", "ERROR")
-            return False
+            
+            # Enhanced: Diagnose WHY the service failed to start
+            self._diagnose_docker_service_startup_failure(start_stderr)
+            
+            # Always attempt recovery - try restart instead of start (clears any hung state)
+            self.log("Attempting additional recovery methods...", "INFO")
+            restart_exit_code, _, restart_stderr = self.execute_command("systemctl restart docker")
+            if restart_exit_code != 0:
+                self.log(f"Docker service restart also failed: {restart_stderr}", "ERROR")
+                # Check if Docker installation is valid
+                if not self._validate_docker_installation():
+                    self.log("Docker installation appears to be corrupted", "ERROR")
+                    self._provide_docker_installation_troubleshooting()
+                    return False
+                return False
+            else:
+                self.log("Docker service restart succeeded", "SUCCESS")
         
         # Step 2: Wait a moment for service to initialize
         self.log("Waiting for Docker service to initialize...", "INFO")
@@ -6801,6 +6919,8 @@ EOF""")
         exit_code, stdout, stderr = self.execute_command("systemctl is-active docker")
         if exit_code != 0:
             self.log("Docker service still not active after start attempt", "ERROR")
+            # Additional diagnostic for persistent service failures
+            self._provide_docker_service_troubleshooting()
             return False
         
         # Step 4: Test Docker daemon connectivity
@@ -6838,6 +6958,28 @@ EOF""")
         self.log("2. Check socket permissions: ls -la /var/run/docker.sock", "INFO")
         self.log("3. Test with sudo: sudo docker ps", "INFO")
         self.log("4. If sudo works, it's a permissions issue", "INFO")
+    
+    def _provide_docker_service_troubleshooting(self) -> None:
+        """Provide Docker service startup troubleshooting guidance"""
+        self.log("Docker Service Startup Troubleshooting Guide:", "INFO")
+        self.log("1. Check service status: systemctl status docker", "INFO")
+        self.log("2. Check service logs: journalctl -u docker --no-pager -n 20", "INFO")
+        self.log("3. Stop and restart service: systemctl stop docker && systemctl start docker", "INFO")
+        self.log("4. Check for conflicting processes: ps aux | grep docker", "INFO")
+        self.log("5. Remove Docker state files: rm -f /var/run/docker.pid /var/run/docker.sock", "INFO")
+        self.log("6. Check disk space: df -h /var/lib/docker", "INFO")
+        self.log("7. Verify Docker installation: docker --version", "INFO")
+    
+    def _provide_docker_installation_troubleshooting(self) -> None:
+        """Provide Docker installation troubleshooting guidance"""
+        self.log("Docker Installation Troubleshooting Guide:", "INFO")
+        self.log("1. Reinstall Docker: apt-get remove docker docker-engine docker.io containerd runc", "INFO")
+        self.log("2. Update package index: apt-get update", "INFO")
+        self.log("3. Install prerequisites: apt-get install apt-transport-https ca-certificates curl gnupg lsb-release", "INFO")
+        self.log("4. Add Docker GPG key: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg", "INFO")
+        self.log("5. Add Docker repository: echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null", "INFO")
+        self.log("6. Install Docker: apt-get update && apt-get install docker-ce docker-ce-cli containerd.io", "INFO")
+        self.log("7. Test installation: docker run hello-world", "INFO")
     
     def _validate_disk_space_for_docker(self) -> bool:
         """Validate sufficient disk space for Docker build and deployment"""
