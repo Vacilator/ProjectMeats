@@ -68,6 +68,14 @@ from enum import Enum
 import argparse
 import getpass
 
+# Import unified environment configuration management
+try:
+    from deployment.environment_config import EnvironmentConfigManager
+    ENVIRONMENT_CONFIG_AVAILABLE = True
+except ImportError:
+    ENVIRONMENT_CONFIG_AVAILABLE = False
+    EnvironmentConfigManager = None
+
 # Try to import Django's secret key generator, fallback to manual generation
 try:
     from django.core.management.utils import get_random_secret_key
@@ -323,6 +331,14 @@ class AIDeploymentOrchestrator:
         self.github_log_manager: Optional[DeploymentLogManager] = None
         self.github_integration: Optional[GitHubIntegration] = None
         self._setup_github_integration()  # Call here instead of in _setup_logging
+        
+        # Environment configuration manager
+        self.env_manager = None
+        if ENVIRONMENT_CONFIG_AVAILABLE:
+            self.env_manager = EnvironmentConfigManager(orchestrator=self)
+            self.log("Unified environment configuration manager initialized", "INFO")
+        else:
+            self.log("Environment configuration manager not available", "WARNING")
         
         # Remote connection
         self.ssh_client = None
@@ -2997,7 +3013,8 @@ class AIDeploymentOrchestrator:
     
     def collect_production_config(self, domain: str = None) -> ProductionConfig:
         """
-        Setup production configuration with automatic database credential generation
+        Collect production configuration with improved security and user experience.
+        Uses unified environment management system.
         """
         self.log("=== Production Configuration Setup ===", "INFO")
         print(f"\n{Colors.CYAN}{'='*60}")
@@ -3006,57 +3023,43 @@ class AIDeploymentOrchestrator:
         
         config = ProductionConfig()
         
-        # Auto-generate secret key
-        self.log("Generating Django secret key...", "INFO")
-        config.secret_key = get_random_secret_key()
-        print(f"{Colors.GREEN}✓ Django secret key generated automatically{Colors.END}")
+        # Generate secure credentials automatically
+        if self.env_manager:
+            self.log("Generating secure credentials using unified manager...", "INFO")
+            credentials = self.env_manager.generate_secure_credentials()
+            config.secret_key = credentials["secret_key"]
+            config.db_name = credentials["db_name"]
+            config.db_user = credentials["db_user"]
+            config.db_password = credentials["db_password"]
+        else:
+            # Fallback to original method
+            self.log("Using fallback credential generation...", "INFO")
+            config.secret_key = get_random_secret_key()
+            config.db_name = f"projectmeats_prod_{secrets.token_hex(4)}"
+            config.db_user = f"pm_user_{secrets.token_hex(3)}"
+            config.db_password = self._generate_secure_db_password()
+        
+        print(f"{Colors.GREEN}✓ Secure credentials generated automatically{Colors.END}")
         
         # Domain configuration
         if domain:
             config.domain = domain
-            config.allowed_hosts = f"{domain},www.{domain}"
+            config.allowed_hosts = f"{domain},www.{domain},localhost,127.0.0.1"
             config.cors_origins = f"https://{domain},https://www.{domain}"
             print(f"{Colors.GREEN}✓ Domain configured: {domain}{Colors.END}")
         else:
             print(f"\n{Colors.YELLOW}Domain Configuration:{Colors.END}")
             config.domain = input(f"Enter your domain name (e.g., example.com): ").strip()
             if config.domain:
-                config.allowed_hosts = f"{config.domain},www.{config.domain}"
+                config.allowed_hosts = f"{config.domain},www.{config.domain},localhost,127.0.0.1"
                 config.cors_origins = f"https://{config.domain},https://www.{config.domain}"
         
-        # Database configuration - AUTO-GENERATED (no user prompts)
+        # Database configuration display (credentials already generated)
         print(f"\n{Colors.YELLOW}Database Configuration:{Colors.END}")
-        print("Setting up PostgreSQL database configuration automatically...")
-        
-        # Generate unique, secure database credentials automatically
-        config.db_name = f"projectmeats_prod_{secrets.token_hex(4)}"  # e.g., projectmeats_prod_a1b2c3d4
-        config.db_user = f"pm_user_{secrets.token_hex(3)}"  # e.g., pm_user_x9y8z7
-        config.db_password = self._generate_secure_db_password()
-        
+        print("PostgreSQL database credentials generated automatically:")
         print(f"{Colors.GREEN}✓ Database name: {config.db_name}{Colors.END}")
         print(f"{Colors.GREEN}✓ Database user: {config.db_user}{Colors.END}")
-        print(f"{Colors.GREEN}✓ Database password: [auto-generated 16-character secure password]{Colors.END}")
-        print(f"{Colors.GREEN}✓ Database configuration generated automatically{Colors.END}")
-        
-        # Log the credentials securely for system administration
-        self.log(f"Generated database credentials - Name: {config.db_name}, User: {config.db_user}", "INFO")
-        
-        # Save credentials to a secure admin file (readable only by root)
-        try:
-            admin_info = {
-                "deployment_time": datetime.now().isoformat(),
-                "database_name": config.db_name,
-                "database_user": config.db_user,
-                "database_password": config.db_password,
-                "database_host": config.db_host,
-                "database_port": config.db_port
-            }
-            
-            # Note: In production, this would be written to the server, here we just log it
-            self.log("Database credentials will be saved to /opt/projectmeats/admin/database_credentials.json on the server", "INFO")
-            
-        except Exception as e:
-            self.log(f"Warning: Could not prepare admin credentials file: {e}", "WARNING")
+        print(f"{Colors.GREEN}✓ Database password: [20-character secure password]{Colors.END}")
         
         # Company information
         print(f"\n{Colors.YELLOW}Company Information (Optional):{Colors.END}")
@@ -3069,15 +3072,24 @@ class AIDeploymentOrchestrator:
         print(f"\n{Colors.YELLOW}Email Configuration (Optional - can be configured later):{Colors.END}")
         configure_email = input("Configure email settings now? (y/N): ").strip().lower()
         
+        email_config = {}
         if configure_email in ['y', 'yes']:
-            config.email_host = input("SMTP host (e.g., smtp.gmail.com): ").strip()
-            if config.email_host:
-                config.email_port = input(f"SMTP port [{config.email_port}]: ").strip() or config.email_port
-                config.email_user = input("Email username: ").strip()
-                config.email_password = getpass.getpass("Email password (will be hidden): ").strip()
+            email_config["email_host"] = input("SMTP host (e.g., smtp.gmail.com): ").strip()
+            if email_config["email_host"]:
+                email_config["email_port"] = input(f"SMTP port [{config.email_port}]: ").strip() or config.email_port
+                email_config["email_user"] = input("Email username: ").strip()
+                email_config["email_password"] = getpass.getpass("Email password (will be hidden): ").strip()
+                email_config["domain"] = config.domain
                 
                 use_tls = input("Use TLS encryption? (Y/n): ").strip().lower()
-                config.email_use_tls = use_tls not in ['n', 'no']
+                email_config["email_use_tls"] = use_tls not in ['n', 'no']
+                
+                # Update config object
+                config.email_host = email_config["email_host"]
+                config.email_port = email_config["email_port"]
+                config.email_user = email_config["email_user"]
+                config.email_password = email_config["email_password"]
+                config.email_use_tls = email_config["email_use_tls"]
                 
                 print(f"{Colors.GREEN}✓ Email configuration collected{Colors.END}")
         else:
@@ -3092,6 +3104,16 @@ class AIDeploymentOrchestrator:
             print(f"{Colors.GREEN}✓ SSL/HTTPS security will be enabled{Colors.END}")
         else:
             print(f"{Colors.BLUE}SSL disabled - recommended only for development{Colors.END}")
+        
+        # Validate configuration if using unified manager
+        if self.env_manager:
+            config_dict = asdict(config)
+            is_valid, issues = self.env_manager.validate_configuration(config_dict)
+            if not is_valid:
+                self.log("Configuration validation found issues:", "WARNING")
+                for issue in issues:
+                    self.log(f"  - {issue}", "WARNING")
+                print(f"{Colors.YELLOW}⚠️  Configuration issues detected (see logs){Colors.END}")
         
         print(f"\n{Colors.GREEN}{'='*60}")
         print(f"{Colors.GREEN}  Configuration Summary")
@@ -3116,9 +3138,19 @@ class AIDeploymentOrchestrator:
     
     def generate_production_env_file(self, config: ProductionConfig) -> str:
         """
-        Generate .env file content from ProductionConfig
+        Generate .env file content from ProductionConfig using unified environment manager
         """
         self.log("Generating production environment file...", "INFO")
+        
+        if self.env_manager:
+            # Use unified environment manager
+            config_dict = asdict(config)
+            try:
+                env_content = self.env_manager.create_environment_file(config_dict)
+                self.log("✓ Environment file generated using unified manager", "SUCCESS")
+                return env_content
+            except Exception as e:
+                self.log(f"Error with unified manager, falling back to template: {e}", "WARNING")
         
         # Read the template file content
         template_content = f"""# ProjectMeats Production Environment Configuration
@@ -3361,8 +3393,11 @@ EOF"""
             
             # Create database and user with the collected configuration
             if self._setup_database_with_config(config):
-                # Create secure admin credentials file on the server
-                self._save_admin_credentials(config)
+                # Create secure admin credentials file using unified manager
+                if self.env_manager:
+                    self.env_manager.save_admin_credentials(asdict(config), self.execute_command)
+                else:
+                    self._save_admin_credentials(config)
                 # Ensure Django service directories and permissions are set up
                 self._setup_django_service_directories()
                 return True
