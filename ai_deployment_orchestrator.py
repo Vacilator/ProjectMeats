@@ -6653,6 +6653,9 @@ EOF""")
             # Try one more time after potential auto-recovery
             if not self._check_docker_daemon_connectivity():
                 self.log("Docker daemon connectivity failed even after recovery attempts", "ERROR")
+                
+                # Collect comprehensive diagnostics before final failure
+                self._collect_docker_failure_diagnostics()
                 return False
             else:
                 self.log("Docker daemon connectivity recovered successfully", "SUCCESS")
@@ -6980,6 +6983,202 @@ EOF""")
         self.log("5. Add Docker repository: echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null", "INFO")
         self.log("6. Install Docker: apt-get update && apt-get install docker-ce docker-ce-cli containerd.io", "INFO")
         self.log("7. Test installation: docker run hello-world", "INFO")
+    
+    def _collect_docker_failure_diagnostics(self) -> None:
+        """Collect comprehensive Docker failure diagnostics and store artifacts"""
+        self.log("Collecting comprehensive Docker failure diagnostics...", "INFO")
+        
+        try:
+            # Import required modules
+            import os
+            from datetime import datetime
+            
+            # Generate timestamp for unique artifact naming
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Determine logs directory - use /opt/projectmeats/logs if available, otherwise use current directory
+            if os.path.exists("/opt/projectmeats"):
+                logs_dir = "/opt/projectmeats/logs"
+                # Create logs directory if it doesn't exist
+                os.makedirs(logs_dir, exist_ok=True)
+            else:
+                # Fallback to project directory logs
+                logs_dir = os.path.join(os.getcwd(), "logs")
+                os.makedirs(logs_dir, exist_ok=True)
+            
+            # Construct path to diagnostic script
+            script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts", "deployment", "collect_docker_diagnostics.sh")
+            
+            # Check if script exists
+            if not os.path.exists(script_path):
+                # Try alternative path for when script is in same directory structure
+                alternative_paths = [
+                    "./scripts/deployment/collect_docker_diagnostics.sh",
+                    "/opt/projectmeats/scripts/deployment/collect_docker_diagnostics.sh"
+                ]
+                
+                script_found = False
+                for alt_path in alternative_paths:
+                    if os.path.exists(alt_path):
+                        script_path = alt_path
+                        script_found = True
+                        break
+                
+                if not script_found:
+                    self.log("Docker diagnostic script not found, using basic diagnostics", "WARNING")
+                    self._collect_basic_docker_diagnostics(logs_dir, timestamp)
+                    return
+            
+            self.log(f"Running Docker diagnostic script: {script_path}", "INFO")
+            
+            # Execute diagnostic script - it will create its own artifacts
+            exit_code, stdout, stderr = self.execute_command(f"bash {script_path}")
+            
+            if exit_code == 0:
+                self.log("Docker diagnostic script completed successfully", "SUCCESS")
+                self.log("Diagnostic output:", "INFO")
+                # Log the summary output from the script
+                if stdout:
+                    for line in stdout.strip().split('\n')[-20:]:  # Last 20 lines (summary)
+                        if line.strip():
+                            self.log(f"Diagnostic: {line}", "INFO")
+            else:
+                self.log(f"Docker diagnostic script failed with exit code {exit_code}", "WARNING")
+                if stderr:
+                    self.log(f"Diagnostic stderr: {stderr[:500]}...", "WARNING")  # First 500 chars
+                
+                # Fallback to basic diagnostics
+                self._collect_basic_docker_diagnostics(logs_dir, timestamp)
+            
+            # Create structured JSON summary for programmatic access
+            self._create_docker_diagnosis_json(logs_dir, timestamp, exit_code == 0)
+            
+        except Exception as e:
+            self.log(f"Error collecting Docker diagnostics: {e}", "ERROR")
+            # Still attempt basic diagnostics on error
+            try:
+                self._collect_basic_docker_diagnostics("/tmp", timestamp)
+            except:
+                pass
+    
+    def _collect_basic_docker_diagnostics(self, logs_dir: str, timestamp: str) -> None:
+        """Collect basic Docker diagnostics when full script is not available"""
+        self.log("Collecting basic Docker diagnostics...", "INFO")
+        
+        try:
+            import json
+            
+            basic_diagnostics = {
+                "timestamp": timestamp,
+                "diagnostic_type": "basic",
+                "commands": {}
+            }
+            
+            # Basic diagnostic commands
+            diagnostic_commands = [
+                ("docker_version", "docker --version"),
+                ("docker_info", "docker info"),
+                ("docker_service_status", "systemctl status docker"),
+                ("docker_service_logs", "journalctl -u docker --no-pager -n 10"),
+                ("containerd_status", "systemctl status containerd"),
+                ("docker_socket_perms", "ls -la /var/run/docker.sock"),
+                ("disk_space", "df -h"),
+                ("virtualization", "systemd-detect-virt"),
+            ]
+            
+            for cmd_name, cmd in diagnostic_commands:
+                try:
+                    exit_code, stdout, stderr = self.execute_command(cmd)
+                    basic_diagnostics["commands"][cmd_name] = {
+                        "exit_code": exit_code,
+                        "stdout": stdout[:1000] if stdout else "",  # Limit output
+                        "stderr": stderr[:500] if stderr else ""
+                    }
+                except:
+                    basic_diagnostics["commands"][cmd_name] = {
+                        "exit_code": -1,
+                        "stdout": "",
+                        "stderr": "Command execution failed"
+                    }
+            
+            # Save basic diagnostics to JSON file
+            basic_diag_file = os.path.join(logs_dir, f"docker_basic_diagnostics_{timestamp}.json")
+            with open(basic_diag_file, 'w') as f:
+                json.dump(basic_diagnostics, f, indent=2)
+            
+            self.log(f"Basic Docker diagnostics saved to: {basic_diag_file}", "INFO")
+            
+        except Exception as e:
+            self.log(f"Error collecting basic Docker diagnostics: {e}", "ERROR")
+    
+    def _create_docker_diagnosis_json(self, logs_dir: str, timestamp: str, script_success: bool) -> None:
+        """Create structured JSON summary for Docker diagnosis"""
+        try:
+            import json
+            
+            # Collect key system state
+            diagnosis_data = {
+                "timestamp": timestamp,
+                "deployment_id": getattr(self.state, 'deployment_id', 'unknown'),
+                "server": getattr(self.state, 'server', 'unknown'),
+                "diagnostic_script_success": script_success,
+                "docker_status": {},
+                "system_info": {},
+                "recommendations": []
+            }
+            
+            # Check Docker service status
+            exit_code, stdout, stderr = self.execute_command("systemctl is-active docker")
+            diagnosis_data["docker_status"]["service_active"] = (exit_code == 0)
+            
+            # Check containerd status
+            exit_code, stdout, stderr = self.execute_command("systemctl is-active containerd")
+            diagnosis_data["docker_status"]["containerd_active"] = (exit_code == 0)
+            
+            # Check Docker socket
+            exit_code, stdout, stderr = self.execute_command("test -S /var/run/docker.sock")
+            diagnosis_data["docker_status"]["socket_exists"] = (exit_code == 0)
+            
+            # Check virtualization
+            exit_code, stdout, stderr = self.execute_command("systemd-detect-virt")
+            diagnosis_data["system_info"]["virtualization"] = stdout.strip() if exit_code == 0 else "unknown"
+            
+            # Check disk space
+            exit_code, stdout, stderr = self.execute_command("df / | tail -1 | awk '{print $5}' | sed 's/%//'")
+            if exit_code == 0:
+                try:
+                    disk_usage = int(stdout.strip())
+                    diagnosis_data["system_info"]["disk_usage_percent"] = disk_usage
+                    if disk_usage > 85:
+                        diagnosis_data["recommendations"].append("High disk usage detected - consider cleaning up space")
+                except:
+                    diagnosis_data["system_info"]["disk_usage_percent"] = -1
+            
+            # Add recommendations based on findings
+            if not diagnosis_data["docker_status"]["service_active"]:
+                diagnosis_data["recommendations"].append("Docker service is not active - investigate service startup failure")
+            
+            if not diagnosis_data["docker_status"]["containerd_active"]:
+                diagnosis_data["recommendations"].append("Containerd service is not active - Docker depends on containerd")
+            
+            if not diagnosis_data["docker_status"]["socket_exists"]:
+                diagnosis_data["recommendations"].append("Docker socket does not exist - indicates daemon startup failure")
+            
+            virt_type = diagnosis_data["system_info"]["virtualization"]
+            if virt_type in ["openvz", "lxc"]:
+                diagnosis_data["recommendations"].append(f"Running in {virt_type} - may not support Docker properly")
+            elif virt_type == "wsl":
+                diagnosis_data["recommendations"].append("Running in WSL - may need Docker Desktop configuration")
+            
+            # Save diagnosis JSON
+            diagnosis_file = os.path.join(logs_dir, f"docker_diagnosis_{timestamp}.json")
+            with open(diagnosis_file, 'w') as f:
+                json.dump(diagnosis_data, f, indent=2)
+            
+            self.log(f"Docker diagnosis summary saved to: {diagnosis_file}", "INFO")
+            
+        except Exception as e:
+            self.log(f"Error creating Docker diagnosis JSON: {e}", "ERROR")
     
     def _validate_disk_space_for_docker(self) -> bool:
         """Validate sufficient disk space for Docker build and deployment"""
