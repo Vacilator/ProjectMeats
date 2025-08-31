@@ -4933,7 +4933,9 @@ networks:
         # Write the generated docker-compose content to the server
         self.log(f"Writing {'external database' if use_external_db else 'local database'} docker-compose configuration...", "INFO")
         
-        exit_code, _, stderr = self.execute_command(f"cat > /opt/projectmeats/docker-compose.prod.yml << 'EOF'\\n{compose_content}\\nEOF")
+        exit_code, _, stderr = self.execute_command(f"""cat > /opt/projectmeats/docker-compose.prod.yml << 'EOF'
+{compose_content}
+EOF""")
         if exit_code != 0:
             self.log(f"Failed to write docker-compose.prod.yml: {stderr}", "ERROR")
             return False
@@ -4983,7 +4985,9 @@ DATABASE_EXTERNAL=false
 """
         
         # Write .env.prod file to server  
-        exit_code, _, stderr = self.execute_command(f"cat > /opt/projectmeats/.env.prod << 'EOF'\\n{env_content}\\nEOF")
+        exit_code, _, stderr = self.execute_command(f"""cat > /opt/projectmeats/.env.prod << 'EOF'
+{env_content}
+EOF""")
         if exit_code == 0:
             self.log("Production environment file (.env.prod) created successfully", "SUCCESS")
             return True
@@ -5173,7 +5177,9 @@ CMD ["nginx", "-g", "daemon off;"]
             self.execute_command(f"mkdir -p {dir_path}")
             
             # Write Dockerfile
-            exit_code, _, stderr = self.execute_command(f"cat > {filepath} << 'EOF'\\n{content}\\nEOF")
+            exit_code, _, stderr = self.execute_command(f"""cat > {filepath} << 'EOF'
+{content}
+EOF""")
             if exit_code != 0:
                 self.log(f"Failed to create {filepath}: {stderr}", "ERROR")
                 return False
@@ -5242,7 +5248,9 @@ CSRF_COOKIE_SECURE=True
 """
 
         # Write environment file
-        exit_code, _, stderr = self.execute_command(f"cat > /opt/projectmeats/.env << 'EOF'\\n{docker_env_content}\\nEOF")
+        exit_code, _, stderr = self.execute_command(f"""cat > /opt/projectmeats/.env << 'EOF'
+{docker_env_content}
+EOF""")
         if exit_code == 0:
             # Set secure permissions
             self.execute_command("chmod 600 /opt/projectmeats/.env")
