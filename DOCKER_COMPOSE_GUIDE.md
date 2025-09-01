@@ -168,12 +168,30 @@ NGINX_PORT=80
 
 ## Production Considerations
 
-### Security
-1. **Change default passwords** in production
-2. **Use strong secret keys** for Django
-3. **Configure firewall** to only allow necessary ports
-4. **Use SSL/TLS** certificates (Let's Encrypt recommended)
-5. **Update the nginx.conf** to use your actual domain name
+### Security Hardening (Enhanced)
+1. **Use hardened production compose**: `docker-compose.prod.yml` with Traefik and automatic TLS
+2. **Environment security**: Copy `.env.prod.template` to `.env.prod` with strong passwords
+3. **Network isolation**: Backend services isolated from internet access
+4. **Container security**: All services run as non-root with minimal privileges
+5. **Validation**: Run `make prod-validate` before deployment
+6. **Monitoring**: Comprehensive health checks and logging
+
+### Deployment Process
+```bash
+# 1. Configure environment
+cp .env.prod.template .env.prod
+nano .env.prod  # Set all required values
+
+# 2. Validate configuration  
+make prod-validate
+
+# 3. Deploy with security hardening
+make prod-up
+
+# 4. Monitor deployment
+make prod-status
+make prod-logs
+```
 
 ### Performance
 1. **Scale services** using `docker compose up --scale backend=3`

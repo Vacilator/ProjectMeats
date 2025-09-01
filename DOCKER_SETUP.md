@@ -94,11 +94,13 @@ CSRF_COOKIE_SECURE=True
 - Volume mounts for live code changes
 - Debug mode enabled
 
-### docker-compose.prod.yml (High-Availability Production)
-- Additional security headers
-- Static and media file volumes
-- Optimized for production deployment
-- Includes nginx reverse proxy
+### docker-compose.prod.yml (Security-Hardened Production)
+- **Traefik reverse proxy** with automatic TLS termination
+- **Enhanced security contexts** - non-root users, dropped capabilities
+- **Network isolation** - backend services internal-only
+- **Resource governance** - memory and CPU limits
+- **Comprehensive health checks** and logging
+- **Preflight validation** integration
 
 ## Available Commands
 
@@ -234,49 +236,72 @@ docker compose config
 
 ## Production Deployment
 
-For production deployment:
+For production deployment with enhanced security:
 
-1. Use `docker-compose.prod.yml`
-2. Set strong passwords in `.env`
-3. Configure SSL certificates
-4. Set up proper DNS
-5. Configure backups
-6. Set up monitoring
+1. **Use hardened production configuration**: `docker-compose.prod.yml`
+2. **Configure environment**: Copy `.env.prod.template` to `.env.prod` and set secure values
+3. **Validate configuration**: Run `make prod-validate`
+4. **Deploy**: Run `make prod-up`
 
 ```bash
-# Production deployment
-docker compose -f docker-compose.prod.yml up --build -d
+# Production deployment with security hardening
+cp .env.prod.template .env.prod
+nano .env.prod  # Configure all required values
+make prod-validate  # Validate deployment readiness
+make prod-up        # Deploy with Traefik and automatic TLS
 ```
+
+Key features:
+- **Traefik reverse proxy** with automatic Let's Encrypt TLS
+- **Network isolation** - backend services internal-only
+- **Security contexts** - non-root users, read-only filesystems
+- **Resource limits** - prevents resource exhaustion
+- **Health monitoring** - comprehensive health checks
+
+See [PROD_COMPOSE_HARDENING.md](docs/PROD_COMPOSE_HARDENING.md) for detailed security documentation.
 
 ## File Structure
 
 ```
 ProjectMeats/
 ├── docker-compose.yml          # Main production setup
-├── docker-compose.dev.yml      # Development setup
-├── docker-compose.prod.yml     # High-availability production
-├── .env.example               # Environment template
-├── test_docker.sh             # Testing script
+├── docker-compose.dev.yml      # Development setup  
+├── docker-compose.prod.yml     # Security-hardened production
+├── .env.prod.template         # Production environment template
+├── scripts/
+│   └── preflight/
+│       └── validate_prod_compose.sh  # Production validation
 ├── backend/
 │   ├── Dockerfile            # Backend container
-│   ├── .dockerignore         # Backend build exclusions
-│   └── requirements.txt      # Python dependencies
+│   ├── Dockerfile.prod       # Production backend
+│   └── .dockerignore         # Backend build exclusions
 ├── frontend/
-│   ├── Dockerfile            # Production frontend
-│   ├── Dockerfile.dev        # Development frontend
-│   ├── .dockerignore         # Frontend build exclusions
-│   └── nginx.conf           # nginx configuration
-└── nginx/                    # Reverse proxy (for prod)
+│   ├── Dockerfile            # Frontend container
+│   ├── Dockerfile.prod       # Production frontend
+│   └── .dockerignore         # Frontend build exclusions
+└── docs/
+    └── PROD_COMPOSE_HARDENING.md  # Security documentation
 ```
 
 ## Security Considerations
 
-- Change default passwords
-- Use strong Django secret keys
-- Enable SSL in production
-- Regular security updates
-- Limit database access
-- Use environment-specific configurations
+### Production Security (Enhanced)
+- **Automatic TLS** with Let's Encrypt certificate management
+- **Network isolation** - backend services not exposed to internet
+- **Container hardening** - non-root users, read-only filesystems
+- **Secret management** - external environment file, no inline secrets
+- **Resource limits** - prevents resource exhaustion attacks
+- **Health monitoring** - comprehensive service health checks
+- **Preflight validation** - deployment readiness verification
+
+### Security Checklist
+- [ ] Change all default passwords in `.env.prod`
+- [ ] Use strong Django secret keys (50+ characters)
+- [ ] Configure domain DNS to point to server
+- [ ] Run `make prod-validate` before deployment
+- [ ] Verify all services healthy after deployment
+- [ ] Monitor logs for security events
+- [ ] Regular security updates for base images
 
 ## Performance Optimization
 
