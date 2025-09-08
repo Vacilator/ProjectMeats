@@ -140,6 +140,11 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Additional static files directories (includes React build assets)
+STATICFILES_DIRS = [
+    BASE_DIR.parent / "frontend" / "build" / "static",  # React build static files
+]
+
 # Media files (User uploads)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
