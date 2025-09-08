@@ -1,0 +1,22 @@
+# Invalid app.yaml that would cause the certificate_id error
+name: projectmeats
+region: nyc
+
+services:
+  - name: backend
+    source_dir: backend
+    dockerfile_path: backend/Dockerfile  
+    certificate_id: "invalid-field-12345"  # This field causes the error!
+    github:
+      repo: Vacilator/ProjectMeats
+      branch: main
+    http_port: 8000
+    
+static_sites:
+  - name: frontend
+    source_dir: frontend
+    github:
+      repo: Vacilator/ProjectMeats
+      branch: main
+    build_command: npm run build
+    output_dir: build

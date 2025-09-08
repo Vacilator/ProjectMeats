@@ -1,0 +1,60 @@
+# DigitalOcean App Platform Specification for ProjectMeats
+# Minimal, valid specification without deprecated fields
+name: projectmeats
+region: nyc
+
+# Backend API Service
+services:
+  - name: backend
+    source_dir: backend
+    dockerfile_path: backend/Dockerfile
+    github:
+      repo: Vacilator/ProjectMeats
+      branch: main
+    http_port: 8000
+    instance_count: 1
+    instance_size_slug: professional-xs
+    environment_slug: python
+    envs:
+      - key: DJANGO_SETTINGS_MODULE
+        value: apps.settings.production
+      - key: DEBUG
+        value: "False"
+    health_check:
+      http_path: /health/
+    routes:
+      - path: /api
+      - path: /admin
+      - path: /health
+
+# Frontend Static Site
+static_sites:
+  - name: frontend
+    source_dir: frontend
+    github:
+      repo: Vacilator/ProjectMeats
+      branch: main
+    build_command: npm run build
+    output_dir: build
+    environment_slug: node-js
+    routes:
+      - path: /
+
+# Database
+databases:
+  - name: projectmeats-db
+    engine: PG
+    version: "15"
+    size: db-s-dev-database
+
+# Pre-deployment jobs
+jobs:
+  - name: migrate
+    source_dir: backend
+    dockerfile_path: backend/Dockerfile
+    github:
+      repo: Vacilator/ProjectMeats
+      branch: main
+    run_command: python manage.py migrate
+    environment_slug: python
+    kind: PRE_DEPLOY
