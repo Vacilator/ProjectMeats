@@ -5,8 +5,13 @@ Base view classes that provide common functionality for all entities
 migrated from PowerApps/Dataverse.
 """
 
+import os
+from pathlib import Path
+
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import User
+from django.http import HttpResponse, Http404
+from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
@@ -468,3 +473,49 @@ def health_check_view(request):
         {"status": "healthy", "service": "ProjectMeats Backend"},
         status=status.HTTP_200_OK,
     )
+
+
+def frontend_view(request):
+    """
+    Serve React frontend build files for production deployment.
+    
+    This view handles serving the React application's static files and
+    provides a fallback to index.html for client-side routing.
+    """
+    # Potential build file locations (in order of preference)
+    build_paths = [
+        Path(settings.BASE_DIR).parent / "frontend" / "build",  # Standard development location
+        Path("/opt/projectmeats/frontend/build"),  # Production deployment location
+        Path("/workspace/frontend/build"),  # Docker/workspace location
+        Path("/workspace/current"),  # Alternative workspace location
+    ]
+    
+    # Find the first existing build directory
+    build_dir = None
+    for path in build_paths:
+        if path.exists() and (path / "index.html").exists():
+            build_dir = path
+            break
+    
+    if not build_dir:
+        # Create debug info for troubleshooting
+        debug_info = []
+        for path in build_paths:
+            debug_info.append(f"Path: {path} (exists: {path.exists()}, has index.html: {(path / 'index.html').exists() if path.exists() else False})")
+        
+        error_msg = f"""Frontend build files not found. Checked paths:
+{chr(10).join(debug_info)}
+
+To fix: Run 'npm run build' in frontend directory or ensure production symlink is configured."""
+        
+        raise Http404(error_msg)
+    
+    # Serve the index.html file for all non-API routes (React Router handles client-side routing)
+    index_file = build_dir / "index.html"
+    
+    try:
+        with open(index_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HttpResponse(content, content_type='text/html')
+    except Exception as e:
+        raise Http404(f"Error reading index.html: {str(e)}")
