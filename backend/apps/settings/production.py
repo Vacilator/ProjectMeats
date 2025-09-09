@@ -13,7 +13,7 @@ DEBUG = False
 # Production allowed hosts - controlled by environment
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS", 
-    default="meatscentral.com,www.meatscentral.com"
+    default="meatscentral.com,www.meatscentral.com,10.244.32.208"
 ).split(",")
 
 # Production static files configuration (Approach A)
