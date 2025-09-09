@@ -10,7 +10,7 @@ from .base import *
 DEBUG = True
 
 # Allow all hosts in development but also include production domains for testing
-ALLOWED_HOSTS = ["*", "meatscentral.com", "www.meatscentral.com", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["*", "meatscentral.com", "www.meatscentral.com", "localhost", "127.0.0.1", "10.244.32.208"]
 
 # Development CORS origins - includes production domains for testing
 CORS_ALLOWED_ORIGINS = [
